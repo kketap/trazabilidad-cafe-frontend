@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { ConfigProvider, theme } from "antd";
-import { Routes, Route } from "react-router-dom";
+import { Routes, Route, Navigate } from "react-router-dom";
 import AppLayout from "./layouts/AppLayout";
 import HomePage from "./pages/HomePage";
 import CosechasPage from "./pages/CosechasPage";
@@ -52,20 +52,19 @@ function App() {
         },
       }}
     >
-      {/* AppLayout envuelve todas las vistas para mostrar el menú y encabezado común. */}
-      <AppLayout themeMode={themeMode} onThemeModeChange={setThemeMode}>
-        {/* Definición de rutas principales. El layout se mantiene mientras el contenido cambia. */}
-        <Routes>
-          <Route path="/" element={<HomePage />} />
+      <Routes>
+        <Route element={<AppLayout themeMode={themeMode} onThemeModeChange={setThemeMode} />}>
+          <Route path="/" element={<Navigate to="/inicio" replace />} />
+          <Route path="/inicio" element={<HomePage />} />
           <Route path="/cosechas" element={<CosechasPage />} />
-          {/* Rutas del módulo comercial. */}
           <Route path="/clientes" element={<ClientesPage />} />
           <Route path="/facturacion" element={<FacturacionPage />} />
           <Route path="/trazabilidad" element={<TrazabilidadPage />} />
           <Route path="/reportes" element={<ReportesPage />} />
           <Route path="/configuracion" element={<ConfiguracionPage />} />
-        </Routes>
-      </AppLayout>
+          <Route path="*" element={<div style={{ padding: 24 }}>Página no encontrada (404)</div>} />
+        </Route>
+      </Routes>
     </ConfigProvider>
   );
 }

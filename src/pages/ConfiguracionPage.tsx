@@ -10,7 +10,7 @@ export default function ConfiguracionPage() {
     };
 
     return (
-        <Space direction="vertical" size="large" style={{ width: "100%" }}>
+        <Space orientation="vertical" size="large" style={{ width: "100%" }}>
             <Typography.Title level={2} style={{ margin: 0 }}>
                 Configuración
             </Typography.Title>

@@ -270,7 +270,7 @@ export default function FacturacionPage() {
 
     return (
         <div>
-            <Space direction="vertical" size="large" style={{ width: "100%" }}>
+            <Space orientation="vertical" size="large" style={{ width: "100%" }}>
                 <div
                     style={{
                         display: "flex",

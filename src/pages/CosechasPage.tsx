@@ -156,7 +156,7 @@ export default function CosechasPage() {
     return (
         <div>
             {/* Encabezado de la vista con título, subtítulo y botón para registrar. */}
-            <Space direction="vertical" size="large" style={{ width: "100%" }}>
+            <Space orientation="vertical" size="large" style={{ width: "100%" }}>
                 <div
                     style={{
                         display: "flex",

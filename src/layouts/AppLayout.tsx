@@ -14,8 +14,7 @@ import {
 } from "@ant-design/icons";
 import { Button, Grid, Layout, Menu, Space, Tooltip, Typography, theme as antdTheme } from "antd";
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
-import type { ReactNode } from "react";
+import { useNavigate, Outlet } from "react-router-dom";
 
 const { Header, Sider, Content } = Layout;
 const { Text } = Typography;
@@ -25,12 +24,11 @@ type ThemeMode = "light" | "dark" | "system";
 
 // Props para controlar el tema desde App.
 type AppLayoutProps = {
-    children: ReactNode;
     themeMode: ThemeMode;
     onThemeModeChange: (themeMode: ThemeMode) => void;
 };
 
-export default function AppLayout({ children, themeMode, onThemeModeChange }: AppLayoutProps) {
+export default function AppLayout({ themeMode, onThemeModeChange }: AppLayoutProps) {
     // useNavigate permite navegar entre rutas al hacer clic en los items del menú.
     const navigate = useNavigate();
     // Tokens visuales que cambian con el tema.
@@ -43,7 +41,7 @@ export default function AppLayout({ children, themeMode, onThemeModeChange }: Ap
     // Maneja el clic en cualquier menú (desktop o móvil) y navega según la key del item.
     const handleMenuClick = ({ key }: { key: string }) => {
         if (key === "inicio") {
-            navigate("/");
+            navigate("/inicio");
         } else if (key === "cosechas") {
             navigate("/cosechas");
         } else if (key === "clientes") {
@@ -176,7 +174,7 @@ export default function AppLayout({ children, themeMode, onThemeModeChange }: Ap
                 </Sider>
             )}
 
-            <Layout style={{ width: "100%", minWidth: 0 }}>
+            <Layout style={{ flex: 1, width: "100%" }}>
                 <Header
                     style={{
                         height: isMobile ? "auto" : 80,
@@ -320,13 +318,12 @@ export default function AppLayout({ children, themeMode, onThemeModeChange }: Ap
                     style={{
                         // Fondo adaptable al tema seleccionado.
                         background: token.colorBgLayout,
-                        padding: isMobile ? 12 : 24,
-                        width: "100%",
-                        minWidth: 0,
-                        overflowX: "hidden",
+                        padding: 24,
+                        flex: 1,
+                        overflow: "auto",
                     }}
                 >
-                    {children}
+                    <Outlet />
                 </Content>
             </Layout>
         </Layout>

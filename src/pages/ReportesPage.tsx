@@ -3,7 +3,7 @@ import { DownloadOutlined, FilePdfOutlined } from "@ant-design/icons";
 
 export default function ReportesPage() {
     return (
-        <Space direction="vertical" size="large" style={{ width: "100%" }}>
+        <Space orientation="vertical" size="large" style={{ width: "100%" }}>
             <Typography.Title level={2} style={{ margin: 0 }}>
                 Reportes y Estadísticas
             </Typography.Title>
@@ -11,7 +11,7 @@ export default function ReportesPage() {
             <Row gutter={[16, 16]}>
                 <Col xs={24} lg={8}>
                     <Card title="Descarga de Datos">
-                        <Space direction="vertical" style={{ width: "100%" }}>
+                        <Space orientation="vertical" style={{ width: "100%" }}>
                             <Button icon={<DownloadOutlined />} block>
                                 Exportar Cosechas (CSV)
                             </Button>

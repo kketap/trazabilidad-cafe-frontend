@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Avatar, Button, Card, List, Space, Tag, Typography } from "antd";
+import { Avatar, Button, Card, Col, Row, Space, Tag, Typography } from "antd";
 import { DeleteOutlined, EditOutlined, PlusOutlined, UserOutlined } from "@ant-design/icons";
 
 // Datos que representa cada cliente en la lista.
@@ -44,7 +44,7 @@ export default function ClientesPage() {
     };
 
     return (
-        <Space direction="vertical" size="large" style={{ width: "100%" }}>
+        <Space orientation="vertical" size="large" style={{ width: "100%" }}>
             <div
                 style={{
                     display: "flex",
@@ -67,12 +67,10 @@ export default function ClientesPage() {
                 </Button>
             </div>
 
-            {/* Lista principal de clientes. */}
-            <List
-                grid={{ gutter: 16, xs: 1, sm: 2, md: 3 }}
-                dataSource={clientes}
-                renderItem={(cliente) => (
-                    <List.Item>
+            {/* Grid principal de clientes. */}
+            <Row gutter={[16, 16]}>
+                {clientes.map((cliente) => (
+                    <Col key={cliente.id} xs={24} sm={12} md={8}>
                         <Card
                             hoverable
                             actions={[
@@ -101,7 +99,7 @@ export default function ClientesPage() {
                                 }
                                 title={cliente.nombreRazonSocial}
                                 description={
-                                    <Space direction="vertical" size={6}>
+                                    <Space orientation="vertical" size={6}>
                                         <Typography.Text type="secondary">RUT: {cliente.rut}</Typography.Text>
                                         <Typography.Text type="secondary">Contacto: {cliente.contacto}</Typography.Text>
                                         <Tag color="blue" style={{ width: "fit-content", marginInlineEnd: 0 }}>
@@ -111,9 +109,9 @@ export default function ClientesPage() {
                                 }
                             />
                         </Card>
-                    </List.Item>
-                )}
-            />
+                    </Col>
+                ))}
+            </Row>
         </Space>
     );
 }
