@@ -34,14 +34,12 @@ export default function HomePage() {
                     marginBottom: 24,
                     boxShadow: "0 8px 24px rgba(15, 23, 42, 0.08)",
                 }}
-                bodyStyle={{
-                    padding: isMobile ? 20 : 36,
-                }}
+                styles={{ body: { padding: isMobile ? 20 : 36 } }}
             >
                 <Row gutter={[24, 24]} align="middle">
                     <Col xs={24} lg={16}>
                         <Space
-                            direction="vertical"
+                            orientation="vertical"
                             size={14}
                             style={{
                                 width: "100%",
@@ -111,12 +109,10 @@ export default function HomePage() {
                                 maxWidth: isMobile ? "100%" : 420,
                                 marginLeft: isMobile ? 0 : "auto",
                             }}
-                            bodyStyle={{
-                                padding: isMobile ? 24 : 32,
-                            }}
+                            styles={{ body: { padding: isMobile ? 24 : 32 } }}
                         >
                             <Space
-                                direction="vertical"
+                                orientation="vertical"
                                 size={12}
                                 style={{
                                     width: "100%",
@@ -155,7 +151,7 @@ export default function HomePage() {
 
             <Row gutter={[16, 16]} style={{ marginBottom: 24 }}>
                 <Col xs={24} sm={12} xl={6}>
-                    <Card bordered={false} style={{ borderRadius: 14 }}>
+                    <Card variant="borderless" style={{ borderRadius: 14 }}>
                         <Statistic
                             title="Cosechas registradas"
                             value={0}
@@ -165,7 +161,7 @@ export default function HomePage() {
                 </Col>
 
                 <Col xs={24} sm={12} xl={6}>
-                    <Card bordered={false} style={{ borderRadius: 14 }}>
+                    <Card variant="borderless" style={{ borderRadius: 14 }}>
                         <Statistic
                             title="Kg cosechados"
                             value={0}
@@ -176,7 +172,7 @@ export default function HomePage() {
                 </Col>
 
                 <Col xs={24} sm={12} xl={6}>
-                    <Card bordered={false} style={{ borderRadius: 14 }}>
+                    <Card variant="borderless" style={{ borderRadius: 14 }}>
                         <Statistic
                             title="Procesos controlados"
                             value={0}
@@ -186,7 +182,7 @@ export default function HomePage() {
                 </Col>
 
                 <Col xs={24} sm={12} xl={6}>
-                    <Card bordered={false} style={{ borderRadius: 14 }}>
+                    <Card variant="borderless" style={{ borderRadius: 14 }}>
                         <Statistic
                             title="Rendimiento promedio"
                             value={0}

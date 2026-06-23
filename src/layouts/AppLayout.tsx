@@ -1,30 +1,63 @@
 import {
-    BarChartOutlined,
     FileExcelOutlined,
+    DesktopOutlined,
+    FileTextOutlined,
     HomeOutlined,
     MenuFoldOutlined,
     MenuUnfoldOutlined,
+    MoonOutlined,
     PartitionOutlined,
     SettingOutlined,
     ShopOutlined,
+    SunOutlined,
+    TeamOutlined,
 } from "@ant-design/icons";
-import { Button, Grid, Layout, Menu, Typography } from "antd";
+import { Button, Grid, Layout, Menu, Space, Tooltip, Typography, theme as antdTheme } from "antd";
 import { useState } from "react";
-import type { ReactNode } from "react";
+import { useNavigate, Outlet } from "react-router-dom";
 
 const { Header, Sider, Content } = Layout;
 const { Text } = Typography;
 const { useBreakpoint } = Grid;
 
+type ThemeMode = "light" | "dark" | "system";
+
+// Props para controlar el tema desde App.
 type AppLayoutProps = {
-    children: ReactNode;
+    themeMode: ThemeMode;
+    onThemeModeChange: (themeMode: ThemeMode) => void;
 };
 
-export default function AppLayout({ children }: AppLayoutProps) {
+export default function AppLayout({ themeMode, onThemeModeChange }: AppLayoutProps) {
+    // useNavigate permite navegar entre rutas al hacer clic en los items del menú.
+    const navigate = useNavigate();
+    // Tokens visuales que cambian con el tema.
+    const { token } = antdTheme.useToken();
     const screens = useBreakpoint();
     const isMobile = !screens.md;
 
     const [collapsed, setCollapsed] = useState(false);
+
+    // Maneja el clic en cualquier menú (desktop o móvil) y navega según la key del item.
+    const handleMenuClick = ({ key }: { key: string }) => {
+        if (key === "inicio") {
+            navigate("/inicio");
+        } else if (key === "cosechas") {
+            navigate("/cosechas");
+        } else if (key === "clientes") {
+            // Navega al módulo de clientes.
+            navigate("/clientes");
+        } else if (key === "facturacion") {
+            // Navega al módulo de facturación.
+            navigate("/facturacion");
+        } else if (key === "trazabilidad") {
+            navigate("/trazabilidad");
+        } else if (key === "reportes") {
+            navigate("/reportes");
+        } else if (key === "configuracion") {
+            navigate("/configuracion");
+        }
+    };
 
     const sidebarCollapsed = isMobile ? true : collapsed;
 
@@ -93,6 +126,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
                         theme="dark"
                         mode="inline"
                         defaultSelectedKeys={["inicio"]}
+                        onClick={handleMenuClick}
                         style={{
                             background: "#111827",
                             borderRight: "none",
@@ -105,47 +139,48 @@ export default function AppLayout({ children }: AppLayoutProps) {
                                 label: "Inicio",
                             },
                             {
-                                key: "dashboard",
-                                icon: <BarChartOutlined />,
-                                label: "Dashboard",
-                                disabled: true,
-                            },
-                            {
                                 key: "cosechas",
                                 icon: <ShopOutlined />,
                                 label: "Cosechas",
-                                disabled: true,
+                            },
+                            // Ítems activos del módulo comercial.
+                            {
+                                key: "clientes",
+                                icon: <TeamOutlined />,
+                                label: "Clientes",
+                            },
+                            {
+                                key: "facturacion",
+                                icon: <FileTextOutlined />,
+                                label: "Facturación",
                             },
                             {
                                 key: "trazabilidad",
                                 icon: <PartitionOutlined />,
                                 label: "Trazabilidad",
-                                disabled: true,
                             },
                             {
                                 key: "reportes",
                                 icon: <FileExcelOutlined />,
                                 label: "Reportes",
-                                disabled: true,
                             },
                             {
                                 key: "configuracion",
                                 icon: <SettingOutlined />,
                                 label: "Configuración",
-                                disabled: true,
                             },
                         ]}
                     />
                 </Sider>
             )}
 
-            <Layout style={{ width: "100%", minWidth: 0 }}>
+            <Layout style={{ flex: 1, width: "100%" }}>
                 <Header
                     style={{
                         height: isMobile ? "auto" : 80,
                         padding: isMobile ? "16px" : "0 24px",
-                        background: "#ffffff",
-                        borderBottom: "1px solid #e5e7eb",
+                        background: token.colorBgContainer,
+                        borderBottom: `1px solid ${token.colorBorderSecondary}`,
                         display: "flex",
                         alignItems: isMobile ? "flex-start" : "center",
                         justifyContent: "space-between",
@@ -190,7 +225,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
 
                             <Text
                                 style={{
-                                    color: "#6b7280",
+                                    color: token.colorTextSecondary,
                                     fontSize: isMobile ? 13 : 14,
                                     lineHeight: 1.4,
                                 }}
@@ -200,10 +235,39 @@ export default function AppLayout({ children }: AppLayoutProps) {
                         </div>
                     </div>
 
+                    {/* Botones para cambiar entre temas. */}
+                    <Space.Compact style={{ width: isMobile ? "100%" : "auto", flexShrink: 0 }}>
+                        <Tooltip title="Modo Claro">
+                            <Button
+                                type={themeMode === "light" ? "primary" : "default"}
+                                icon={<SunOutlined />}
+                                onClick={() => onThemeModeChange("light")}
+                                aria-label="Modo Claro"
+                            />
+                        </Tooltip>
+                        <Tooltip title="Modo Oscuro">
+                            <Button
+                                type={themeMode === "dark" ? "primary" : "default"}
+                                icon={<MoonOutlined />}
+                                onClick={() => onThemeModeChange("dark")}
+                                aria-label="Modo Oscuro"
+                            />
+                        </Tooltip>
+                        <Tooltip title="Sistema">
+                            <Button
+                                type={themeMode === "system" ? "primary" : "default"}
+                                icon={<DesktopOutlined />}
+                                onClick={() => onThemeModeChange("system")}
+                                aria-label="Sistema"
+                            />
+                        </Tooltip>
+                    </Space.Compact>
+
                     {isMobile && (
                         <Menu
                             mode="horizontal"
                             defaultSelectedKeys={["inicio"]}
+                            onClick={handleMenuClick}
                             style={{
                                 width: "100%",
                                 borderBottom: "none",
@@ -218,19 +282,32 @@ export default function AppLayout({ children }: AppLayoutProps) {
                                     key: "cosechas",
                                     icon: <ShopOutlined />,
                                     label: "Cosechas",
-                                    disabled: true,
+                                },
+                                // Ítems comerciales visibles en móvil.
+                                {
+                                    key: "clientes",
+                                    icon: <TeamOutlined />,
+                                    label: "Clientes",
+                                },
+                                {
+                                    key: "facturacion",
+                                    icon: <FileTextOutlined />,
+                                    label: "Facturación",
                                 },
                                 {
                                     key: "trazabilidad",
                                     icon: <PartitionOutlined />,
                                     label: "Trazabilidad",
-                                    disabled: true,
                                 },
                                 {
                                     key: "reportes",
                                     icon: <FileExcelOutlined />,
                                     label: "Reportes",
-                                    disabled: true,
+                                },
+                                {
+                                    key: "configuracion",
+                                    icon: <SettingOutlined />,
+                                    label: "Configuración",
                                 },
                             ]}
                         />
@@ -239,14 +316,14 @@ export default function AppLayout({ children }: AppLayoutProps) {
 
                 <Content
                     style={{
-                        background: "#f3f4f6",
-                        padding: isMobile ? 12 : 24,
-                        width: "100%",
-                        minWidth: 0,
-                        overflowX: "hidden",
+                        // Fondo adaptable al tema seleccionado.
+                        background: token.colorBgLayout,
+                        padding: 24,
+                        flex: 1,
+                        overflow: "auto",
                     }}
                 >
-                    {children}
+                    <Outlet />
                 </Content>
             </Layout>
         </Layout>
