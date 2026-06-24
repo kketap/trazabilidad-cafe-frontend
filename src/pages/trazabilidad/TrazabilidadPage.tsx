@@ -1,118 +1,163 @@
-import { Button, Card, Col, DatePicker, Form, InputNumber, Modal, Row, Select, Space, Statistic, Table, Typography } from "antd";
+import { useEffect, useState } from "react";
+import {
+    Button,
+    Card,
+    Col,
+    DatePicker,
+    Form,
+    InputNumber,
+    message,
+    Modal,
+    Row,
+    Select,
+    Space,
+    Statistic,
+    Table,
+    Typography,
+} from "antd";
 import { EyeOutlined, PlusOutlined } from "@ant-design/icons";
-import { useState } from "react";
 import type { Dayjs } from "dayjs";
 import type { ColumnsType } from "antd/es/table";
 
-type ProcesoTrazabilidad = {
-    id: string;
-    fecha: string;
-    loteOrigen: string;
-    etapa: string;
-    kilosIngresados: number;
-    kilosResultantes: number;
-    porcentajeMerma: number;
-};
+import { getCosechas, type Cosecha } from "../cosechas/cosechas.api";
+import {
+    createProcesoTrazabilidad,
+    getProcesosTrazabilidad,
+    type CreateProcesoTrazabilidadDto,
+    type ProcesoTrazabilidad,
+} from "./trazabilidad.api";
 
 type ProcesoFormValues = {
     fecha: Dayjs;
-    loteOrigen: string;
+    cosechaId: number;
     etapa: string;
     kilosIngresados: number;
     kilosResultantes: number;
     porcentajeMerma: number;
 };
 
-const MOCK_TRAZABILIDAD: ProcesoTrazabilidad[] = [
-    {
-        id: "1",
-        fecha: "2026-06-11",
-        loteOrigen: "COSECHA-2026-001",
-        etapa: "Secado",
-        kilosIngresados: 180,
-        kilosResultantes: 145,
-        porcentajeMerma: 19.44,
-    },
-    {
-        id: "2",
-        fecha: "2026-06-15",
-        loteOrigen: "COSECHA-2026-002",
-        etapa: "Trilla",
-        kilosIngresados: 260,
-        kilosResultantes: 208,
-        porcentajeMerma: 20,
-    },
-    {
-        id: "3",
-        fecha: "2026-06-21",
-        loteOrigen: "COSECHA-2026-003",
-        etapa: "Clasificación",
-        kilosIngresados: 95,
-        kilosResultantes: 82,
-        porcentajeMerma: 13.68,
-    },
-];
-
 export default function TrazabilidadPage() {
-    const [procesos, setProcesos] = useState<ProcesoTrazabilidad[]>(MOCK_TRAZABILIDAD);
+    const [procesos, setProcesos] = useState<ProcesoTrazabilidad[]>([]);
+    const [cosechas, setCosechas] = useState<Cosecha[]>([]);
+
+    const [loading, setLoading] = useState(false);
+    const [saving, setSaving] = useState(false);
+
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [form] = Form.useForm<ProcesoFormValues>();
 
-    const handleRegister = () => {
-        setIsModalOpen(true);
-    };
+    useEffect(() => {
+        cargarDatos();
+    }, []);
 
-    const handleCancel = () => {
+    async function cargarDatos() {
+        try {
+            setLoading(true);
+
+            const [procesosData, cosechasData] = await Promise.all([
+                getProcesosTrazabilidad(),
+                getCosechas(),
+            ]);
+
+            setProcesos(procesosData);
+            setCosechas(cosechasData);
+        } catch (error) {
+            console.error("Error cargando trazabilidad:", error);
+            message.error("No se pudieron cargar los datos de trazabilidad.");
+        } finally {
+            setLoading(false);
+        }
+    }
+
+    function handleRegister() {
+        setIsModalOpen(true);
+    }
+
+    function handleCancel() {
         setIsModalOpen(false);
         form.resetFields();
-    };
+    }
 
-    const handleValuesChange = (changedValues: Partial<ProcesoFormValues>) => {
-        if ("kilosIngresados" in changedValues || "kilosResultantes" in changedValues) {
+    function handleValuesChange(changedValues: Partial<ProcesoFormValues>) {
+        if (
+            "kilosIngresados" in changedValues ||
+            "kilosResultantes" in changedValues
+        ) {
             const kilosIngresados = form.getFieldValue("kilosIngresados") ?? 0;
             const kilosResultantes = form.getFieldValue("kilosResultantes") ?? 0;
-            const porcentajeMerma = kilosIngresados > 0 ? ((kilosIngresados - kilosResultantes) / kilosIngresados) * 100 : 0;
 
-            form.setFieldsValue({ porcentajeMerma });
+            const porcentajeMerma =
+                kilosIngresados > 0
+                    ? ((kilosIngresados - kilosResultantes) / kilosIngresados) * 100
+                    : 0;
+
+            form.setFieldsValue({
+                porcentajeMerma: Number(porcentajeMerma.toFixed(2)),
+            });
         }
-    };
+    }
 
-    const onFinish = (values: ProcesoFormValues) => {
-        const nuevoProceso: ProcesoTrazabilidad = {
-            id: Date.now().toString(),
-            fecha: values.fecha.format("YYYY-MM-DD"),
-            loteOrigen: values.loteOrigen,
-            etapa: values.etapa,
-            kilosIngresados: values.kilosIngresados,
-            kilosResultantes: values.kilosResultantes,
-            porcentajeMerma: values.porcentajeMerma,
-        };
+    async function onFinish(values: ProcesoFormValues) {
+        try {
+            setSaving(true);
 
-        setProcesos((currentProcesos) => [...currentProcesos, nuevoProceso]);
-        setIsModalOpen(false);
-        form.resetFields();
-    };
+            const payload: CreateProcesoTrazabilidadDto = {
+                fecha: values.fecha.format("YYYY-MM-DD"),
+                cosechaId: values.cosechaId,
+                etapa: values.etapa,
+                kilosIngresados: values.kilosIngresados,
+                kilosResultantes: values.kilosResultantes,
+            };
 
-    const handleView = (proceso: ProcesoTrazabilidad) => {
+            const nuevoProceso = await createProcesoTrazabilidad(payload);
+
+            setProcesos((currentProcesos) => [nuevoProceso, ...currentProcesos]);
+            message.success("Proceso registrado correctamente.");
+
+            setIsModalOpen(false);
+            form.resetFields();
+        } catch (error) {
+            console.error("Error registrando proceso:", error);
+            message.error("No se pudo registrar el proceso.");
+        } finally {
+            setSaving(false);
+        }
+    }
+
+    function handleView(proceso: ProcesoTrazabilidad) {
         console.log("Ver proceso:", proceso);
-    };
+    }
 
-    const mermaPromedio = procesos.length > 0
-        ? procesos.reduce((total, proceso) => total + proceso.porcentajeMerma, 0) / procesos.length
-        : 0;
-    const totalIngresado = procesos.reduce((total, proceso) => total + proceso.kilosIngresados, 0);
-    const totalResultante = procesos.reduce((total, proceso) => total + proceso.kilosResultantes, 0);
+    const mermaPromedio =
+        procesos.length > 0
+            ? procesos.reduce(
+                (total, proceso) => total + proceso.porcentajeMerma,
+                0,
+            ) / procesos.length
+            : 0;
+
+    const totalIngresado = procesos.reduce(
+        (total, proceso) => total + proceso.kilosIngresados,
+        0,
+    );
+
+    const totalResultante = procesos.reduce(
+        (total, proceso) => total + proceso.kilosResultantes,
+        0,
+    );
 
     const columns: ColumnsType<ProcesoTrazabilidad> = [
         {
             title: "Fecha",
             dataIndex: "fecha",
             key: "fecha",
+            render: (fecha: string) => fecha.slice(0, 10),
         },
         {
             title: "Lote Origen",
-            dataIndex: "loteOrigen",
             key: "loteOrigen",
+            render: (_, record) =>
+                record.cosecha?.lotes ?? `Cosecha #${record.cosechaId}`,
         },
         {
             title: "Etapa",
@@ -123,28 +168,42 @@ export default function TrazabilidadPage() {
             title: "Kilos Ingresados",
             dataIndex: "kilosIngresados",
             key: "kilosIngresados",
-            render: (kilosIngresados: number) => kilosIngresados.toLocaleString("es-CL"),
+            render: (kilosIngresados: number) =>
+                kilosIngresados.toLocaleString("es-CL"),
         },
         {
             title: "Kilos Resultantes",
             dataIndex: "kilosResultantes",
             key: "kilosResultantes",
-            render: (kilosResultantes: number) => kilosResultantes.toLocaleString("es-CL"),
+            render: (kilosResultantes: number) =>
+                kilosResultantes.toLocaleString("es-CL"),
         },
         {
             title: "% Merma",
             dataIndex: "porcentajeMerma",
             key: "porcentajeMerma",
-            render: (porcentajeMerma: number) => `${porcentajeMerma.toLocaleString("es-CL")}%`,
+            render: (porcentajeMerma: number) =>
+                `${porcentajeMerma.toLocaleString("es-CL", {
+                    maximumFractionDigits: 2,
+                })}%`,
         },
         {
             title: "Acciones",
             key: "acciones",
             render: (_, record) => (
-                <Button type="link" icon={<EyeOutlined />} onClick={() => handleView(record)} />
+                <Button
+                    type="link"
+                    icon={<EyeOutlined />}
+                    onClick={() => handleView(record)}
+                />
             ),
         },
     ];
+
+    const cosechaOptions = cosechas.map((cosecha) => ({
+        value: cosecha.id,
+        label: `${cosecha.lotes} - ${cosecha.fecha.slice(0, 10)} - ${cosecha.kilosCosechados.toLocaleString("es-CL")} kg`,
+    }));
 
     return (
         <div>
@@ -161,6 +220,7 @@ export default function TrazabilidadPage() {
                     <Typography.Title level={2} style={{ margin: 0 }}>
                         Control de Trazabilidad
                     </Typography.Title>
+
                     <Button type="primary" icon={<PlusOutlined />} onClick={handleRegister}>
                         Registrar Proceso
                     </Button>
@@ -177,6 +237,7 @@ export default function TrazabilidadPage() {
                             />
                         </Card>
                     </Col>
+
                     <Col xs={24} md={8}>
                         <Card hoverable>
                             <Statistic
@@ -187,6 +248,7 @@ export default function TrazabilidadPage() {
                             />
                         </Card>
                     </Col>
+
                     <Col xs={24} md={8}>
                         <Card hoverable>
                             <Statistic
@@ -204,6 +266,7 @@ export default function TrazabilidadPage() {
                     dataSource={procesos}
                     rowKey="id"
                     bordered
+                    loading={loading}
                     pagination={false}
                 />
             </Space>
@@ -213,6 +276,7 @@ export default function TrazabilidadPage() {
                 open={isModalOpen}
                 onCancel={handleCancel}
                 footer={null}
+                destroyOnHidden
             >
                 <Form
                     form={form}
@@ -224,36 +288,31 @@ export default function TrazabilidadPage() {
                     <Form.Item
                         label="Fecha"
                         name="fecha"
-                        rules={[
-                            { required: true, message: "La fecha es obligatoria" },
-                        ]}
+                        rules={[{ required: true, message: "La fecha es obligatoria" }]}
                     >
                         <DatePicker style={{ width: "100%" }} />
                     </Form.Item>
 
                     <Form.Item
                         label="Lote Origen"
-                        name="loteOrigen"
+                        name="cosechaId"
                         rules={[
                             { required: true, message: "El lote origen es obligatorio" },
                         ]}
                     >
                         <Select
-                            placeholder="Seleccione un lote"
-                            options={[
-                                { value: "COSECHA-2026-001", label: "COSECHA-2026-001" },
-                                { value: "COSECHA-2026-002", label: "COSECHA-2026-002" },
-                                { value: "COSECHA-2026-003", label: "COSECHA-2026-003" },
-                            ]}
+                            placeholder="Seleccione una cosecha"
+                            options={cosechaOptions}
+                            showSearch
+                            optionFilterProp="label"
+                            disabled={cosechas.length === 0}
                         />
                     </Form.Item>
 
                     <Form.Item
                         label="Etapa"
                         name="etapa"
-                        rules={[
-                            { required: true, message: "La etapa es obligatoria" },
-                        ]}
+                        rules={[{ required: true, message: "La etapa es obligatoria" }]}
                     >
                         <Select
                             placeholder="Seleccione una etapa"
@@ -262,6 +321,7 @@ export default function TrazabilidadPage() {
                                 { value: "Lavado", label: "Lavado" },
                                 { value: "Secado", label: "Secado" },
                                 { value: "Trilla", label: "Trilla" },
+                                { value: "Clasificación", label: "Clasificación" },
                             ]}
                         />
                     </Form.Item>
@@ -270,7 +330,10 @@ export default function TrazabilidadPage() {
                         label="Kilos Ingresados"
                         name="kilosIngresados"
                         rules={[
-                            { required: true, message: "Los kilos ingresados son obligatorios" },
+                            {
+                                required: true,
+                                message: "Los kilos ingresados son obligatorios",
+                            },
                         ]}
                     >
                         <InputNumber
@@ -284,7 +347,10 @@ export default function TrazabilidadPage() {
                         label="Kilos Resultantes"
                         name="kilosResultantes"
                         rules={[
-                            { required: true, message: "Los kilos resultantes son obligatorios" },
+                            {
+                                required: true,
+                                message: "Los kilos resultantes son obligatorios",
+                            },
                         ]}
                     >
                         <InputNumber
@@ -294,10 +360,7 @@ export default function TrazabilidadPage() {
                         />
                     </Form.Item>
 
-                    <Form.Item
-                        label="% Merma"
-                        name="porcentajeMerma"
-                    >
+                    <Form.Item label="% Merma" name="porcentajeMerma">
                         <InputNumber
                             style={{ width: "100%" }}
                             readOnly
@@ -306,9 +369,10 @@ export default function TrazabilidadPage() {
                     </Form.Item>
 
                     <Form.Item>
-                        <Button type="primary" htmlType="submit">
+                        <Button type="primary" htmlType="submit" loading={saving}>
                             Guardar
                         </Button>
+
                         <Button style={{ marginLeft: 8 }} onClick={handleCancel}>
                             Cancelar
                         </Button>

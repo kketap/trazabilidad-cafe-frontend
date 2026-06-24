@@ -1,21 +1,36 @@
-import { useState } from "react";
-import { Button, Card, Col, DatePicker, Form, Input, InputNumber, Modal, Row, Select, Space, Statistic, Table, Typography } from "antd";
+import { useEffect, useState } from "react";
+import {
+    Button,
+    Card,
+    Col,
+    DatePicker,
+    Form,
+    Input,
+    InputNumber,
+    message,
+    Modal,
+    Row,
+    Select,
+    Space,
+    Statistic,
+    Table,
+    Typography,
+} from "antd";
 import { DeleteOutlined, EditOutlined, PlusOutlined } from "@ant-design/icons";
 import type { Dayjs } from "dayjs";
 import type { ColumnsType } from "antd/es/table";
 
-// Tipo de datos usado en la tabla de cosechas.
-type Cosecha = {
-    id: string;
-    fecha: string;
-    kilosCosechados: number;
-    cantidadCosechadores: number;
-    lotes: string;
-    totalHectareas: number;
-    tipoCosecha: string;
-};
+import {
+    createCosecha,
+    deleteCosecha,
+    getCosechas,
+    updateCosecha,
+    type Cosecha,
+    type CreateCosechaDto,
+} from "./cosechas.api";
 
-// Tipo de datos capturados por el formulario del modal.
+import dayjs from "dayjs";
+
 type CosechaFormValues = {
     fecha: Dayjs;
     kilosCosechados: number;
@@ -25,101 +40,155 @@ type CosechaFormValues = {
     tipoCosecha: string;
 };
 
-// Datos de prueba para mostrar la tabla mientras no haya backend.
-const MOCK_COSECHAS: Cosecha[] = [
-    {
-        id: "1",
-        fecha: "2026-06-15",
-        kilosCosechados: 180,
-        cantidadCosechadores: 4,
-        lotes: "Lote A-01",
-        totalHectareas: 2.5,
-        tipoCosecha: "Rebusque",
-    },
-    {
-        id: "2",
-        fecha: "2026-06-18",
-        kilosCosechados: 320,
-        cantidadCosechadores: 6,
-        lotes: "Lote B-03",
-        totalHectareas: 4.0,
-        tipoCosecha: "Rebusque",
-    },
-    {
-        id: "3",
-        fecha: "2026-06-20",
-        kilosCosechados: 95,
-        cantidadCosechadores: 3,
-        lotes: "Lote C-02",
-        totalHectareas: 1.8,
-        tipoCosecha: "Rebusque",
-    },
-];
-
 export default function CosechasPage() {
-    // Estado local que contiene las cosechas visibles en la tabla.
-    const [cosechas, setCosechas] = useState<Cosecha[]>(MOCK_COSECHAS);
-    // Estado que controla si el modal de registro está abierto o cerrado.
+    const [cosechas, setCosechas] = useState<Cosecha[]>([]);
+    const [loading, setLoading] = useState(false);
+    const [saving, setSaving] = useState(false);
+
     const [isModalVisible, setIsModalVisible] = useState(false);
-    // Instancia del formulario para manejar validación, envío y limpieza.
     const [form] = Form.useForm<CosechaFormValues>();
 
-    // Abre el modal al hacer clic en "Registrar Cosecha".
-    const showModal = () => {
+    const [editingCosecha, setEditingCosecha] = useState<Cosecha | null>(null);
+
+    useEffect(() => {
+        cargarCosechas();
+    }, []);
+
+    async function cargarCosechas() {
+        try {
+            setLoading(true);
+            const data = await getCosechas();
+            setCosechas(data);
+        } catch (error) {
+            console.error("Error cargando cosechas:", error);
+            message.error("No se pudieron cargar las cosechas.");
+        } finally {
+            setLoading(false);
+        }
+    }
+
+    function showModal() {
+        setEditingCosecha(null);
+        form.resetFields();
         setIsModalVisible(true);
-    };
+    }
 
-    // Cierra el modal y limpia los campos del formulario.
-    const handleCancel = () => {
+    function handleCancel() {
         setIsModalVisible(false);
+        setEditingCosecha(null);
         form.resetFields();
-    };
+    }
 
-    // Se ejecuta cuando el formulario es válido; agrega la nueva cosecha al estado local.
-    const onFinish = (values: CosechaFormValues) => {
-        const nuevaCosecha: Cosecha = {
-            id: Date.now().toString(),
-            fecha: values.fecha.format("YYYY-MM-DD"),
-            kilosCosechados: values.kilosCosechados,
-            cantidadCosechadores: values.cantidadCosechadores,
-            lotes: values.lotes,
-            totalHectareas: values.totalHectareas,
-            tipoCosecha: values.tipoCosecha,
-        };
+    async function onFinish(values: CosechaFormValues) {
+        try {
+            setSaving(true);
 
-        console.log("Datos de la cosecha:", nuevaCosecha);
-        setCosechas((currentCosechas) => [...currentCosechas, nuevaCosecha]);
-        setIsModalVisible(false);
-        form.resetFields();
-    };
+            const payload: CreateCosechaDto = {
+                fecha: values.fecha.format("YYYY-MM-DD"),
+                kilosCosechados: values.kilosCosechados,
+                cantidadCosechadores: values.cantidadCosechadores,
+                lotes: values.lotes,
+                totalHectareas: values.totalHectareas,
+                tipoCosecha: values.tipoCosecha,
+            };
 
-    // Por ahora solo imprime en consola la cosecha seleccionada para edición.
-    const handleEdit = (cosecha: Cosecha) => {
-        console.log("Editar cosecha:", cosecha);
-    };
+            if (editingCosecha) {
+                const cosechaActualizada = await updateCosecha(
+                    editingCosecha.id,
+                    payload,
+                );
 
-    // Elimina visualmente la cosecha filtrándola del estado local.
-    const handleDelete = (id: string) => {
-        setCosechas((currentCosechas) =>
-            currentCosechas.filter((cosecha) => cosecha.id !== id),
-        );
-    };
+                setCosechas((currentCosechas) =>
+                    currentCosechas.map((cosecha) =>
+                        cosecha.id === editingCosecha.id ? cosechaActualizada : cosecha,
+                    ),
+                );
 
-    const kilosTotales = cosechas.reduce((total, cosecha) => total + cosecha.kilosCosechados, 0);
-    const totalHectareas = cosechas.reduce((total, cosecha) => total + cosecha.totalHectareas, 0);
+                message.success("Cosecha actualizada correctamente.");
+            } else {
+                const nuevaCosecha = await createCosecha(payload);
+
+                setCosechas((currentCosechas) => [nuevaCosecha, ...currentCosechas]);
+
+                message.success("Cosecha registrada correctamente.");
+            }
+
+            setIsModalVisible(false);
+            setEditingCosecha(null);
+            form.resetFields();
+        } catch (error) {
+            console.error("Error guardando cosecha:", error);
+            message.error("No se pudo guardar la cosecha.");
+        } finally {
+            setSaving(false);
+        }
+    }
+
+    function handleEdit(cosecha: Cosecha) {
+        setEditingCosecha(cosecha);
+
+        form.setFieldsValue({
+            fecha: dayjs(cosecha.fecha),
+            kilosCosechados: cosecha.kilosCosechados,
+            cantidadCosechadores: cosecha.cantidadCosechadores,
+            lotes: cosecha.lotes,
+            totalHectareas: cosecha.totalHectareas,
+            tipoCosecha: cosecha.tipoCosecha,
+        });
+
+        setIsModalVisible(true);
+    }
+
+    function handleDelete(id: number) {
+        Modal.confirm({
+            title: "Eliminar cosecha",
+            content:
+                "¿Seguro que deseas eliminar esta cosecha? Si tiene procesos de trazabilidad asociados, también podrían eliminarse.",
+            okText: "Eliminar",
+            cancelText: "Cancelar",
+            okButtonProps: {
+                danger: true,
+            },
+            async onOk() {
+                try {
+                    await deleteCosecha(id);
+                    setCosechas((currentCosechas) =>
+                        currentCosechas.filter((cosecha) => cosecha.id !== id),
+                    );
+                    message.success("Cosecha eliminada correctamente.");
+                } catch (error) {
+                    console.error("Error eliminando cosecha:", error);
+                    message.error("No se pudo eliminar la cosecha.");
+                }
+            },
+        });
+    }
+
+    const kilosTotales = cosechas.reduce(
+        (total, cosecha) => total + cosecha.kilosCosechados,
+        0,
+    );
+
+    const totalHectareas = cosechas.reduce(
+        (total, cosecha) => total + cosecha.totalHectareas,
+        0,
+    );
+
     const rendimiento = totalHectareas > 0 ? kilosTotales / totalHectareas : 0;
 
-    // Columnas de la tabla: Fecha, Kilos Cosechados, Cantidad Cosechadores, Lotes, Total Hectáreas, Tipo Cosecha y Acciones.
     const columns: ColumnsType<Cosecha> = [
         {
             title: "Fecha",
             dataIndex: "fecha",
             key: "fecha",
+            render: (fecha: string) => fecha.slice(0, 10),
         },
         {
             title: "Kilos Cosechados",
             dataIndex: "kilosCosechados",
             key: "kilosCosechados",
+            render: (kilosCosechados: number) =>
+                kilosCosechados.toLocaleString("es-CL"),
         },
         {
             title: "Cantidad Cosechadores",
@@ -135,6 +204,8 @@ export default function CosechasPage() {
             title: "Total Hectáreas",
             dataIndex: "totalHectareas",
             key: "totalHectareas",
+            render: (totalHectareas: number) =>
+                totalHectareas.toLocaleString("es-CL"),
         },
         {
             title: "Tipo Cosecha",
@@ -146,8 +217,17 @@ export default function CosechasPage() {
             key: "acciones",
             render: (_, record) => (
                 <Space size="small">
-                    <Button type="link" icon={<EditOutlined />} onClick={() => handleEdit(record)} />
-                    <Button type="link" danger icon={<DeleteOutlined />} onClick={() => handleDelete(record.id)} />
+                    <Button
+                        type="link"
+                        icon={<EditOutlined />}
+                        onClick={() => handleEdit(record)}
+                    />
+                    <Button
+                        type="link"
+                        danger
+                        icon={<DeleteOutlined />}
+                        onClick={() => handleDelete(record.id)}
+                    />
                 </Space>
             ),
         },
@@ -155,7 +235,6 @@ export default function CosechasPage() {
 
     return (
         <div>
-            {/* Encabezado de la vista con título, subtítulo y botón para registrar. */}
             <Space orientation="vertical" size="large" style={{ width: "100%" }}>
                 <div
                     style={{
@@ -174,6 +253,7 @@ export default function CosechasPage() {
                             Registro y gestión de las cosechas realizadas.
                         </Typography.Text>
                     </div>
+
                     <Button type="primary" icon={<PlusOutlined />} onClick={showModal}>
                         Registrar Cosecha
                     </Button>
@@ -190,6 +270,7 @@ export default function CosechasPage() {
                             />
                         </Card>
                     </Col>
+
                     <Col xs={24} md={8}>
                         <Card hoverable>
                             <Statistic
@@ -200,6 +281,7 @@ export default function CosechasPage() {
                             />
                         </Card>
                     </Col>
+
                     <Col xs={24} md={8}>
                         <Card hoverable>
                             <Statistic
@@ -212,24 +294,23 @@ export default function CosechasPage() {
                     </Col>
                 </Row>
 
-                {/* Tabla que muestra las cosechas almacenadas en el estado local. */}
                 <Table
                     columns={columns}
                     dataSource={cosechas}
                     rowKey="id"
                     bordered
+                    loading={loading}
                     pagination={false}
                 />
             </Space>
 
-            {/* Modal con el formulario para registrar una nueva cosecha. */}
             <Modal
-                title="Registrar Cosecha"
+                title={editingCosecha ? "Editar Cosecha" : "Registrar Cosecha"}
                 open={isModalVisible}
                 onCancel={handleCancel}
                 footer={null}
+                destroyOnHidden
             >
-                {/* Formulario con validaciones de campos requeridos. */}
                 <Form
                     form={form}
                     layout="vertical"
@@ -239,9 +320,7 @@ export default function CosechasPage() {
                     <Form.Item
                         label="Fecha"
                         name="fecha"
-                        rules={[
-                            { required: true, message: "La fecha es obligatoria" },
-                        ]}
+                        rules={[{ required: true, message: "La fecha es obligatoria" }]}
                     >
                         <DatePicker style={{ width: "100%" }} />
                     </Form.Item>
@@ -250,7 +329,10 @@ export default function CosechasPage() {
                         label="Kilos Cosechados"
                         name="kilosCosechados"
                         rules={[
-                            { required: true, message: "Los kilos cosechados son obligatorios" },
+                            {
+                                required: true,
+                                message: "Los kilos cosechados son obligatorios",
+                            },
                         ]}
                     >
                         <InputNumber
@@ -264,7 +346,10 @@ export default function CosechasPage() {
                         label="Cantidad Cosechadores"
                         name="cantidadCosechadores"
                         rules={[
-                            { required: true, message: "La cantidad de cosechadores es obligatoria" },
+                            {
+                                required: true,
+                                message: "La cantidad de cosechadores es obligatoria",
+                            },
                         ]}
                     >
                         <InputNumber
@@ -277,18 +362,19 @@ export default function CosechasPage() {
                     <Form.Item
                         label="Lotes"
                         name="lotes"
-                        rules={[
-                            { required: true, message: "Los lotes son obligatorios" },
-                        ]}
+                        rules={[{ required: true, message: "Los lotes son obligatorios" }]}
                     >
-                        <Input placeholder="Ej: Lote 1" />
+                        <Input placeholder="Ej: Lote A-01" />
                     </Form.Item>
 
                     <Form.Item
                         label="Total Hectáreas"
                         name="totalHectareas"
                         rules={[
-                            { required: true, message: "El total de hectáreas es obligatorio" },
+                            {
+                                required: true,
+                                message: "El total de hectáreas es obligatorio",
+                            },
                         ]}
                     >
                         <InputNumber
@@ -309,14 +395,17 @@ export default function CosechasPage() {
                             placeholder="Seleccione un tipo de cosecha"
                             options={[
                                 { value: "Rebusque", label: "Rebusque" },
+                                { value: "Selectiva", label: "Selectiva" },
+                                { value: "Manual", label: "Manual" },
                             ]}
                         />
                     </Form.Item>
 
                     <Form.Item>
-                        <Button type="primary" htmlType="submit">
-                            Guardar
+                        <Button type="primary" htmlType="submit" loading={saving}>
+                            {editingCosecha ? "Actualizar" : "Guardar"}
                         </Button>
+
                         <Button style={{ marginLeft: 8 }} onClick={handleCancel}>
                             Cancelar
                         </Button>

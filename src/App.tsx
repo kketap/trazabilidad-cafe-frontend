@@ -3,10 +3,10 @@ import { ConfigProvider, theme } from "antd";
 import { Routes, Route, Navigate } from "react-router-dom";
 import AppLayout from "./layouts/AppLayout";
 import HomePage from "./pages/HomePage";
-import CosechasPage from "./pages/CosechasPage";
+import CosechasPage from "./pages/cosechas/CosechasPage";
 import ClientesPage from "./pages/ClientesPage";
 import FacturacionPage from "./pages/FacturacionPage";
-import TrazabilidadPage from "./pages/TrazabilidadPage";
+import TrazabilidadPage from "./pages/trazabilidad/TrazabilidadPage";
 import ReportesPage from "./pages/ReportesPage";
 import ConfiguracionPage from "./pages/ConfiguracionPage";
 
