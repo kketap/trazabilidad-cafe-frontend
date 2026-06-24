@@ -1,24 +1,14 @@
 // src/pages/cosechas/CosechasPage.tsx
 import { useState } from "react";
-import { Button, Card, Col, DatePicker, Form, Input, InputNumber, Modal, Row, Select, Space, Statistic, Table, Typography } from "antd";
+import { Button, Card, Col, Row, Space, Statistic, Table, Typography } from "antd";
 import { DeleteOutlined, EditOutlined, PlusOutlined } from "@ant-design/icons";
-import type { Dayjs } from "dayjs";
 import type { ColumnsType } from "antd/es/table";
+import CrearCosechaModal, { type CosechaFormValues } from "../../components/cosechas-modals/CrearCosechaModal";
 
 // Tipo de datos usado en la tabla de cosechas.
 type Cosecha = {
     id: string;
     fecha: string;
-    kilosCosechados: number;
-    cantidadCosechadores: number;
-    lotes: string;
-    totalHectareas: number;
-    tipoCosecha: string;
-};
-
-// Tipo de datos capturados por el formulario del modal.
-type CosechaFormValues = {
-    fecha: Dayjs;
     kilosCosechados: number;
     cantidadCosechadores: number;
     lotes: string;
@@ -62,22 +52,19 @@ export default function CosechasPage() {
     const [cosechas, setCosechas] = useState<Cosecha[]>(MOCK_COSECHAS);
     // Estado que controla si el modal de registro está abierto o cerrado.
     const [isModalVisible, setIsModalVisible] = useState(false);
-    // Instancia del formulario para manejar validación, envío y limpieza.
-    const [form] = Form.useForm<CosechaFormValues>();
 
     // Abre el modal al hacer clic en "Registrar Cosecha".
     const showModal = () => {
         setIsModalVisible(true);
     };
 
-    // Cierra el modal y limpia los campos del formulario.
+    // Cierra el modal.
     const handleCancel = () => {
         setIsModalVisible(false);
-        form.resetFields();
     };
 
     // Se ejecuta cuando el formulario es válido; agrega la nueva cosecha al estado local.
-    const onFinish = (values: CosechaFormValues) => {
+    const handleSubmit = (values: CosechaFormValues) => {
         const nuevaCosecha: Cosecha = {
             id: Date.now().toString(),
             fecha: values.fecha.format("YYYY-MM-DD"),
@@ -90,7 +77,6 @@ export default function CosechasPage() {
 
         setCosechas((currentCosechas) => [...currentCosechas, nuevaCosecha]);
         setIsModalVisible(false);
-        form.resetFields();
     };
 
     // Placeholder para la edición de cosechas.
@@ -222,107 +208,11 @@ export default function CosechasPage() {
                 />
             </Space>
 
-            {/* Modal con el formulario para registrar una nueva cosecha. */}
-            <Modal
-                title="Registrar Cosecha"
+            <CrearCosechaModal
                 open={isModalVisible}
-                onCancel={handleCancel}
-                footer={null}
-            >
-                {/* Formulario con validaciones de campos requeridos. */}
-                <Form
-                    form={form}
-                    layout="vertical"
-                    onFinish={onFinish}
-                    autoComplete="off"
-                >
-                    <Form.Item
-                        label="Fecha"
-                        name="fecha"
-                        rules={[
-                            { required: true, message: "La fecha es obligatoria" },
-                        ]}
-                    >
-                        <DatePicker style={{ width: "100%" }} />
-                    </Form.Item>
-
-                    <Form.Item
-                        label="Kilos Cosechados"
-                        name="kilosCosechados"
-                        rules={[
-                            { required: true, message: "Los kilos cosechados son obligatorios" },
-                        ]}
-                    >
-                        <InputNumber
-                            style={{ width: "100%" }}
-                            min={0}
-                            placeholder="Ej: 150"
-                        />
-                    </Form.Item>
-
-                    <Form.Item
-                        label="Cantidad Cosechadores"
-                        name="cantidadCosechadores"
-                        rules={[
-                            { required: true, message: "La cantidad de cosechadores es obligatoria" },
-                        ]}
-                    >
-                        <InputNumber
-                            style={{ width: "100%" }}
-                            min={0}
-                            placeholder="Ej: 4"
-                        />
-                    </Form.Item>
-
-                    <Form.Item
-                        label="Lotes"
-                        name="lotes"
-                        rules={[
-                            { required: true, message: "Los lotes son obligatorios" },
-                        ]}
-                    >
-                        <Input placeholder="Ej: Lote 1" />
-                    </Form.Item>
-
-                    <Form.Item
-                        label="Total Hectáreas"
-                        name="totalHectareas"
-                        rules={[
-                            { required: true, message: "El total de hectáreas es obligatorio" },
-                        ]}
-                    >
-                        <InputNumber
-                            style={{ width: "100%" }}
-                            min={0}
-                            placeholder="Ej: 2.5"
-                        />
-                    </Form.Item>
-
-                    <Form.Item
-                        label="Tipo Cosecha"
-                        name="tipoCosecha"
-                        rules={[
-                            { required: true, message: "El tipo de cosecha es obligatorio" },
-                        ]}
-                    >
-                        <Select
-                            placeholder="Seleccione un tipo de cosecha"
-                            options={[
-                                { value: "Rebusque", label: "Rebusque" },
-                            ]}
-                        />
-                    </Form.Item>
-
-                    <Form.Item>
-                        <Button type="primary" htmlType="submit">
-                            Guardar
-                        </Button>
-                        <Button style={{ marginLeft: 8 }} onClick={handleCancel}>
-                            Cancelar
-                        </Button>
-                    </Form.Item>
-                </Form>
-            </Modal>
+                onClose={handleCancel}
+                onSubmit={handleSubmit}
+            />
         </div>
     );
 }

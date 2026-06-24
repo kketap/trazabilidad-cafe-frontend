@@ -1,22 +1,13 @@
 // src/pages/trazabilidad/TrazabilidadPage.tsx
-import { Button, Card, Col, DatePicker, Form, InputNumber, Modal, Row, Select, Space, Statistic, Table, Typography } from "antd";
+import { Button, Card, Col, Row, Space, Statistic, Table, Typography } from "antd";
 import { EyeOutlined, PlusOutlined } from "@ant-design/icons";
 import { useState } from "react";
-import type { Dayjs } from "dayjs";
 import type { ColumnsType } from "antd/es/table";
+import CrearProcesoModal, { type ProcesoFormValues } from "../../components/trazabilidad-modals/CrearProcesoModal";
 
 type ProcesoTrazabilidad = {
     id: string;
     fecha: string;
-    loteOrigen: string;
-    etapa: string;
-    kilosIngresados: number;
-    kilosResultantes: number;
-    porcentajeMerma: number;
-};
-
-type ProcesoFormValues = {
-    fecha: Dayjs;
     loteOrigen: string;
     etapa: string;
     kilosIngresados: number;
@@ -57,7 +48,6 @@ const MOCK_TRAZABILIDAD: ProcesoTrazabilidad[] = [
 export default function TrazabilidadPage() {
     const [procesos, setProcesos] = useState<ProcesoTrazabilidad[]>(MOCK_TRAZABILIDAD);
     const [isModalOpen, setIsModalOpen] = useState(false);
-    const [form] = Form.useForm<ProcesoFormValues>();
 
     const handleRegister = () => {
         setIsModalOpen(true);
@@ -65,20 +55,9 @@ export default function TrazabilidadPage() {
 
     const handleCancel = () => {
         setIsModalOpen(false);
-        form.resetFields();
     };
 
-    const handleValuesChange = (changedValues: Partial<ProcesoFormValues>) => {
-        if ("kilosIngresados" in changedValues || "kilosResultantes" in changedValues) {
-            const kilosIngresados = form.getFieldValue("kilosIngresados") ?? 0;
-            const kilosResultantes = form.getFieldValue("kilosResultantes") ?? 0;
-            const porcentajeMerma = kilosIngresados > 0 ? ((kilosIngresados - kilosResultantes) / kilosIngresados) * 100 : 0;
-
-            form.setFieldsValue({ porcentajeMerma });
-        }
-    };
-
-    const onFinish = (values: ProcesoFormValues) => {
+    const handleSubmit = (values: ProcesoFormValues) => {
         const nuevoProceso: ProcesoTrazabilidad = {
             id: Date.now().toString(),
             fecha: values.fecha.format("YYYY-MM-DD"),
@@ -91,7 +70,6 @@ export default function TrazabilidadPage() {
 
         setProcesos((currentProcesos) => [...currentProcesos, nuevoProceso]);
         setIsModalOpen(false);
-        form.resetFields();
     };
 
     const handleView = (_proceso: ProcesoTrazabilidad) => {
@@ -209,113 +187,11 @@ export default function TrazabilidadPage() {
                 />
             </Space>
 
-            <Modal
-                title="Registrar Proceso"
+            <CrearProcesoModal
                 open={isModalOpen}
-                onCancel={handleCancel}
-                footer={null}
-            >
-                <Form
-                    form={form}
-                    layout="vertical"
-                    onFinish={onFinish}
-                    onValuesChange={handleValuesChange}
-                    autoComplete="off"
-                >
-                    <Form.Item
-                        label="Fecha"
-                        name="fecha"
-                        rules={[
-                            { required: true, message: "La fecha es obligatoria" },
-                        ]}
-                    >
-                        <DatePicker style={{ width: "100%" }} />
-                    </Form.Item>
-
-                    <Form.Item
-                        label="Lote Origen"
-                        name="loteOrigen"
-                        rules={[
-                            { required: true, message: "El lote origen es obligatorio" },
-                        ]}
-                    >
-                        <Select
-                            placeholder="Seleccione un lote"
-                            options={[
-                                { value: "COSECHA-2026-001", label: "COSECHA-2026-001" },
-                                { value: "COSECHA-2026-002", label: "COSECHA-2026-002" },
-                                { value: "COSECHA-2026-003", label: "COSECHA-2026-003" },
-                            ]}
-                        />
-                    </Form.Item>
-
-                    <Form.Item
-                        label="Etapa"
-                        name="etapa"
-                        rules={[
-                            { required: true, message: "La etapa es obligatoria" },
-                        ]}
-                    >
-                        <Select
-                            placeholder="Seleccione una etapa"
-                            options={[
-                                { value: "Despulpado", label: "Despulpado" },
-                                { value: "Lavado", label: "Lavado" },
-                                { value: "Secado", label: "Secado" },
-                                { value: "Trilla", label: "Trilla" },
-                            ]}
-                        />
-                    </Form.Item>
-
-                    <Form.Item
-                        label="Kilos Ingresados"
-                        name="kilosIngresados"
-                        rules={[
-                            { required: true, message: "Los kilos ingresados son obligatorios" },
-                        ]}
-                    >
-                        <InputNumber
-                            style={{ width: "100%" }}
-                            min={0}
-                            placeholder="Ej: 180"
-                        />
-                    </Form.Item>
-
-                    <Form.Item
-                        label="Kilos Resultantes"
-                        name="kilosResultantes"
-                        rules={[
-                            { required: true, message: "Los kilos resultantes son obligatorios" },
-                        ]}
-                    >
-                        <InputNumber
-                            style={{ width: "100%" }}
-                            min={0}
-                            placeholder="Ej: 145"
-                        />
-                    </Form.Item>
-
-                    <Form.Item
-                        label="% Merma"
-                        name="porcentajeMerma"
-                    >
-                        <InputNumber
-                            style={{ width: "100%" }}
-                            readOnly
-                            placeholder="Merma calculada"
-                        />
-                    </Form.Item>
-
-                    <Form.Item>
-                        <Button type="primary" htmlType="submit">
-                            Guardar
-                        </Button>
-                        <Button style={{ marginLeft: 8 }} onClick={handleCancel}>
-                            Cancelar
-                        </Button>
-                    </Form.Item>
-                </Form>
-            </Modal>
+                onClose={handleCancel}
+                onSubmit={handleSubmit}
+            />
         </div>
     );
 }
