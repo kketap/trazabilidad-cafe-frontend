@@ -1,4 +1,6 @@
+// src/pages/cosechas/CosechasPage.tsx
 import { useEffect, useState } from "react";
+import dayjs from "dayjs";
 import {
     Button,
     Card,
@@ -17,8 +19,8 @@ import {
     Typography,
 } from "antd";
 import { DeleteOutlined, EditOutlined, PlusOutlined } from "@ant-design/icons";
-import type { Dayjs } from "dayjs";
 import type { ColumnsType } from "antd/es/table";
+import type { Dayjs } from "dayjs";
 
 import {
     createCosecha,
@@ -28,8 +30,6 @@ import {
     type Cosecha,
     type CreateCosechaDto,
 } from "./cosechas.api";
-
-import dayjs from "dayjs";
 
 type CosechaFormValues = {
     fecha: Dayjs;
@@ -46,9 +46,9 @@ export default function CosechasPage() {
     const [saving, setSaving] = useState(false);
 
     const [isModalVisible, setIsModalVisible] = useState(false);
-    const [form] = Form.useForm<CosechaFormValues>();
-
     const [editingCosecha, setEditingCosecha] = useState<Cosecha | null>(null);
+
+    const [form] = Form.useForm<CosechaFormValues>();
 
     useEffect(() => {
         cargarCosechas();
@@ -152,9 +152,11 @@ export default function CosechasPage() {
             async onOk() {
                 try {
                     await deleteCosecha(id);
+
                     setCosechas((currentCosechas) =>
                         currentCosechas.filter((cosecha) => cosecha.id !== id),
                     );
+
                     message.success("Cosecha eliminada correctamente.");
                 } catch (error) {
                     console.error("Error eliminando cosecha:", error);
@@ -222,6 +224,7 @@ export default function CosechasPage() {
                         icon={<EditOutlined />}
                         onClick={() => handleEdit(record)}
                     />
+
                     <Button
                         type="link"
                         danger
@@ -249,6 +252,7 @@ export default function CosechasPage() {
                         <Typography.Title level={2} style={{ margin: 0 }}>
                             Cosechas
                         </Typography.Title>
+
                         <Typography.Text type="secondary">
                             Registro y gestión de las cosechas realizadas.
                         </Typography.Text>
@@ -388,7 +392,10 @@ export default function CosechasPage() {
                         label="Tipo Cosecha"
                         name="tipoCosecha"
                         rules={[
-                            { required: true, message: "El tipo de cosecha es obligatorio" },
+                            {
+                                required: true,
+                                message: "El tipo de cosecha es obligatorio",
+                            },
                         ]}
                     >
                         <Select

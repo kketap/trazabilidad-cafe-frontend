@@ -1,3 +1,4 @@
+// src/pages/reportes/ReportesPage.tsx
 import { Button, Card, Col, Row, Space, Typography } from "antd";
 import { DownloadOutlined, FilePdfOutlined } from "@ant-design/icons";
 

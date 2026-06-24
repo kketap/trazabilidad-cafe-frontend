@@ -1,3 +1,4 @@
+// src/pages/clientes/ClientesPage.tsx
 import { useState } from "react";
 import { Avatar, Button, Card, Col, Row, Space, Tag, Typography } from "antd";
 import { DeleteOutlined, EditOutlined, PlusOutlined, UserOutlined } from "@ant-design/icons";
@@ -32,15 +33,15 @@ export default function ClientesPage() {
 
     // Acción temporal para crear cliente.
     const handleNewCliente = () => {
-        console.log("Nuevo cliente");
+        // TODO: implementar creación de cliente.
     };
 
-    const handleEdit = (cliente: Cliente) => {
-        console.log("Editar cliente:", cliente);
+    const handleEdit = (_cliente: Cliente) => {
+        // TODO: implementar edición de cliente.
     };
 
-    const handleDelete = (cliente: Cliente) => {
-        console.log("Eliminar cliente:", cliente);
+    const handleDelete = (_cliente: Cliente) => {
+        // TODO: implementar eliminación de cliente.
     };
 
     return (
