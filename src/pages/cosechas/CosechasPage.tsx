@@ -1,3 +1,4 @@
+// src/pages/cosechas/CosechasPage.tsx
 import { useState } from "react";
 import { Button, Card, Col, DatePicker, Form, Input, InputNumber, Modal, Row, Select, Space, Statistic, Table, Typography } from "antd";
 import { DeleteOutlined, EditOutlined, PlusOutlined } from "@ant-design/icons";
@@ -87,15 +88,14 @@ export default function CosechasPage() {
             tipoCosecha: values.tipoCosecha,
         };
 
-        console.log("Datos de la cosecha:", nuevaCosecha);
         setCosechas((currentCosechas) => [...currentCosechas, nuevaCosecha]);
         setIsModalVisible(false);
         form.resetFields();
     };
 
-    // Por ahora solo imprime en consola la cosecha seleccionada para edición.
-    const handleEdit = (cosecha: Cosecha) => {
-        console.log("Editar cosecha:", cosecha);
+    // Placeholder para la edición de cosechas.
+    const handleEdit = (_cosecha: Cosecha) => {
+        // TODO: implementar edición de cosecha.
     };
 
     // Elimina visualmente la cosecha filtrándola del estado local.

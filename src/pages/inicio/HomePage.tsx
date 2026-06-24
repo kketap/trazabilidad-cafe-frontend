@@ -1,3 +1,4 @@
+// src/pages/inicio/HomePage.tsx
 import {
     Button,
     Card,

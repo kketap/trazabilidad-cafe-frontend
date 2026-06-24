@@ -1,3 +1,4 @@
+// src/pages/facturacion/FacturacionPage.tsx
 import { useState } from "react";
 import { Button, Card, Col, DatePicker, Form, Input, InputNumber, Modal, Row, Select, Space, Statistic, Table, Tag, Typography } from "antd";
 import { DeleteOutlined, EditOutlined, PlusOutlined } from "@ant-design/icons";
@@ -153,18 +154,17 @@ export default function FacturacionPage() {
             estadoPago: values.estadoPago,
         };
 
-        console.log("Datos de la factura:", nuevaFactura);
         setFacturas((currentFacturas) => [...currentFacturas, nuevaFactura]);
         setIsModalOpen(false);
         form.resetFields();
     };
 
-    const handleEdit = (factura: Factura) => {
-        console.log("Editar factura:", factura);
+    const handleEdit = (_factura: Factura) => {
+        // TODO: implementar edición de factura.
     };
 
-    const handleDelete = (factura: Factura) => {
-        console.log("Eliminar factura:", factura);
+    const handleDelete = (_factura: Factura) => {
+        // TODO: implementar eliminación de factura.
     };
 
     const totalFacturado = facturas.reduce((total, factura) => total + factura.montoVenta, 0);

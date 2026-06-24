@@ -1,12 +1,13 @@
+// src/pages/configuracion/ConfiguracionPage.tsx
 import { Button, Card, Form, Input, InputNumber, Space, Tabs, Typography } from "antd";
 
 export default function ConfiguracionPage() {
-    const handleEmpresaFinish = (values: unknown) => {
-        console.log("Perfil de empresa:", values);
+    const handleEmpresaFinish = (_values: unknown) => {
+        // TODO: persistir perfil de empresa.
     };
 
-    const handleParametrosFinish = (values: unknown) => {
-        console.log("Parámetros del sistema:", values);
+    const handleParametrosFinish = (_values: unknown) => {
+        // TODO: persistir parámetros del sistema.
     };
 
     return (

@@ -1,3 +1,4 @@
+// src/pages/trazabilidad/TrazabilidadPage.tsx
 import { Button, Card, Col, DatePicker, Form, InputNumber, Modal, Row, Select, Space, Statistic, Table, Typography } from "antd";
 import { EyeOutlined, PlusOutlined } from "@ant-design/icons";
 import { useState } from "react";
@@ -93,8 +94,8 @@ export default function TrazabilidadPage() {
         form.resetFields();
     };
 
-    const handleView = (proceso: ProcesoTrazabilidad) => {
-        console.log("Ver proceso:", proceso);
+    const handleView = (_proceso: ProcesoTrazabilidad) => {
+        // TODO: implementar vista detalle de proceso.
     };
 
     const mermaPromedio = procesos.length > 0
