@@ -1,86 +1,100 @@
 // src/pages/configuracion/ConfiguracionPage.tsx
-import { Button, Card, Form, Input, InputNumber, Space, Tabs, Typography } from "antd";
+import { Button, Card, Col, Form, Input, Row, message } from "antd";
 
 export default function ConfiguracionPage() {
-    const handleEmpresaFinish = (_values: unknown) => {
-        // TODO: persistir perfil de empresa.
+    const [profileForm] = Form.useForm();
+    const [passwordForm] = Form.useForm();
+
+    const handleProfileFinish = (values: { nombreUsuario: string }) => {
+        message.success(`Perfil de ${values.nombreUsuario} guardado correctamente.`);
     };
 
-    const handleParametrosFinish = (_values: unknown) => {
-        // TODO: persistir parámetros del sistema.
+    const handlePasswordFinish = (values: {
+        contrasenaActual: string;
+        nuevaContrasena: string;
+        confirmarContrasena: string;
+    }) => {
+        if (values.nuevaContrasena !== values.confirmarContrasena) {
+            passwordForm.setFields([
+                {
+                    name: "confirmarContrasena",
+                    errors: ["Las contraseñas nuevas no coinciden."],
+                },
+            ]);
+            return;
+        }
+
+        message.success("Contraseña actualizada correctamente.");
+        passwordForm.resetFields();
     };
 
     return (
-        <Space orientation="vertical" size="large" style={{ width: "100%" }}>
-            <Typography.Title level={2} style={{ margin: 0 }}>
-                Configuración
-            </Typography.Title>
+        <Row gutter={[24, 24]}>
+            <Col xs={24} lg={12}>
+                <Card title="Perfil de Usuario" bordered={false}>
+                    <Form
+                        form={profileForm}
+                        layout="vertical"
+                        onFinish={handleProfileFinish}
+                        autoComplete="off"
+                    >
+                        <Form.Item
+                            label="Nombre de Usuario"
+                            name="nombreUsuario"
+                            rules={[{ required: true, message: "Ingresa tu nombre de usuario." }]}
+                        >
+                            <Input placeholder="Ej: juan.perez" />
+                        </Form.Item>
 
-            <Card>
-                <Tabs
-                    items={[
-                        {
-                            key: "perfil-empresa",
-                            label: "Perfil de Empresa",
-                            children: (
-                                <Form layout="vertical" onFinish={handleEmpresaFinish}>
-                                    <Form.Item label="Nombre" name="nombre">
-                                        <Input placeholder="Nombre de la empresa" />
-                                    </Form.Item>
+                        <Form.Item>
+                            <Button type="primary" htmlType="submit">
+                                Guardar Perfil
+                            </Button>
+                        </Form.Item>
+                    </Form>
+                </Card>
+            </Col>
 
-                                    <Form.Item label="RUT" name="rut">
-                                        <Input placeholder="RUT de la empresa" />
-                                    </Form.Item>
+            <Col xs={24} lg={12}>
+                <Card title="Seguridad" bordered={false}>
+                    <Form
+                        form={passwordForm}
+                        layout="vertical"
+                        onFinish={handlePasswordFinish}
+                        autoComplete="off"
+                    >
+                        <Form.Item
+                            label="Contraseña Actual"
+                            name="contrasenaActual"
+                            rules={[{ required: true, message: "Ingresa tu contraseña actual." }]}
+                        >
+                            <Input.Password placeholder="Contraseña actual" />
+                        </Form.Item>
 
-                                    <Form.Item label="Dirección" name="direccion">
-                                        <Input placeholder="Dirección comercial" />
-                                    </Form.Item>
+                        <Form.Item
+                            label="Nueva Contraseña"
+                            name="nuevaContrasena"
+                            rules={[{ required: true, message: "Ingresa una nueva contraseña." }]}
+                        >
+                            <Input.Password placeholder="Nueva contraseña" />
+                        </Form.Item>
 
-                                    <Form.Item label="Teléfono" name="telefono">
-                                        <Input placeholder="Teléfono de contacto" />
-                                    </Form.Item>
+                        <Form.Item
+                            label="Confirmar Nueva Contraseña"
+                            name="confirmarContrasena"
+                            rules={[{ required: true, message: "Confirma la nueva contraseña." }]}
+                        >
+                            <Input.Password placeholder="Confirmar nueva contraseña" />
+                        </Form.Item>
 
-                                    <Form.Item>
-                                        <Button type="primary" htmlType="submit">
-                                            Guardar Cambios
-                                        </Button>
-                                    </Form.Item>
-                                </Form>
-                            ),
-                        },
-                        {
-                            key: "parametros-sistema",
-                            label: "Parámetros del Sistema",
-                            children: (
-                                <Form layout="vertical" onFinish={handleParametrosFinish}>
-                                    <Form.Item label="Precio Base por Kilo" name="precioBasePorKilo">
-                                        <InputNumber
-                                            style={{ width: "100%" }}
-                                            min={0}
-                                            placeholder="Ej: 125000"
-                                        />
-                                    </Form.Item>
-
-                                    <Form.Item label="Porcentaje de Merma Esperado" name="porcentajeMermaEsperado">
-                                        <InputNumber
-                                            style={{ width: "100%" }}
-                                            min={0}
-                                            max={100}
-                                            placeholder="Ej: 18"
-                                        />
-                                    </Form.Item>
-
-                                    <Form.Item>
-                                        <Button type="primary" htmlType="submit">
-                                            Guardar Cambios
-                                        </Button>
-                                    </Form.Item>
-                                </Form>
-                            ),
-                        },
-                    ]}
-                />
-            </Card>
-        </Space>
+                        <Form.Item>
+                            <Button type="primary" htmlType="submit">
+                                Actualizar Contraseña
+                            </Button>
+                        </Form.Item>
+                    </Form>
+                </Card>
+            </Col>
+        </Row>
     );
 }

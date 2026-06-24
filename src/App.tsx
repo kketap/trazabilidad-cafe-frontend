@@ -13,6 +13,10 @@ import ConfiguracionPage from "./pages/configuracion/ConfiguracionPage";
 
 type ThemeMode = "light" | "dark" | "system";
 
+// Colores corporativos extraídos de los banners en src/assets/Logos/.
+const BRAND_GOLD = "#c4b795";
+const BRAND_DARK = "#161716";
+
 function App() {
   // Controla el modo de tema elegido por el usuario.
   const [themeMode, setThemeMode] = useState<ThemeMode>("system");
@@ -44,17 +48,24 @@ function App() {
   const isDarkMode = themeMode === "dark" || (themeMode === "system" && isSystemDark);
 
   return (
-    // Aplica la paleta cafetera y el algoritmo de tema global.
+    // Tema global de Ant Design: primario dorado; fondos oscuros corporativos en modo oscuro.
     <ConfigProvider
       theme={{
         algorithm: isDarkMode ? theme.darkAlgorithm : theme.defaultAlgorithm,
-        token: {
-          colorPrimary: "#d46b08",
-        },
+        token: isDarkMode
+          ? {
+              colorPrimary: BRAND_GOLD,
+              colorBgContainer: BRAND_DARK,
+              colorBgLayout: BRAND_DARK,
+            }
+          : {
+              colorPrimary: BRAND_GOLD,
+            },
       }}
     >
       <Routes>
-        <Route element={<AppLayout themeMode={themeMode} onThemeModeChange={setThemeMode} />}>
+        {/* isDarkMode sincroniza el estilo del sidebar con el tema activo. */}
+        <Route element={<AppLayout themeMode={themeMode} isDarkMode={isDarkMode} onThemeModeChange={setThemeMode} />}>
           <Route path="/" element={<Navigate to="/inicio" replace />} />
           <Route path="/inicio" element={<HomePage />} />
           <Route path="/cosechas" element={<CosechasPage />} />

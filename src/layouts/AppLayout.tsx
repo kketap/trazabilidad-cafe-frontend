@@ -21,15 +21,20 @@ const { Header, Sider, Content } = Layout;
 const { Text } = Typography;
 const { useBreakpoint } = Grid;
 
+// Acentos de la paleta corporativa para sidebar (oscuro) y topbar (claro).
+const SIDEBAR_DARK_BG = "#2a2118";
+const HEADER_LIGHT_BG = "#f5f1e8";
+
 type ThemeMode = "light" | "dark" | "system";
 
-// Props para controlar el tema desde App.
+// Props para controlar el tema y sincronizar el modo oscuro desde App.
 type AppLayoutProps = {
     themeMode: ThemeMode;
+    isDarkMode: boolean;
     onThemeModeChange: (themeMode: ThemeMode) => void;
 };
 
-export default function AppLayout({ themeMode, onThemeModeChange }: AppLayoutProps) {
+export default function AppLayout({ themeMode, isDarkMode, onThemeModeChange }: AppLayoutProps) {
     // useNavigate permite navegar entre rutas al hacer clic en los items del menú.
     const navigate = useNavigate();
     // Tokens visuales que cambian con el tema.
@@ -72,7 +77,8 @@ export default function AppLayout({ themeMode, onThemeModeChange }: AppLayoutPro
                     width={280}
                     collapsedWidth={88}
                     style={{
-                        background: "#111827",
+                        // Fondo del sidebar: café oscuro en modo oscuro, beige corporativo en modo claro.
+                        background: isDarkMode ? SIDEBAR_DARK_BG : HEADER_LIGHT_BG,
                         minHeight: "100vh",
                         position: "sticky",
                         top: 0,
@@ -80,40 +86,46 @@ export default function AppLayout({ themeMode, onThemeModeChange }: AppLayoutPro
                         overflow: "auto",
                     }}
                 >
+                    {/* Encabezado de marca: logo arriba y texto centrado debajo en modo expandido. */}
                     <div
                         style={{
-                            height: 88,
+                            height: sidebarCollapsed ? 88 : 140,
                             display: "flex",
+                            flexDirection: sidebarCollapsed ? "row" : "column",
                             alignItems: "center",
-                            justifyContent: sidebarCollapsed ? "center" : "flex-start",
-                            padding: sidebarCollapsed ? "0" : "0 24px",
-                            borderBottom: "1px solid rgba(255,255,255,0.08)",
+                            justifyContent: "center",
+                            padding: sidebarCollapsed ? "0" : "16px 24px 12px",
+                            gap: sidebarCollapsed ? 0 : 8,
+                            borderBottom: `1px solid ${token.colorSplit}`,
                         }}
                     >
-                        <ShopOutlined
+                        {/* Banner de marca distinto para modo claro y modo oscuro. */}
+                        <img
+                            src={isDarkMode ? "/banner-dark.png" : "/banner-light.png"}
+                            alt="Fundos Noche"
                             style={{
-                                color: "#facc15",
-                                fontSize: 30,
-                                marginRight: sidebarCollapsed ? 0 : 12,
+                                maxHeight: sidebarCollapsed ? 50 : 70,
+                                maxWidth: sidebarCollapsed ? 60 : "100%",
+                                objectFit: "contain",
                             }}
                         />
 
                         {!sidebarCollapsed && (
-                            <div>
+                            <div style={{ textAlign: "center" }}>
                                 <Text
                                     style={{
-                                        color: "white",
+                                        color: token.colorText,
                                         display: "block",
                                         fontWeight: 700,
                                         fontSize: 18,
                                     }}
                                 >
-                                    Trazabilidad Café
+                                    Fundos Noche
                                 </Text>
 
                                 <Text
                                     style={{
-                                        color: "#9ca3af",
+                                        color: token.colorTextSecondary,
                                         fontSize: 13,
                                     }}
                                 >
@@ -123,13 +135,15 @@ export default function AppLayout({ themeMode, onThemeModeChange }: AppLayoutPro
                         )}
                     </div>
 
+                    {/* Menú lateral adaptativo al tema activo con fondo corporativo. */}
                     <Menu
-                        theme="dark"
+                        theme={isDarkMode ? "dark" : "light"}
                         mode="inline"
                         defaultSelectedKeys={["inicio"]}
                         onClick={handleMenuClick}
                         style={{
-                            background: "#111827",
+                            // Fondo del menú igual al sidebar para mantener continuidad y contraste.
+                            background: isDarkMode ? SIDEBAR_DARK_BG : HEADER_LIGHT_BG,
                             borderRight: "none",
                             padding: "16px 8px",
                         }}
@@ -144,17 +158,6 @@ export default function AppLayout({ themeMode, onThemeModeChange }: AppLayoutPro
                                 icon: <ShopOutlined />,
                                 label: "Cosechas",
                             },
-                            // Ítems activos del módulo comercial.
-                            {
-                                key: "clientes",
-                                icon: <TeamOutlined />,
-                                label: "Clientes",
-                            },
-                            {
-                                key: "facturacion",
-                                icon: <FileTextOutlined />,
-                                label: "Facturación",
-                            },
                             {
                                 key: "trazabilidad",
                                 icon: <PartitionOutlined />,
@@ -164,6 +167,18 @@ export default function AppLayout({ themeMode, onThemeModeChange }: AppLayoutPro
                                 key: "reportes",
                                 icon: <FileExcelOutlined />,
                                 label: "Reportes",
+                            },
+                            // Navegación reordenada: Inicio, Cosechas, Trazabilidad, Reportes, Facturación, Clientes, Configuración.
+                            // Ítems activos del módulo comercial.
+                            {
+                                key: "facturacion",
+                                icon: <FileTextOutlined />,
+                                label: "Facturación",
+                            },
+                            {
+                                key: "clientes",
+                                icon: <TeamOutlined />,
+                                label: "Clientes",
                             },
                             {
                                 key: "configuracion",
@@ -180,7 +195,8 @@ export default function AppLayout({ themeMode, onThemeModeChange }: AppLayoutPro
                     style={{
                         height: isMobile ? "auto" : 80,
                         padding: isMobile ? "16px" : "0 24px",
-                        background: token.colorBgContainer,
+                        // Fondo de la topbar: beige corporativo en modo claro, token oscuro en modo oscuro.
+                        background: isDarkMode ? token.colorBgContainer : HEADER_LIGHT_BG,
                         borderBottom: `1px solid ${token.colorBorderSecondary}`,
                         display: "flex",
                         alignItems: isMobile ? "flex-start" : "center",
@@ -212,28 +228,7 @@ export default function AppLayout({ themeMode, onThemeModeChange }: AppLayoutPro
                             />
                         )}
 
-                        <div style={{ minWidth: 0 }}>
-                            <Text
-                                style={{
-                                    display: "block",
-                                    fontWeight: 700,
-                                    fontSize: isMobile ? 18 : 20,
-                                    lineHeight: 1.25,
-                                }}
-                            >
-                                Sistema de Trazabilidad de Café
-                            </Text>
-
-                            <Text
-                                style={{
-                                    color: token.colorTextSecondary,
-                                    fontSize: isMobile ? 13 : 14,
-                                    lineHeight: 1.4,
-                                }}
-                            >
-                                Control de cosecha, procesos y reportes
-                            </Text>
-                        </div>
+                        {/* Título removido: la página activa se identifica por el sidebar. */}
                     </div>
 
                     {/* Botones para cambiar entre temas. */}
@@ -284,17 +279,6 @@ export default function AppLayout({ themeMode, onThemeModeChange }: AppLayoutPro
                                     icon: <ShopOutlined />,
                                     label: "Cosechas",
                                 },
-                                // Ítems comerciales visibles en móvil.
-                                {
-                                    key: "clientes",
-                                    icon: <TeamOutlined />,
-                                    label: "Clientes",
-                                },
-                                {
-                                    key: "facturacion",
-                                    icon: <FileTextOutlined />,
-                                    label: "Facturación",
-                                },
                                 {
                                     key: "trazabilidad",
                                     icon: <PartitionOutlined />,
@@ -304,6 +288,18 @@ export default function AppLayout({ themeMode, onThemeModeChange }: AppLayoutPro
                                     key: "reportes",
                                     icon: <FileExcelOutlined />,
                                     label: "Reportes",
+                                },
+                                // Navegación móvil con el mismo orden que el sidebar desktop.
+                                // Ítems comerciales visibles en móvil.
+                                {
+                                    key: "facturacion",
+                                    icon: <FileTextOutlined />,
+                                    label: "Facturación",
+                                },
+                                {
+                                    key: "clientes",
+                                    icon: <TeamOutlined />,
+                                    label: "Clientes",
                                 },
                                 {
                                     key: "configuracion",
