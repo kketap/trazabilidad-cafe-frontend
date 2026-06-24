@@ -16,6 +16,7 @@ import {
 import { Button, Grid, Layout, Menu, Space, Tooltip, Typography, theme as antdTheme } from "antd";
 import { useState } from "react";
 import { useNavigate, Outlet } from "react-router-dom";
+import MenuAccesibilidad from "../components/accesibilidad/MenuAccesibilidad";
 
 const { Header, Sider, Content } = Layout;
 const { Text } = Typography;
@@ -26,15 +27,18 @@ const SIDEBAR_DARK_BG = "#2a2118";
 const HEADER_LIGHT_BG = "#f5f1e8";
 
 type ThemeMode = "light" | "dark" | "system";
+type TextSize = "small" | "normal" | "large" | "xlarge";
 
-// Props para controlar el tema y sincronizar el modo oscuro desde App.
+// Props para controlar el tema, el modo oscuro y el tamaño de texto desde App.
 type AppLayoutProps = {
     themeMode: ThemeMode;
     isDarkMode: boolean;
     onThemeModeChange: (themeMode: ThemeMode) => void;
+    textSize: TextSize;
+    onTextSizeChange: (textSize: TextSize) => void;
 };
 
-export default function AppLayout({ themeMode, isDarkMode, onThemeModeChange }: AppLayoutProps) {
+export default function AppLayout({ themeMode, isDarkMode, onThemeModeChange, textSize, onTextSizeChange }: AppLayoutProps) {
     // useNavigate permite navegar entre rutas al hacer clic en los items del menú.
     const navigate = useNavigate();
     // Tokens visuales que cambian con el tema.
@@ -43,6 +47,8 @@ export default function AppLayout({ themeMode, isDarkMode, onThemeModeChange }: 
     const isMobile = !screens.md;
 
     const [collapsed, setCollapsed] = useState(false);
+    // Zoom de accesibilidad controlado localmente (inicia en 90%).
+    const [zoom, setZoom] = useState(0.9);
 
     // Maneja el clic en cualquier menú (desktop o móvil) y navega según la key del item.
     const handleMenuClick = ({ key }: { key: string }) => {
@@ -68,7 +74,14 @@ export default function AppLayout({ themeMode, isDarkMode, onThemeModeChange }: 
     const sidebarCollapsed = isMobile ? true : collapsed;
 
     return (
-        <Layout style={{ minHeight: "100vh", width: "100%" }}>
+        <Layout
+            style={{
+                minHeight: "100vh",
+                width: "100%",
+                // Variable CSS global para el zoom de accesibilidad.
+                ["--app-zoom" as string]: zoom,
+            }}
+        >
             {!isMobile && (
                 <Sider
                     collapsible
@@ -84,6 +97,8 @@ export default function AppLayout({ themeMode, isDarkMode, onThemeModeChange }: 
                         top: 0,
                         left: 0,
                         overflow: "auto",
+                        // Zoom de accesibilidad aplicado al sidebar.
+                        zoom: "var(--app-zoom)",
                     }}
                 >
                     {/* Encabezado de marca: logo arriba y texto centrado debajo en modo expandido. */}
@@ -198,6 +213,8 @@ export default function AppLayout({ themeMode, isDarkMode, onThemeModeChange }: 
                         // Fondo de la topbar: beige corporativo en modo claro, token oscuro en modo oscuro.
                         background: isDarkMode ? token.colorBgContainer : HEADER_LIGHT_BG,
                         borderBottom: `1px solid ${token.colorBorderSecondary}`,
+                        // Zoom de accesibilidad aplicado a la topbar.
+                        zoom: "var(--app-zoom)",
                         display: "flex",
                         alignItems: isMobile ? "flex-start" : "center",
                         justifyContent: "space-between",
@@ -318,10 +335,22 @@ export default function AppLayout({ themeMode, isDarkMode, onThemeModeChange }: 
                         padding: 24,
                         flex: 1,
                         overflow: "auto",
+                        // Zoom de accesibilidad aplicado al contenido principal.
+                        zoom: "var(--app-zoom)",
                     }}
                 >
                     <Outlet />
                 </Content>
+
+                {/* Botón flotante de accesibilidad: apariencia, zoom y tamaño de texto. */}
+                <MenuAccesibilidad
+                    themeMode={themeMode}
+                    onThemeModeChange={onThemeModeChange}
+                    textSize={textSize}
+                    onTextSizeChange={onTextSizeChange}
+                    zoom={zoom}
+                    onZoomChange={setZoom}
+                />
             </Layout>
         </Layout>
     );
