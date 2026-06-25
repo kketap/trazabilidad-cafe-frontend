@@ -10,6 +10,9 @@ import FacturacionPage from "./pages/facturacion/FacturacionPage";
 import TrazabilidadPage from "./pages/trazabilidad/TrazabilidadPage";
 import ReportesPage from "./pages/reportes/ReportesPage";
 import ConfiguracionPage from "./pages/configuracion/ConfiguracionPage";
+import LotesPage from "./pages/lotes/LotesPage";
+
+import esES from "antd/locale/es_ES";
 
 type ThemeMode = "light" | "dark" | "system";
 type TextSize = "small" | "normal" | "large" | "xlarge";
@@ -20,22 +23,22 @@ const BRAND_DARK = "#161716";
 
 // Escala de tamaño de texto para accesibilidad (más marcada para diferencias perceptibles).
 const textSizeScale: Record<TextSize, number> = {
-    small: 0.8,
-    normal: 1,
-    large: 1.25,
-    xlarge: 1.5,
+  small: 0.8,
+  normal: 1,
+  large: 1.25,
+  xlarge: 1.5,
 };
 
 // Tokens de fuente escalados según el tamaño de texto seleccionado.
 const getFontTokens = (scale: number) => ({
-    fontSizeSM: 12 * scale,
-    fontSizeLG: 16 * scale,
-    fontSizeXL: 20 * scale,
-    fontSizeHeading1: 38 * scale,
-    fontSizeHeading2: 30 * scale,
-    fontSizeHeading3: 24 * scale,
-    fontSizeHeading4: 20 * scale,
-    fontSizeHeading5: 16 * scale,
+  fontSizeSM: 12 * scale,
+  fontSizeLG: 16 * scale,
+  fontSizeXL: 20 * scale,
+  fontSizeHeading1: 38 * scale,
+  fontSizeHeading2: 30 * scale,
+  fontSizeHeading3: 24 * scale,
+  fontSizeHeading4: 20 * scale,
+  fontSizeHeading5: 16 * scale,
 });
 
 function App() {
@@ -75,19 +78,20 @@ function App() {
   return (
     // Tema global de Ant Design: primario dorado; fondos oscuros corporativos en modo oscuro; fuentes escaladas.
     <ConfigProvider
+      locale={esES}
       theme={{
         algorithm: isDarkMode ? theme.darkAlgorithm : theme.defaultAlgorithm,
         token: isDarkMode
           ? {
-              colorPrimary: BRAND_GOLD,
-              colorBgContainer: BRAND_DARK,
-              colorBgLayout: BRAND_DARK,
-              ...fontTokens,
-            }
+            colorPrimary: BRAND_GOLD,
+            colorBgContainer: BRAND_DARK,
+            colorBgLayout: BRAND_DARK,
+            ...fontTokens,
+          }
           : {
-              colorPrimary: BRAND_GOLD,
-              ...fontTokens,
-            },
+            colorPrimary: BRAND_GOLD,
+            ...fontTokens,
+          },
       }}
     >
       <Routes>
@@ -96,6 +100,7 @@ function App() {
           <Route path="/" element={<Navigate to="/inicio" replace />} />
           <Route path="/inicio" element={<HomePage />} />
           <Route path="/cosechas" element={<CosechasPage />} />
+          <Route path="/lotes" element={<LotesPage />} />
           <Route path="/clientes" element={<ClientesPage />} />
           <Route path="/facturacion" element={<FacturacionPage />} />
           <Route path="/trazabilidad" element={<TrazabilidadPage />} />

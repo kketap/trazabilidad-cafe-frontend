@@ -12,10 +12,11 @@ import {
     ShopOutlined,
     SunOutlined,
     TeamOutlined,
+    AppstoreOutlined
 } from "@ant-design/icons";
 import { Button, Grid, Layout, Menu, Space, Tooltip, Typography, theme as antdTheme } from "antd";
 import { useState } from "react";
-import { useNavigate, Outlet } from "react-router-dom";
+import { useNavigate, Outlet, useLocation } from "react-router-dom";
 import MenuAccesibilidad from "../components/accesibilidad/MenuAccesibilidad";
 
 const { Header, Sider, Content } = Layout;
@@ -52,24 +53,10 @@ export default function AppLayout({ themeMode, isDarkMode, onThemeModeChange, te
 
     // Maneja el clic en cualquier menú (desktop o móvil) y navega según la key del item.
     const handleMenuClick = ({ key }: { key: string }) => {
-        if (key === "inicio") {
-            navigate("/inicio");
-        } else if (key === "cosechas") {
-            navigate("/cosechas");
-        } else if (key === "clientes") {
-            // Navega al módulo de clientes.
-            navigate("/clientes");
-        } else if (key === "facturacion") {
-            // Navega al módulo de facturación.
-            navigate("/facturacion");
-        } else if (key === "trazabilidad") {
-            navigate("/trazabilidad");
-        } else if (key === "reportes") {
-            navigate("/reportes");
-        } else if (key === "configuracion") {
-            navigate("/configuracion");
-        }
+        navigate(key);
     };
+
+    const location = useLocation();
 
     const sidebarCollapsed = isMobile ? true : collapsed;
 
@@ -84,60 +71,98 @@ export default function AppLayout({ themeMode, isDarkMode, onThemeModeChange, te
         >
             {!isMobile && (
                 <Sider
-                    collapsible
                     collapsed={sidebarCollapsed}
                     trigger={null}
                     width={280}
                     collapsedWidth={88}
                     style={{
-                        // Fondo del sidebar: café oscuro en modo oscuro, beige corporativo en modo claro.
                         background: isDarkMode ? SIDEBAR_DARK_BG : HEADER_LIGHT_BG,
+                        height: "100vh",
                         minHeight: "100vh",
-                        position: "sticky",
+                        position: "fixed",
                         top: 0,
                         left: 0,
-                        overflow: "auto",
-                        // Zoom de accesibilidad aplicado al sidebar.
-                        zoom: "var(--app-zoom)",
+                        bottom: 0,
+                        overflowY: "auto",
+                        zIndex: 100,
                     }}
                 >
-                    {/* Encabezado de marca: logo arriba y texto centrado debajo en modo expandido. */}
+                    {/* Encabezado de marca con botón al nivel del logo */}
                     <div
                         style={{
-                            height: sidebarCollapsed ? 88 : 140,
-                            display: "flex",
-                            flexDirection: sidebarCollapsed ? "row" : "column",
-                            alignItems: "center",
-                            justifyContent: "center",
-                            padding: sidebarCollapsed ? "0" : "16px 24px 12px",
-                            gap: sidebarCollapsed ? 0 : 8,
+                            minHeight: sidebarCollapsed ? 96 : 150,
+                            padding: sidebarCollapsed ? "16px 8px" : "18px 18px 16px",
                             borderBottom: `1px solid ${token.colorSplit}`,
                         }}
                     >
-                        {/* Banner de marca distinto para modo claro y modo oscuro. */}
-                        <img
-                            src={isDarkMode ? "/banner-dark.png" : "/banner-light.png"}
-                            alt="Fundos Noche"
+                        <div
                             style={{
-                                maxHeight: sidebarCollapsed ? 50 : 70,
-                                maxWidth: sidebarCollapsed ? 60 : "100%",
-                                objectFit: "contain",
+                                display: "grid",
+                                gridTemplateColumns: sidebarCollapsed ? "1fr" : "1fr 36px",
+                                alignItems: "center",
+                                columnGap: 8,
                             }}
-                        />
+                        >
+                            <div
+                                style={{
+                                    display: "flex",
+                                    justifyContent: "center",
+                                    alignItems: "center",
+                                    minWidth: 0,
+                                }}
+                            >
+                                <img
+                                    src={isDarkMode ? "/banner-dark.png" : "/banner-light.png"}
+                                    alt="Fundos Noche"
+                                    style={{
+                                        maxHeight: sidebarCollapsed ? 44 : 76,
+                                        maxWidth: sidebarCollapsed ? 52 : "100%",
+                                        objectFit: "contain",
+                                    }}
+                                />
+                            </div>
+
+                            {!sidebarCollapsed && (
+                                <Tooltip title="Contraer menú">
+                                    <Button
+                                        type="text"
+                                        icon={<MenuFoldOutlined />}
+                                        onClick={() => setCollapsed((value) => !value)}
+                                        style={{
+                                            color: token.colorText,
+                                            fontSize: 18,
+                                            borderRadius: 8,
+                                        }}
+                                        aria-label="Contraer menú"
+                                    />
+                                </Tooltip>
+                            )}
+
+                            {sidebarCollapsed && (
+                                <Tooltip title="Expandir menú">
+                                    <Button
+                                        type="text"
+                                        icon={<MenuUnfoldOutlined />}
+                                        onClick={() => setCollapsed((value) => !value)}
+                                        style={{
+                                            color: token.colorText,
+                                            fontSize: 18,
+                                            borderRadius: 8,
+                                            margin: "8px auto 0",
+                                        }}
+                                        aria-label="Expandir menú"
+                                    />
+                                </Tooltip>
+                            )}
+                        </div>
 
                         {!sidebarCollapsed && (
-                            <div style={{ textAlign: "center" }}>
-                                <Text
-                                    style={{
-                                        color: token.colorText,
-                                        display: "block",
-                                        fontWeight: 700,
-                                        fontSize: 18,
-                                    }}
-                                >
-                                    Fundos Noche
-                                </Text>
-
+                            <div
+                                style={{
+                                    textAlign: "center",
+                                    marginTop: 14,
+                                }}
+                            >
                                 <Text
                                     style={{
                                         color: token.colorTextSecondary,
@@ -154,7 +179,7 @@ export default function AppLayout({ themeMode, isDarkMode, onThemeModeChange, te
                     <Menu
                         theme={isDarkMode ? "dark" : "light"}
                         mode="inline"
-                        defaultSelectedKeys={["inicio"]}
+                        selectedKeys={[location.pathname]}
                         onClick={handleMenuClick}
                         style={{
                             // Fondo del menú igual al sidebar para mantener continuidad y contraste.
@@ -164,39 +189,42 @@ export default function AppLayout({ themeMode, isDarkMode, onThemeModeChange, te
                         }}
                         items={[
                             {
-                                key: "inicio",
+                                key: "/inicio",
                                 icon: <HomeOutlined />,
                                 label: "Inicio",
                             },
                             {
-                                key: "cosechas",
+                                key: "/cosechas",
                                 icon: <ShopOutlined />,
                                 label: "Cosechas",
                             },
                             {
-                                key: "trazabilidad",
+                                key: "/lotes",
+                                icon: <AppstoreOutlined />,
+                                label: "Lotes",
+                            },
+                            {
+                                key: "/trazabilidad",
                                 icon: <PartitionOutlined />,
                                 label: "Trazabilidad",
                             },
                             {
-                                key: "reportes",
+                                key: "/reportes",
                                 icon: <FileExcelOutlined />,
                                 label: "Reportes",
                             },
-                            // Navegación reordenada: Inicio, Cosechas, Trazabilidad, Reportes, Facturación, Clientes, Configuración.
-                            // Ítems activos del módulo comercial.
                             {
-                                key: "facturacion",
+                                key: "/facturacion",
                                 icon: <FileTextOutlined />,
                                 label: "Facturación",
                             },
                             {
-                                key: "clientes",
+                                key: "/clientes",
                                 icon: <TeamOutlined />,
                                 label: "Clientes",
                             },
                             {
-                                key: "configuracion",
+                                key: "/configuracion",
                                 icon: <SettingOutlined />,
                                 label: "Configuración",
                             },
@@ -205,81 +233,37 @@ export default function AppLayout({ themeMode, isDarkMode, onThemeModeChange, te
                 </Sider>
             )}
 
-            <Layout style={{ flex: 1, width: "100%" }}>
-                <Header
-                    style={{
-                        height: isMobile ? "auto" : 80,
-                        padding: isMobile ? "16px" : "0 24px",
-                        // Fondo de la topbar: beige corporativo en modo claro, token oscuro en modo oscuro.
-                        background: isDarkMode ? token.colorBgContainer : HEADER_LIGHT_BG,
-                        borderBottom: `1px solid ${token.colorBorderSecondary}`,
-                        // Zoom de accesibilidad aplicado a la topbar.
-                        zoom: "var(--app-zoom)",
-                        display: "flex",
-                        alignItems: isMobile ? "flex-start" : "center",
-                        justifyContent: "space-between",
-                        gap: 16,
-                        flexDirection: isMobile ? "column" : "row",
-                        lineHeight: "normal",
-                    }}
-                >
-                    <div
+            <Layout
+                style={{
+                    flex: 1,
+                    width: "100%",
+                    minHeight: "100vh",
+                    marginLeft: isMobile ? 0 : sidebarCollapsed ? 88 : 280,
+                    transition: "margin-left 0.2s ease",
+                }}
+            >
+                {isMobile && (
+                    <Header
                         style={{
+                            height: "auto",
+                            padding: "16px",
+                            background: isDarkMode ? token.colorBgContainer : HEADER_LIGHT_BG,
+                            borderBottom: `1px solid ${token.colorBorderSecondary}`,
+                            zoom: "var(--app-zoom)",
                             display: "flex",
-                            alignItems: "center",
-                            gap: 12,
-                            width: "100%",
+                            alignItems: "flex-start",
+                            justifyContent: "space-between",
+                            gap: 16,
+                            flexDirection: "column",
+                            lineHeight: "normal",
+                            position: "sticky",
+                            top: 0,
+                            zIndex: 90,
                         }}
                     >
-                        {!isMobile && (
-                            <Button
-                                type="text"
-                                icon={
-                                    collapsed ? <MenuUnfoldOutlined /> : <MenuFoldOutlined />
-                                }
-                                onClick={() => setCollapsed((value) => !value)}
-                                style={{
-                                    fontSize: 18,
-                                    flexShrink: 0,
-                                }}
-                            />
-                        )}
-
-                        {/* Título removido: la página activa se identifica por el sidebar. */}
-                    </div>
-
-                    {/* Botones para cambiar entre temas. */}
-                    <Space.Compact style={{ width: isMobile ? "100%" : "auto", flexShrink: 0 }}>
-                        <Tooltip title="Modo Claro">
-                            <Button
-                                type={themeMode === "light" ? "primary" : "default"}
-                                icon={<SunOutlined />}
-                                onClick={() => onThemeModeChange("light")}
-                                aria-label="Modo Claro"
-                            />
-                        </Tooltip>
-                        <Tooltip title="Modo Oscuro">
-                            <Button
-                                type={themeMode === "dark" ? "primary" : "default"}
-                                icon={<MoonOutlined />}
-                                onClick={() => onThemeModeChange("dark")}
-                                aria-label="Modo Oscuro"
-                            />
-                        </Tooltip>
-                        <Tooltip title="Sistema">
-                            <Button
-                                type={themeMode === "system" ? "primary" : "default"}
-                                icon={<DesktopOutlined />}
-                                onClick={() => onThemeModeChange("system")}
-                                aria-label="Sistema"
-                            />
-                        </Tooltip>
-                    </Space.Compact>
-
-                    {isMobile && (
                         <Menu
                             mode="horizontal"
-                            defaultSelectedKeys={["inicio"]}
+                            selectedKeys={[location.pathname]}
                             onClick={handleMenuClick}
                             style={{
                                 width: "100%",
@@ -287,55 +271,57 @@ export default function AppLayout({ themeMode, isDarkMode, onThemeModeChange, te
                             }}
                             items={[
                                 {
-                                    key: "inicio",
+                                    key: "/inicio",
                                     icon: <HomeOutlined />,
                                     label: "Inicio",
                                 },
                                 {
-                                    key: "cosechas",
+                                    key: "/cosechas",
                                     icon: <ShopOutlined />,
                                     label: "Cosechas",
                                 },
                                 {
-                                    key: "trazabilidad",
+                                    key: "/lotes",
+                                    icon: <AppstoreOutlined />,
+                                    label: "Lotes",
+                                },
+                                {
+                                    key: "/trazabilidad",
                                     icon: <PartitionOutlined />,
                                     label: "Trazabilidad",
                                 },
                                 {
-                                    key: "reportes",
+                                    key: "/reportes",
                                     icon: <FileExcelOutlined />,
                                     label: "Reportes",
                                 },
-                                // Navegación móvil con el mismo orden que el sidebar desktop.
-                                // Ítems comerciales visibles en móvil.
                                 {
-                                    key: "facturacion",
+                                    key: "/facturacion",
                                     icon: <FileTextOutlined />,
                                     label: "Facturación",
                                 },
                                 {
-                                    key: "clientes",
+                                    key: "/clientes",
                                     icon: <TeamOutlined />,
                                     label: "Clientes",
                                 },
                                 {
-                                    key: "configuracion",
+                                    key: "/configuracion",
                                     icon: <SettingOutlined />,
                                     label: "Configuración",
                                 },
                             ]}
                         />
-                    )}
-                </Header>
+                    </Header>
+                )}
 
                 <Content
                     style={{
-                        // Fondo adaptable al tema seleccionado.
                         background: token.colorBgLayout,
-                        padding: 24,
+                        padding: isMobile ? 16 : "24px",
                         flex: 1,
-                        overflow: "auto",
-                        // Zoom de accesibilidad aplicado al contenido principal.
+                        minHeight: "100vh",
+                        overflow: "visible",
                         zoom: "var(--app-zoom)",
                     }}
                 >

@@ -1,4 +1,12 @@
 import { apiClient } from "./../../api/apiClient";
+import type { Lote } from "../lotes/lotes.api";
+
+export type CosechaLote = {
+  id: number;
+  cosechaId: number;
+  loteId: number;
+  lote: Lote;
+};
 
 export type Cosecha = {
   id: number;
@@ -8,6 +16,7 @@ export type Cosecha = {
   lotes: string;
   totalHectareas: number;
   tipoCosecha: string;
+  cosechaLotes?: CosechaLote[];
   createdAt?: string;
   updatedAt?: string;
 };
@@ -16,7 +25,8 @@ export type CreateCosechaDto = {
   fecha: string;
   kilosCosechados: number;
   cantidadCosechadores: number;
-  lotes: string;
+  lotes?: string;
+  loteIds?: number[];
   totalHectareas: number;
   tipoCosecha: string;
 };

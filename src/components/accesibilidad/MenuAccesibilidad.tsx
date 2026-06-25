@@ -1,5 +1,15 @@
 // src/components/accesibilidad/MenuAccesibilidad.tsx
-import { FloatButton, Popover, Radio, Select, Space, Typography } from "antd";
+import { useState } from "react";
+import {
+    Card,
+    Divider,
+    Drawer,
+    FloatButton,
+    Radio,
+    Select,
+    Space,
+    Typography,
+} from "antd";
 import { SettingOutlined } from "@ant-design/icons";
 
 type ThemeMode = "light" | "dark" | "system";
@@ -37,50 +47,96 @@ export default function MenuAccesibilidad({
     zoom,
     onZoomChange,
 }: MenuAccesibilidadProps) {
-    const content = (
-        <Space direction="vertical" style={{ width: 220 }}>
-            <div>
-                <Typography.Text strong>Apariencia</Typography.Text>
-                <Radio.Group
-                    value={themeMode}
-                    onChange={(e) => onThemeModeChange(e.target.value)}
-                    style={{ display: "flex", flexDirection: "column", gap: 8, marginTop: 8 }}
-                >
-                    <Radio value="light">Modo Claro</Radio>
-                    <Radio value="dark">Modo Oscuro</Radio>
-                    <Radio value="system">Sistema</Radio>
-                </Radio.Group>
-            </div>
-
-            <div>
-                <Typography.Text strong>Tamaño de texto</Typography.Text>
-                <Select
-                    value={textSize}
-                    onChange={onTextSizeChange}
-                    options={textSizeOptions}
-                    style={{ width: "100%", marginTop: 8 }}
-                />
-            </div>
-
-            <div>
-                <Typography.Text strong>Zoom del contenido</Typography.Text>
-                <Select
-                    value={zoom}
-                    onChange={onZoomChange}
-                    options={zoomOptions}
-                    style={{ width: "100%", marginTop: 8 }}
-                />
-            </div>
-        </Space>
-    );
+    const [open, setOpen] = useState(false);
 
     return (
-        <Popover content={content} placement="topRight" trigger="click">
+        <>
             <FloatButton
                 icon={<SettingOutlined />}
                 tooltip="Accesibilidad"
                 style={{ right: 24, bottom: 24 }}
+                onClick={() => setOpen(true)}
             />
-        </Popover>
+
+            <Drawer
+                title="Accesibilidad"
+                placement="right"
+                open={open}
+                onClose={() => setOpen(false)}
+                width="min(420px, 92vw)"
+                destroyOnHidden
+            >
+                <Space direction="vertical" size="large" style={{ width: "100%" }}>
+                    <Typography.Paragraph type="secondary" style={{ marginBottom: 0 }}>
+                        Configura la apariencia, el tamaño del texto y el zoom del sistema.
+                    </Typography.Paragraph>
+
+                    <Card title="Apariencia" size="small">
+                        <Typography.Paragraph type="secondary">
+                            Define cómo quieres visualizar la interfaz.
+                        </Typography.Paragraph>
+
+                        <Divider />
+
+                        <Radio.Group
+                            value={themeMode}
+                            onChange={(e) => onThemeModeChange(e.target.value)}
+                            style={{
+                                display: "flex",
+                                flexDirection: "column",
+                                gap: 12,
+                            }}
+                        >
+                            <Radio value="light">Modo claro</Radio>
+                            <Radio value="dark">Modo oscuro</Radio>
+                            <Radio value="system">Usar configuración del sistema</Radio>
+                        </Radio.Group>
+                    </Card>
+
+                    <Card title="Tamaño de texto" size="small">
+                        <Typography.Paragraph type="secondary">
+                            Ajusta el tamaño de las letras para mejorar la lectura.
+                        </Typography.Paragraph>
+
+                        <Divider />
+
+                        <Select
+                            value={textSize}
+                            onChange={onTextSizeChange}
+                            options={textSizeOptions}
+                            style={{ width: "100%" }}
+                        />
+                    </Card>
+
+                    <Card title="Zoom del contenido" size="small">
+                        <Typography.Paragraph type="secondary">
+                            Cambia la escala visual del contenido del sistema.
+                        </Typography.Paragraph>
+
+                        <Divider />
+
+                        <Select
+                            value={zoom}
+                            onChange={onZoomChange}
+                            options={zoomOptions}
+                            style={{ width: "100%" }}
+                        />
+
+                        <Typography.Text type="secondary" style={{ display: "block", marginTop: 12 }}>
+                            Zoom actual: {(zoom * 100).toFixed(0)}%
+                        </Typography.Text>
+                    </Card>
+
+                    <Card size="small">
+                        <Typography.Text strong>Recomendación</Typography.Text>
+
+                        <Typography.Paragraph style={{ marginTop: 8, marginBottom: 0 }}>
+                            Para uso diario, se recomienda usar el modo del sistema, texto normal
+                            y zoom entre 90% y 100%.
+                        </Typography.Paragraph>
+                    </Card>
+                </Space>
+            </Drawer>
+        </>
     );
 }

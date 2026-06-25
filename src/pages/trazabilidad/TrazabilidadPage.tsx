@@ -10,6 +10,9 @@ import {
     Statistic,
     Table,
     Typography,
+    Tag,
+    Descriptions,
+    Modal
 } from "antd";
 import { EyeOutlined, PlusOutlined } from "@ant-design/icons";
 import type { ColumnsType } from "antd/es/table";
@@ -26,6 +29,8 @@ import {
     type ProcesoTrazabilidad,
 } from "./trazabilidad.api";
 
+import dayjs from "dayjs";
+
 export default function TrazabilidadPage() {
     const [procesos, setProcesos] = useState<ProcesoTrazabilidad[]>([]);
     const [cosechas, setCosechas] = useState<Cosecha[]>([]);
@@ -34,6 +39,11 @@ export default function TrazabilidadPage() {
     const [saving, setSaving] = useState(false);
 
     const [isModalOpen, setIsModalOpen] = useState(false);
+
+    const [selectedProceso, setSelectedProceso] =
+        useState<ProcesoTrazabilidad | null>(null);
+
+    const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
 
     useEffect(() => {
         cargarDatos();
@@ -93,7 +103,13 @@ export default function TrazabilidadPage() {
     }
 
     function handleView(proceso: ProcesoTrazabilidad) {
-        console.log("Ver proceso:", proceso);
+        setSelectedProceso(proceso);
+        setIsDetailModalOpen(true);
+    }
+
+    function handleCloseDetailModal() {
+        setSelectedProceso(null);
+        setIsDetailModalOpen(false);
     }
 
     const mermaPromedio =
@@ -119,7 +135,7 @@ export default function TrazabilidadPage() {
             title: "Fecha",
             dataIndex: "fecha",
             key: "fecha",
-            render: (fecha: string) => fecha.slice(0, 10),
+            render: (fecha: string) => dayjs(fecha).format("DD/MM/YYYY"),
         },
         {
             title: "Lote Origen",
@@ -242,6 +258,96 @@ export default function TrazabilidadPage() {
                 onClose={handleCancel}
                 onSubmit={onFinish}
             />
+            <Modal
+                title="Detalle del Proceso"
+                open={isDetailModalOpen}
+                onCancel={handleCloseDetailModal}
+                footer={[
+                    <Button key="close" onClick={handleCloseDetailModal}>
+                        Cerrar
+                    </Button>,
+                ]}
+                centered
+                width="min(760px, 95vw)"
+            >
+                {selectedProceso && (
+                    <Descriptions
+                        bordered
+                        column={{
+                            xs: 1,
+                            sm: 1,
+                            md: 2,
+                        }}
+                        size="middle"
+                    >
+                        <Descriptions.Item label="Fecha">
+                            {dayjs(selectedProceso.fecha).format("DD/MM/YYYY")}
+                        </Descriptions.Item>
+
+                        <Descriptions.Item label="Etapa">
+                            <Tag color="blue">{selectedProceso.etapa}</Tag>
+                        </Descriptions.Item>
+
+                        <Descriptions.Item label="Lote Origen">
+                            {selectedProceso.cosecha?.lotes ??
+                                `Cosecha #${selectedProceso.cosechaId}`}
+                        </Descriptions.Item>
+
+                        <Descriptions.Item label="Tipo de Cosecha">
+                            {selectedProceso.cosecha?.tipoCosecha ?? "-"}
+                        </Descriptions.Item>
+
+                        <Descriptions.Item label="Kg Cosechados">
+                            {selectedProceso.cosecha?.kilosCosechados?.toLocaleString(
+                                "es-CL",
+                            ) ?? "-"}{" "}
+                            kg
+                        </Descriptions.Item>
+
+                        <Descriptions.Item label="Kg Ingresados">
+                            {selectedProceso.kilosIngresados.toLocaleString("es-CL")} kg
+                        </Descriptions.Item>
+
+                        <Descriptions.Item label="Kg Resultantes">
+                            {selectedProceso.kilosResultantes.toLocaleString("es-CL")} kg
+                        </Descriptions.Item>
+
+                        <Descriptions.Item label="Merma">
+                            <Tag
+                                color={
+                                    selectedProceso.porcentajeMerma >= 30
+                                        ? "red"
+                                        : selectedProceso.porcentajeMerma >= 15
+                                            ? "orange"
+                                            : "green"
+                                }
+                            >
+                                {selectedProceso.porcentajeMerma.toLocaleString("es-CL", {
+                                    maximumFractionDigits: 2,
+                                })}
+                                %
+                            </Tag>
+                        </Descriptions.Item>
+
+                        <Descriptions.Item label="Fecha de Registro">
+                            {selectedProceso.createdAt
+                                ? dayjs(selectedProceso.createdAt).format(
+                                    "DD/MM/YYYY HH:mm",
+                                )
+                                : "-"}
+                        </Descriptions.Item>
+
+                        <Descriptions.Item label="Última Actualización">
+                            {selectedProceso.updatedAt
+                                ? dayjs(selectedProceso.updatedAt).format(
+                                    "DD/MM/YYYY HH:mm",
+                                )
+                                : "-"}
+                        </Descriptions.Item>
+                    </Descriptions>
+                )}
+            </Modal>
         </div>
+
     );
 }

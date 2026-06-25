@@ -1,16 +1,20 @@
 // src/pages/inicio/HomePage.tsx
+import { useEffect, useState, type ReactNode } from "react";
 import {
     Button,
     Card,
     Col,
     Grid,
+    message,
     Row,
+    Skeleton,
     Space,
     Statistic,
     Tag,
     Typography,
 } from "antd";
 import {
+    AppstoreOutlined,
     BarChartOutlined,
     FileExcelOutlined,
     HomeOutlined,
@@ -18,14 +22,101 @@ import {
     PlusOutlined,
     RiseOutlined,
     SafetyCertificateOutlined,
+    ShopOutlined,
 } from "@ant-design/icons";
+import { useNavigate } from "react-router-dom";
+
+import { getHomeResumen, type HomeResumen } from "./home.api";
 
 const { Title, Text, Paragraph } = Typography;
 const { useBreakpoint } = Grid;
 
+const emptyStats = {
+    totalCosechas: 0,
+    kilosTotales: 0,
+    totalHectareas: 0,
+    rendimiento: 0,
+    totalProcesos: 0,
+    totalIngresado: 0,
+    totalResultante: 0,
+    mermaPromedio: 0,
+};
+
+const initialResumen: HomeResumen = {
+    general: emptyStats,
+    mesActual: emptyStats,
+};
+
+type MetricCardProps = {
+    loading: boolean;
+    title: string;
+    value: number;
+    suffix?: string;
+    prefix?: ReactNode;
+    precision?: number;
+    formatter?: (value: string | number) => ReactNode;
+};
+
+function MetricCard({
+    loading,
+    title,
+    value,
+    suffix,
+    prefix,
+    precision,
+    formatter,
+}: MetricCardProps) {
+    return (
+        <Card
+            variant="borderless"
+            style={{
+                borderRadius: 14,
+                minHeight: 116,
+            }}
+        >
+            {loading ? (
+                <Space direction="vertical" style={{ width: "100%" }}>
+                    <Skeleton.Input active size="small" style={{ width: 160 }} />
+                    <Skeleton.Input active size="large" style={{ width: 120 }} />
+                </Space>
+            ) : (
+                <Statistic
+                    title={title}
+                    value={value}
+                    suffix={suffix}
+                    prefix={prefix}
+                    precision={precision}
+                    formatter={formatter}
+                />
+            )}
+        </Card>
+    );
+}
+
 export default function HomePage() {
     const screens = useBreakpoint();
     const isMobile = !screens.md;
+    const navigate = useNavigate();
+
+    const [resumen, setResumen] = useState<HomeResumen>(initialResumen);
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        cargarResumen();
+    }, []);
+
+    async function cargarResumen() {
+        try {
+            setLoading(true);
+            const data = await getHomeResumen();
+            setResumen(data);
+        } catch (error) {
+            console.error("Error cargando resumen del home:", error);
+            message.error("No se pudieron cargar los indicadores de producción.");
+        } finally {
+            setLoading(false);
+        }
+    }
 
     return (
         <div style={{ width: "100%" }}>
@@ -53,7 +144,7 @@ export default function HomePage() {
                                     alignSelf: isMobile ? "center" : "flex-start",
                                 }}
                             >
-                                Sistema de gestión agrícola
+                                Gestión de producción cafetera
                             </Tag>
 
                             <Title
@@ -64,7 +155,7 @@ export default function HomePage() {
                                     lineHeight: 1.12,
                                 }}
                             >
-                                Sistema de Trazabilidad de Café
+                                Producción y trazabilidad de Fundos Noche
                             </Title>
 
                             <Paragraph
@@ -74,8 +165,9 @@ export default function HomePage() {
                                     maxWidth: 980,
                                 }}
                             >
-                                Plataforma para registrar cosechas, controlar procesos de
-                                beneficio, trilla, ventas, mermas y saldos disponibles.
+                                Sistema para registrar lotes, cosechas, procesos productivos,
+                                mermas y reportes de producción, manteniendo el seguimiento del
+                                café desde el campo hasta sus etapas de transformación.
                             </Paragraph>
 
                             <Space
@@ -86,16 +178,26 @@ export default function HomePage() {
                                     width: "100%",
                                 }}
                             >
-                                <Button type="primary" icon={<PlusOutlined />} disabled>
-                                    Nueva cosecha
+                                <Button
+                                    type="primary"
+                                    icon={<PlusOutlined />}
+                                    onClick={() => navigate("/cosechas")}
+                                >
+                                    Registrar cosecha
                                 </Button>
 
-                                <Button icon={<PartitionOutlined />} disabled>
+                                <Button
+                                    icon={<AppstoreOutlined />}
+                                    onClick={() => navigate("/lotes")}
+                                >
+                                    Administrar lotes
+                                </Button>
+
+                                <Button
+                                    icon={<PartitionOutlined />}
+                                    onClick={() => navigate("/trazabilidad")}
+                                >
                                     Ver trazabilidad
-                                </Button>
-
-                                <Button icon={<FileExcelOutlined />} disabled>
-                                    Generar reporte
                                 </Button>
                             </Space>
                         </Space>
@@ -120,7 +222,9 @@ export default function HomePage() {
                                     textAlign: "center",
                                 }}
                             >
-                                <Text style={{ color: "#d1d5db" }}>Estado general</Text>
+                                <Text style={{ color: "#d1d5db" }}>
+                                    Estado de producción
+                                </Text>
 
                                 <Title
                                     level={3}
@@ -141,8 +245,8 @@ export default function HomePage() {
                                         lineHeight: 1.7,
                                     }}
                                 >
-                                    Los módulos principales del sistema se encuentran preparados
-                                    para el registro y seguimiento de la producción.
+                                    Los módulos de lotes, cosechas y trazabilidad están
+                                    disponibles para registrar y controlar la producción de café.
                                 </Paragraph>
                             </Space>
                         </Card>
@@ -150,64 +254,135 @@ export default function HomePage() {
                 </Row>
             </Card>
 
+            <Title level={3} style={{ marginTop: 24 }}>
+                Producción del mes actual
+            </Title>
+
             <Row gutter={[16, 16]} style={{ marginBottom: 24 }}>
                 <Col xs={24} sm={12} xl={6}>
-                    <Card variant="borderless" style={{ borderRadius: 14 }}>
-                        <Statistic
-                            title="Cosechas registradas"
-                            value={0}
-                            prefix={<HomeOutlined />}
-                        />
-                    </Card>
+                    <MetricCard
+                        loading={loading}
+                        title="Cosechas del mes"
+                        value={resumen.mesActual.totalCosechas}
+                        prefix={<HomeOutlined />}
+                    />
                 </Col>
 
                 <Col xs={24} sm={12} xl={6}>
-                    <Card variant="borderless" style={{ borderRadius: 14 }}>
-                        <Statistic
-                            title="Kg cosechados"
-                            value={0}
-                            suffix="kg"
-                            prefix={<BarChartOutlined />}
-                        />
-                    </Card>
+                    <MetricCard
+                        loading={loading}
+                        title="Kg cosechados del mes"
+                        value={resumen.mesActual.kilosTotales}
+                        suffix="kg"
+                        prefix={<BarChartOutlined />}
+                        formatter={(value) => Number(value).toLocaleString("es-CL")}
+                    />
                 </Col>
 
                 <Col xs={24} sm={12} xl={6}>
-                    <Card variant="borderless" style={{ borderRadius: 14 }}>
-                        <Statistic
-                            title="Procesos controlados"
-                            value={0}
-                            prefix={<PartitionOutlined />}
-                        />
-                    </Card>
+                    <MetricCard
+                        loading={loading}
+                        title="Procesos registrados"
+                        value={resumen.mesActual.totalProcesos}
+                        prefix={<PartitionOutlined />}
+                    />
                 </Col>
 
                 <Col xs={24} sm={12} xl={6}>
-                    <Card variant="borderless" style={{ borderRadius: 14 }}>
-                        <Statistic
-                            title="Rendimiento promedio"
-                            value={0}
-                            suffix="%"
-                            prefix={<RiseOutlined />}
-                        />
-                    </Card>
+                    <MetricCard
+                        loading={loading}
+                        title="Merma promedio"
+                        value={resumen.mesActual.mermaPromedio}
+                        suffix="%"
+                        precision={2}
+                        prefix={<RiseOutlined />}
+                    />
                 </Col>
             </Row>
+
+            <Title level={3} style={{ marginTop: 8 }}>
+                Resumen acumulado
+            </Title>
+
+            <Row gutter={[16, 16]} style={{ marginBottom: 24 }}>
+                <Col xs={24} sm={12} xl={6}>
+                    <MetricCard
+                        loading={loading}
+                        title="Cosechas registradas"
+                        value={resumen.general.totalCosechas}
+                        prefix={<ShopOutlined />}
+                    />
+                </Col>
+
+                <Col xs={24} sm={12} xl={6}>
+                    <MetricCard
+                        loading={loading}
+                        title="Kg cosechados acumulados"
+                        value={resumen.general.kilosTotales}
+                        suffix="kg"
+                        prefix={<BarChartOutlined />}
+                        formatter={(value) => Number(value).toLocaleString("es-CL")}
+                    />
+                </Col>
+
+                <Col xs={24} sm={12} xl={6}>
+                    <MetricCard
+                        loading={loading}
+                        title="Hectáreas cosechadas"
+                        value={resumen.general.totalHectareas}
+                        suffix="ha"
+                        precision={2}
+                        prefix={<AppstoreOutlined />}
+                    />
+                </Col>
+
+                <Col xs={24} sm={12} xl={6}>
+                    <MetricCard
+                        loading={loading}
+                        title="Rendimiento promedio"
+                        value={resumen.general.rendimiento}
+                        suffix="kg/ha"
+                        precision={2}
+                        prefix={<RiseOutlined />}
+                    />
+                </Col>
+            </Row>
+
+            <Title level={3} style={{ marginTop: 8 }}>
+                Módulos de gestión
+            </Title>
 
             <Row gutter={[16, 16]}>
                 <Col xs={24} lg={8}>
                     <Card
-                        title="Cosechas"
-                        extra={<Tag color="blue">Registro</Tag>}
+                        title="Lotes"
+                        extra={<Tag color="gold">Campo</Tag>}
                         style={{ height: "100%", borderRadius: 14 }}
                     >
                         <Paragraph>
-                            Registro diario de cosecha por fecha, lote, variedad, tipo de
-                            cosecha, hectáreas, cosechadores y kilos cosechados.
+                            Administración de los lotes productivos, sus hectáreas,
+                            ubicación, estado y observaciones relevantes para la cosecha.
                         </Paragraph>
 
-                        <Button disabled block>
-                            Ingresar cosecha
+                        <Button block onClick={() => navigate("/lotes")}>
+                            Gestionar lotes
+                        </Button>
+                    </Card>
+                </Col>
+
+                <Col xs={24} lg={8}>
+                    <Card
+                        title="Cosechas"
+                        extra={<Tag color="blue">Producción</Tag>}
+                        style={{ height: "100%", borderRadius: 14 }}
+                    >
+                        <Paragraph>
+                            Registro de fechas de cosecha, kilos recolectados, cantidad de
+                            cosechadores, tipo de cosecha y lotes asociados.
+                        </Paragraph>
+
+                        <Button block onClick={() => navigate("/cosechas")}>
+                            Registrar cosecha
                         </Button>
                     </Card>
                 </Col>
@@ -219,12 +394,48 @@ export default function HomePage() {
                         style={{ height: "100%", borderRadius: 14 }}
                     >
                         <Paragraph>
-                            Control del flujo desde el ingreso a beneficio, café pergamino,
-                            trilla, calidades obtenidas, ventas, mermas y saldos.
+                            Control de procesos como despulpado, lavado, secado, trilla,
+                            kilos ingresados, kilos resultantes y porcentaje de merma.
                         </Paragraph>
 
-                        <Button disabled block>
-                            Ver seguimiento
+                        <Button block onClick={() => navigate("/trazabilidad")}>
+                            Ver procesos
+                        </Button>
+                    </Card>
+                </Col>
+            </Row>
+
+            <Row gutter={[16, 16]} style={{ marginTop: 16 }}>
+                <Col xs={24} lg={8}>
+                    <Card
+                        title="Clientes"
+                        extra={<Tag color="cyan">Comercial</Tag>}
+                        style={{ height: "100%", borderRadius: 14 }}
+                    >
+                        <Paragraph>
+                            Registro de clientes vinculados a ventas, salidas de café,
+                            facturación y seguimiento comercial de la producción.
+                        </Paragraph>
+
+                        <Button block onClick={() => navigate("/clientes")}>
+                            Ver clientes
+                        </Button>
+                    </Card>
+                </Col>
+
+                <Col xs={24} lg={8}>
+                    <Card
+                        title="Facturación"
+                        extra={<Tag color="orange">Ventas</Tag>}
+                        style={{ height: "100%", borderRadius: 14 }}
+                    >
+                        <Paragraph>
+                            Módulo preparado para asociar ventas, documentos, montos,
+                            estados de pago y movimientos comerciales del café.
+                        </Paragraph>
+
+                        <Button block onClick={() => navigate("/facturacion")}>
+                            Ir a facturación
                         </Button>
                     </Card>
                 </Col>
@@ -236,11 +447,15 @@ export default function HomePage() {
                         style={{ height: "100%", borderRadius: 14 }}
                     >
                         <Paragraph>
-                            Consulta de indicadores de producción, rendimientos, ventas,
-                            mermas y disponibilidad de café por etapa.
+                            Consulta de indicadores de producción, rendimiento por lote,
+                            mermas, kilos procesados y datos acumulados del sistema.
                         </Paragraph>
 
-                        <Button disabled block>
+                        <Button
+                            block
+                            icon={<FileExcelOutlined />}
+                            onClick={() => navigate("/reportes")}
+                        >
                             Ver reportes
                         </Button>
                     </Card>
@@ -261,7 +476,7 @@ export default function HomePage() {
                             }}
                         >
                             <SafetyCertificateOutlined
-                                style={{ fontSize: 42, color: "#1677ff" }}
+                                style={{ fontSize: 42, color: "#c4b795" }}
                             />
                         </div>
                     </Col>
@@ -274,7 +489,7 @@ export default function HomePage() {
                                 textAlign: isMobile ? "center" : "left",
                             }}
                         >
-                            Control integral de la producción
+                            Gestión productiva basada en datos
                         </Title>
 
                         <Paragraph
@@ -283,9 +498,9 @@ export default function HomePage() {
                                 textAlign: isMobile ? "center" : "left",
                             }}
                         >
-                            El sistema permite mantener un registro ordenado de cada etapa del
-                            proceso productivo, facilitando la consulta de información, el
-                            seguimiento de lotes y la toma de decisiones basada en datos.
+                            Fundos Noche puede mantener un control ordenado de su producción,
+                            relacionando lotes, cosechas y procesos para obtener información
+                            clara sobre rendimiento, mermas y evolución productiva.
                         </Paragraph>
                     </Col>
                 </Row>

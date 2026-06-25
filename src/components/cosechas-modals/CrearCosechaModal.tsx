@@ -1,6 +1,7 @@
 // src/components/cosechas-modals/CrearCosechaModal.tsx
 import { Button, DatePicker, Form, Input, InputNumber, Modal, Select } from "antd";
 import type { Dayjs } from "dayjs";
+import esES from "antd/es/date-picker/locale/es_ES";
 
 export type CosechaFormValues = {
     fecha: Dayjs;
@@ -37,6 +38,15 @@ export default function CrearCosechaModal({ open, onClose, onSubmit }: CrearCose
             open={open}
             onCancel={handleCancel}
             footer={null}
+            centered
+            width="min(720px, 95vw)"
+            styles={{
+                body: {
+                    maxHeight: "70vh",
+                    overflowY: "auto",
+                    paddingRight: 8,
+                },
+            }}
         >
             <Form
                 form={form}
@@ -51,7 +61,12 @@ export default function CrearCosechaModal({ open, onClose, onSubmit }: CrearCose
                         { required: true, message: "La fecha es obligatoria" },
                     ]}
                 >
-                    <DatePicker style={{ width: "100%" }} />
+                    <DatePicker
+                        style={{ width: "100%" }}
+                        locale={esES}
+                        format="DD/MM/YYYY"
+                        placeholder="Seleccione una fecha"
+                    />
                 </Form.Item>
 
                 <Form.Item

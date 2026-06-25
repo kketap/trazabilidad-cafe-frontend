@@ -1,7 +1,9 @@
 // src/components/trazabilidad-modals/CrearProcesoModal.tsx
-import { Button, DatePicker, Form, InputNumber, Modal, Select } from "antd";
+import { Button, DatePicker, Form, InputNumber, Modal, Select, Row, Col, Space } from "antd";
 import type { Dayjs } from "dayjs";
 import type { Cosecha } from "../../pages/cosechas/cosechas.api";
+
+import esES from "antd/es/date-picker/locale/es_ES";
 
 export type ProcesoFormValues = {
     fecha: Dayjs;
@@ -75,6 +77,15 @@ export default function CrearProcesoModal({
             onCancel={handleCancel}
             footer={null}
             destroyOnHidden
+            centered
+            width="min(780px, 95vw)"
+            styles={{
+                body: {
+                    maxHeight: "70vh",
+                    overflowY: "auto",
+                    paddingRight: 8,
+                },
+            }}
         >
             <Form
                 form={form}
@@ -83,96 +94,131 @@ export default function CrearProcesoModal({
                 onValuesChange={handleValuesChange}
                 autoComplete="off"
             >
-                <Form.Item
-                    label="Fecha"
-                    name="fecha"
-                    rules={[{ required: true, message: "La fecha es obligatoria" }]}
-                >
-                    <DatePicker style={{ width: "100%" }} />
-                </Form.Item>
+                <Row gutter={[16, 0]}>
+                    <Col xs={24} md={12}>
+                        <Form.Item
+                            label="Fecha"
+                            name="fecha"
+                            rules={[
+                                { required: true, message: "La fecha es obligatoria" },
+                            ]}
+                        >
+                            <DatePicker
+                                style={{ width: "100%" }}
+                                locale={esES}
+                                format="DD/MM/YYYY"
+                                placeholder="Seleccione una fecha"
+                            />
+                        </Form.Item>
+                    </Col>
+
+                    <Col xs={24} md={12}>
+                        <Form.Item
+                            label="Lote Origen"
+                            name="cosechaId"
+                            rules={[
+                                {
+                                    required: true,
+                                    message: "El lote origen es obligatorio",
+                                },
+                            ]}
+                        >
+                            <Select
+                                placeholder="Seleccione una cosecha"
+                                options={cosechaOptions}
+                                showSearch
+                                optionFilterProp="label"
+                                loading={loading}
+                                disabled={loading || cosechas.length === 0}
+                            />
+                        </Form.Item>
+                    </Col>
+
+                    <Col xs={24} md={12}>
+                        <Form.Item
+                            label="Etapa"
+                            name="etapa"
+                            rules={[
+                                { required: true, message: "La etapa es obligatoria" },
+                            ]}
+                        >
+                            <Select
+                                placeholder="Seleccione una etapa"
+                                options={[
+                                    { value: "Despulpado", label: "Despulpado" },
+                                    { value: "Lavado", label: "Lavado" },
+                                    { value: "Secado", label: "Secado" },
+                                    { value: "Trilla", label: "Trilla" },
+                                    { value: "Clasificación", label: "Clasificación" },
+                                ]}
+                            />
+                        </Form.Item>
+                    </Col>
+
+                    <Col xs={24} md={12}>
+                        <Form.Item
+                            label="Kilos Ingresados"
+                            name="kilosIngresados"
+                            rules={[
+                                {
+                                    required: true,
+                                    message: "Los kilos ingresados son obligatorios",
+                                },
+                            ]}
+                        >
+                            <InputNumber
+                                style={{ width: "100%" }}
+                                min={0}
+                                placeholder="Ej: 180"
+                            />
+                        </Form.Item>
+                    </Col>
+
+                    <Col xs={24} md={12}>
+                        <Form.Item
+                            label="Kilos Resultantes"
+                            name="kilosResultantes"
+                            rules={[
+                                {
+                                    required: true,
+                                    message: "Los kilos resultantes son obligatorios",
+                                },
+                            ]}
+                        >
+                            <InputNumber
+                                style={{ width: "100%" }}
+                                min={0}
+                                placeholder="Ej: 145"
+                            />
+                        </Form.Item>
+                    </Col>
+
+                    <Col xs={24} md={12}>
+                        <Form.Item label="% Merma" name="porcentajeMerma">
+                            <InputNumber
+                                style={{ width: "100%" }}
+                                readOnly
+                                placeholder="Merma calculada"
+                            />
+                        </Form.Item>
+                    </Col>
+                </Row>
 
                 <Form.Item
-                    label="Lote Origen"
-                    name="cosechaId"
-                    rules={[{ required: true, message: "El lote origen es obligatorio" }]}
+                    style={{
+                        marginBottom: 0,
+                        paddingTop: 8,
+                    }}
                 >
-                    <Select
-                        placeholder="Seleccione una cosecha"
-                        options={cosechaOptions}
-                        showSearch
-                        optionFilterProp="label"
-                        loading={loading}
-                        disabled={loading || cosechas.length === 0}
-                    />
-                </Form.Item>
+                    <Space>
+                        <Button type="primary" htmlType="submit" loading={saving}>
+                            Guardar
+                        </Button>
 
-                <Form.Item
-                    label="Etapa"
-                    name="etapa"
-                    rules={[{ required: true, message: "La etapa es obligatoria" }]}
-                >
-                    <Select
-                        placeholder="Seleccione una etapa"
-                        options={[
-                            { value: "Despulpado", label: "Despulpado" },
-                            { value: "Lavado", label: "Lavado" },
-                            { value: "Secado", label: "Secado" },
-                            { value: "Trilla", label: "Trilla" },
-                            { value: "Clasificación", label: "Clasificación" },
-                        ]}
-                    />
-                </Form.Item>
-
-                <Form.Item
-                    label="Kilos Ingresados"
-                    name="kilosIngresados"
-                    rules={[
-                        {
-                            required: true,
-                            message: "Los kilos ingresados son obligatorios",
-                        },
-                    ]}
-                >
-                    <InputNumber
-                        style={{ width: "100%" }}
-                        min={0}
-                        placeholder="Ej: 180"
-                    />
-                </Form.Item>
-
-                <Form.Item
-                    label="Kilos Resultantes"
-                    name="kilosResultantes"
-                    rules={[
-                        {
-                            required: true,
-                            message: "Los kilos resultantes son obligatorios",
-                        },
-                    ]}
-                >
-                    <InputNumber
-                        style={{ width: "100%" }}
-                        min={0}
-                        placeholder="Ej: 145"
-                    />
-                </Form.Item>
-
-                <Form.Item label="% Merma" name="porcentajeMerma">
-                    <InputNumber
-                        style={{ width: "100%" }}
-                        readOnly
-                        placeholder="Merma calculada"
-                    />
-                </Form.Item>
-
-                <Form.Item>
-                    <Button type="primary" htmlType="submit" loading={saving}>
-                        Guardar
-                    </Button>
-
-                    <Button style={{ marginLeft: 8 }} onClick={handleCancel}>
-                        Cancelar
-                    </Button>
+                        <Button onClick={handleCancel}>
+                            Cancelar
+                        </Button>
+                    </Space>
                 </Form.Item>
             </Form>
         </Modal>
