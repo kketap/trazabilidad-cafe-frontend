@@ -11,6 +11,7 @@ import {
     SettingOutlined,
     ShopOutlined,
     SunOutlined,
+    TagOutlined,
     TeamOutlined,
     AppstoreOutlined
 } from "@ant-design/icons";
@@ -204,6 +205,11 @@ export default function AppLayout({ themeMode, isDarkMode, onThemeModeChange, te
                                 label: "Lotes",
                             },
                             {
+                                key: "/secciones",
+                                icon: <TagOutlined />,
+                                label: "Secciones",
+                            },
+                            {
                                 key: "/trazabilidad",
                                 icon: <PartitionOutlined />,
                                 label: "Trazabilidad",
@@ -284,6 +290,11 @@ export default function AppLayout({ themeMode, isDarkMode, onThemeModeChange, te
                                     key: "/lotes",
                                     icon: <AppstoreOutlined />,
                                     label: "Lotes",
+                                },
+                                {
+                                    key: "/secciones",
+                                    icon: <TagOutlined />,
+                                    label: "Secciones",
                                 },
                                 {
                                     key: "/trazabilidad",

@@ -11,6 +11,7 @@ import TrazabilidadPage from "./pages/trazabilidad/TrazabilidadPage";
 import ReportesPage from "./pages/reportes/ReportesPage";
 import ConfiguracionPage from "./pages/configuracion/ConfiguracionPage";
 import LotesPage from "./pages/lotes/LotesPage";
+import SeccionesPage from "./pages/secciones/SeccionesPage";
 
 import esES from "antd/locale/es_ES";
 
@@ -90,6 +91,10 @@ function App() {
           }
           : {
             colorPrimary: BRAND_GOLD,
+            colorBgLayout: '#F5F0E6',
+            colorBgContainer: '#EDE8DE',
+            colorText: '#2C241B',
+            colorTextSecondary: '#5A4C3F',
             ...fontTokens,
           },
       }}
@@ -101,6 +106,7 @@ function App() {
           <Route path="/inicio" element={<HomePage />} />
           <Route path="/cosechas" element={<CosechasPage />} />
           <Route path="/lotes" element={<LotesPage />} />
+          <Route path="/secciones" element={<SeccionesPage />} />
           <Route path="/clientes" element={<ClientesPage />} />
           <Route path="/facturacion" element={<FacturacionPage />} />
           <Route path="/trazabilidad" element={<TrazabilidadPage />} />
