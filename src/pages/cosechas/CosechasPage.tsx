@@ -1,5 +1,5 @@
 // src/pages/cosechas/CosechasPage.tsx
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import dayjs from "dayjs";
 import {
     Button,
@@ -7,7 +7,6 @@ import {
     Col,
     DatePicker,
     Form,
-    Input,
     InputNumber,
     message,
     Modal,
@@ -22,6 +21,7 @@ import { DeleteOutlined, EditOutlined, PlusOutlined } from "@ant-design/icons";
 import type { ColumnsType } from "antd/es/table";
 import type { Dayjs } from "dayjs";
 import esES from "antd/es/date-picker/locale/es_ES";
+import "dayjs/locale/es";
 
 import {
     createCosecha,
@@ -45,6 +45,7 @@ type CosechaFormValues = {
 };
 
 export default function CosechasPage() {
+    dayjs.locale("es");
     const [cosechas, setCosechas] = useState<Cosecha[]>([]);
     const [loading, setLoading] = useState(false);
     const [saving, setSaving] = useState(false);
@@ -53,6 +54,7 @@ export default function CosechasPage() {
     const [editingCosecha, setEditingCosecha] = useState<Cosecha | null>(null);
 
     const [lotesDisponibles, setLotesDisponibles] = useState<Lote[]>([]);
+    const [filtroMes, setFiltroMes] = useState<Dayjs | null>(null);
 
     const [form] = Form.useForm<CosechaFormValues>();
 
@@ -186,12 +188,23 @@ export default function CosechasPage() {
         });
     }
 
-    const kilosTotales = cosechas.reduce(
+    const cosechasFiltradas = useMemo(() => {
+        if (!filtroMes) return cosechas;
+        return cosechas.filter((cosecha) => {
+            const fecha = dayjs(cosecha.fecha);
+            return (
+                fecha.month() === filtroMes.month() &&
+                fecha.year() === filtroMes.year()
+            );
+        });
+    }, [cosechas, filtroMes]);
+
+    const kilosTotales = cosechasFiltradas.reduce(
         (total, cosecha) => total + cosecha.kilosCosechados,
         0,
     );
 
-    const totalHectareas = cosechas.reduce(
+    const totalHectareas = cosechasFiltradas.reduce(
         (total, cosecha) => total + cosecha.totalHectareas,
         0,
     );
@@ -285,9 +298,19 @@ export default function CosechasPage() {
                         </Typography.Text>
                     </div>
 
-                    <Button type="primary" icon={<PlusOutlined />} onClick={showModal}>
-                        Registrar Cosecha
-                    </Button>
+                    <Space align="center">
+                        <DatePicker
+                            picker="month"
+                            value={filtroMes}
+                            onChange={(value) => setFiltroMes(value)}
+                            format="MMMM YYYY"
+                            placeholder="Filtrar por mes"
+                            allowClear
+                        />
+                        <Button type="primary" icon={<PlusOutlined />} onClick={showModal}>
+                            Registrar Cosecha
+                        </Button>
+                    </Space>
                 </div>
 
                 <Row gutter={[16, 16]}>
@@ -327,11 +350,14 @@ export default function CosechasPage() {
 
                 <Table
                     columns={columns}
-                    dataSource={cosechas}
+                    dataSource={cosechasFiltradas}
                     rowKey="id"
                     bordered
                     loading={loading}
                     pagination={false}
+                    locale={{
+                        emptyText: "No hay cosechas registradas en este mes",
+                    }}
                 />
             </Space>
 

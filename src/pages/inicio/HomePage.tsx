@@ -4,7 +4,6 @@ import {
     Button,
     Card,
     Col,
-    Divider,
     Grid,
     message,
     Row,
@@ -29,9 +28,7 @@ import { useNavigate } from "react-router-dom";
 
 import {
     getHomeResumen,
-    getTopAportantes,
     type HomeResumen,
-    type TopAportante,
 } from "./home.api";
 
 const { Title, Text, Paragraph } = Typography;
@@ -53,11 +50,6 @@ const initialResumen: HomeResumen = {
     mesActual: emptyStats,
 };
 
-type AportanteItem = {
-    label: string;
-    value: string;
-};
-
 type MetricCardProps = {
     loading: boolean;
     title: string;
@@ -66,7 +58,6 @@ type MetricCardProps = {
     prefix?: ReactNode;
     precision?: number;
     formatter?: (value: string | number) => ReactNode;
-    aportantes?: AportanteItem[];
 };
 
 function MetricCard({
@@ -77,7 +68,6 @@ function MetricCard({
     prefix,
     precision,
     formatter,
-    aportantes,
 }: MetricCardProps) {
     return (
         <Card
@@ -93,44 +83,14 @@ function MetricCard({
                     <Skeleton.Input active size="large" style={{ width: 120 }} />
                 </Space>
             ) : (
-                <>
-                    <Statistic
-                        title={title}
-                        value={value}
-                        suffix={suffix}
-                        prefix={prefix}
-                        precision={precision}
-                        formatter={formatter}
-                    />
-                    {aportantes && aportantes.length > 0 && (
-                        <>
-                            <Divider style={{ margin: "10px 0" }} />
-                            <Space
-                                direction="vertical"
-                                size={2}
-                                style={{ width: "100%" }}
-                            >
-                                {aportantes.map((item, index) => (
-                                    <div
-                                        key={index}
-                                        style={{
-                                            display: "flex",
-                                            justifyContent: "space-between",
-                                            alignItems: "center",
-                                        }}
-                                    >
-                                        <Text type="secondary" style={{ fontSize: 13 }}>
-                                            {item.label}
-                                        </Text>
-                                        <Text type="secondary" strong style={{ fontSize: 13 }}>
-                                            {item.value}
-                                        </Text>
-                                    </div>
-                                ))}
-                            </Space>
-                        </>
-                    )}
-                </>
+                <Statistic
+                    title={title}
+                    value={value}
+                    suffix={suffix}
+                    prefix={prefix}
+                    precision={precision}
+                    formatter={formatter}
+                />
             )}
         </Card>
     );
@@ -142,56 +102,23 @@ export default function HomePage() {
     const navigate = useNavigate();
 
     const [resumen, setResumen] = useState<HomeResumen>(initialResumen);
-    const [topAportantes, setTopAportantes] = useState<TopAportante[] | null>(null);
-    const [topHectareas, setTopHectareas] = useState<TopAportante[] | null>(null);
-    const [topRendimiento, setTopRendimiento] = useState<TopAportante[] | null>(null);
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        cargarDatos();
+        cargarResumen();
     }, []);
 
-    async function cargarDatos() {
+    async function cargarResumen() {
         try {
             setLoading(true);
-            const [dataResumen, dataTop] = await Promise.all([
-                getHomeResumen(),
-                getTopAportantes(),
-            ]);
-            setResumen(dataResumen);
-            setTopAportantes(dataTop.topKilos);
-            setTopHectareas(dataTop.topHectareas);
-            setTopRendimiento(dataTop.topRendimiento);
+            const data = await getHomeResumen();
+            setResumen(data);
         } catch (error) {
-            console.error("Error cargando datos del home:", error);
+            console.error("Error cargando resumen del home:", error);
             message.error("No se pudieron cargar los indicadores de producción.");
         } finally {
             setLoading(false);
         }
-    }
-
-    function formatAportantesKilos(items: TopAportante[] | null): AportanteItem[] {
-        if (!items) return [];
-        return items.map((item) => ({
-            label: item.seccion?.titulo || `Cosecha #${item.id}`,
-            value: `${item.kilosCosechados.toLocaleString("es-CL")} kg`,
-        }));
-    }
-
-    function formatAportantesHectareas(items: TopAportante[] | null): AportanteItem[] {
-        if (!items) return [];
-        return items.map((item) => ({
-            label: item.seccion?.titulo || `Cosecha #${item.id}`,
-            value: `${item.totalHectareas.toLocaleString("es-CL")} ha`,
-        }));
-    }
-
-    function formatAportantesRendimiento(items: TopAportante[] | null): AportanteItem[] {
-        if (!items) return [];
-        return items.map((item) => ({
-            label: item.seccion?.titulo || `Cosecha #${item.id}`,
-            value: `${(item.rendimiento ?? 0).toFixed(1)} kg/ha`,
-        }));
     }
 
     return (
@@ -398,7 +325,6 @@ export default function HomePage() {
                         suffix="kg"
                         prefix={<BarChartOutlined />}
                         formatter={(value) => Number(value).toLocaleString("es-CL")}
-                        aportantes={formatAportantesKilos(topAportantes)}
                     />
                 </Col>
 
@@ -410,7 +336,6 @@ export default function HomePage() {
                         suffix="ha"
                         precision={2}
                         prefix={<AppstoreOutlined />}
-                        aportantes={formatAportantesHectareas(topHectareas)}
                     />
                 </Col>
 
@@ -422,7 +347,6 @@ export default function HomePage() {
                         suffix="kg/ha"
                         precision={2}
                         prefix={<RiseOutlined />}
-                        aportantes={formatAportantesRendimiento(topRendimiento)}
                     />
                 </Col>
             </Row>

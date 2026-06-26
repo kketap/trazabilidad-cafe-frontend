@@ -1,21 +1,17 @@
 // src/layouts/AppLayout.tsx
 import {
     FileExcelOutlined,
-    DesktopOutlined,
     FileTextOutlined,
     HomeOutlined,
     MenuFoldOutlined,
     MenuUnfoldOutlined,
-    MoonOutlined,
     PartitionOutlined,
     SettingOutlined,
     ShopOutlined,
-    SunOutlined,
-    TagOutlined,
     TeamOutlined,
     AppstoreOutlined
 } from "@ant-design/icons";
-import { Button, Grid, Layout, Menu, Space, Tooltip, Typography, theme as antdTheme } from "antd";
+import { Button, Grid, Layout, Menu, Tooltip, Typography, theme as antdTheme } from "antd";
 import { useState } from "react";
 import { useNavigate, Outlet, useLocation } from "react-router-dom";
 import MenuAccesibilidad from "../components/accesibilidad/MenuAccesibilidad";
@@ -205,11 +201,6 @@ export default function AppLayout({ themeMode, isDarkMode, onThemeModeChange, te
                                 label: "Lotes",
                             },
                             {
-                                key: "/secciones",
-                                icon: <TagOutlined />,
-                                label: "Secciones",
-                            },
-                            {
                                 key: "/trazabilidad",
                                 icon: <PartitionOutlined />,
                                 label: "Trazabilidad",
@@ -290,11 +281,6 @@ export default function AppLayout({ themeMode, isDarkMode, onThemeModeChange, te
                                     key: "/lotes",
                                     icon: <AppstoreOutlined />,
                                     label: "Lotes",
-                                },
-                                {
-                                    key: "/secciones",
-                                    icon: <TagOutlined />,
-                                    label: "Secciones",
                                 },
                                 {
                                     key: "/trazabilidad",

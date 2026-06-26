@@ -74,26 +74,3 @@ export async function getHomeResumen(): Promise<HomeResumen> {
         ),
     };
 }
-
-export type TopAportante = {
-    id: number;
-    fecha: string;
-    kilosCosechados: number;
-    totalHectareas: number;
-    tipoCosecha: string;
-    seccion?: { id: number; titulo: string; color: string } | null;
-    rendimiento?: number;
-};
-
-export type TopAportantes = {
-    topKilos: TopAportante[];
-    topHectareas: TopAportante[];
-    topRendimiento: TopAportante[];
-};
-
-export async function getTopAportantes(): Promise<TopAportantes> {
-    const response = await apiClient.get<TopAportantes>(
-        "/cosechas/analiticas/top-aportantes",
-    );
-    return response.data;
-}
