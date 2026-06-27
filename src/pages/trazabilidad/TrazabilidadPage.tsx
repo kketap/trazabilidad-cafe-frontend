@@ -5,9 +5,10 @@ import {
     Card,
     Col,
     DatePicker,
+    DatePicker,
     Descriptions,
     message,
-    Modal,
+    Popconfirm,
     Row,
     Select,
     Space,
@@ -15,24 +16,34 @@ import {
     Table,
     Typography,
     Tag,
+    Descriptions,
+    Modal,
 } from "antd";
-import { EyeOutlined, PlusOutlined } from "@ant-design/icons";
+import { DeleteOutlined, EditOutlined, EyeOutlined, PlusOutlined, ClearOutlined } from "@ant-design/icons";
 import type { ColumnsType } from "antd/es/table";
+import type { Dayjs } from "dayjs";
 import CrearProcesoModal, {
     type ProcesoFormValues,
 } from "../../components/trazabilidad-modals/CrearProcesoModal";
+import EditarProcesoModal from "../../components/trazabilidad-modals/EditarProcesoModal";
 
 import { getCosechas, type Cosecha } from "../cosechas/cosechas.api";
 
 import {
     createProcesoTrazabilidad,
+    deleteProcesoTrazabilidad,
     getProcesosTrazabilidad,
+    updateProcesoTrazabilidad,
     type CreateProcesoTrazabilidadDto,
     type ProcesoTrazabilidad,
 } from "./trazabilidad.api";
 
 import type { Dayjs } from "dayjs";
 import dayjs from "dayjs";
+import "dayjs/locale/es";
+import esES from "antd/es/date-picker/locale/es_ES";
+
+dayjs.locale("es");
 
 type SortField = "fecha" | "kilosIngresados" | "kilosResultantes" | "porcentajeMerma";
 type SortOrder = "asc" | "desc";
@@ -45,11 +56,17 @@ export default function TrazabilidadPage() {
     const [saving, setSaving] = useState(false);
 
     const [isModalOpen, setIsModalOpen] = useState(false);
+    const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+    const [editingProceso, setEditingProceso] = useState<ProcesoTrazabilidad | null>(null);
 
     const [selectedProceso, setSelectedProceso] =
         useState<ProcesoTrazabilidad | null>(null);
 
     const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
+
+    const [filtroEtapa, setFiltroEtapa] = useState<string | undefined>(undefined);
+    const [filtroLote, setFiltroLote] = useState<string | undefined>(undefined);
+    const [filtroFecha, setFiltroFecha] = useState<[Dayjs, Dayjs] | null>(null);
 
     const [filtroMes, setFiltroMes] = useState<Dayjs | null>(() => dayjs());
     const [filtroEtapa, setFiltroEtapa] = useState<string | null>(null);
@@ -119,6 +136,54 @@ export default function TrazabilidadPage() {
     function handleView(proceso: ProcesoTrazabilidad) {
         setSelectedProceso(proceso);
         setIsDetailModalOpen(true);
+    }
+
+    function handleEdit(proceso: ProcesoTrazabilidad) {
+        setEditingProceso(proceso);
+        setIsEditModalOpen(true);
+    }
+
+    function handleCloseEditModal() {
+        setEditingProceso(null);
+        setIsEditModalOpen(false);
+    }
+
+    async function handleEditSubmit(id: number, values: ProcesoFormValues) {
+        try {
+            setSaving(true);
+            const payload: Partial<CreateProcesoTrazabilidadDto> = {
+                fecha: values.fecha.format("YYYY-MM-DD"),
+                cosechaId: values.cosechaId,
+                etapa: values.etapa,
+                kilosIngresados: values.kilosIngresados,
+                kilosResultantes: values.kilosResultantes,
+            };
+
+            const procesoActualizado = await updateProcesoTrazabilidad(id, payload);
+
+            setProcesos((current) =>
+                current.map((p) => (p.id === id ? procesoActualizado : p)),
+            );
+            message.success("Proceso actualizado correctamente.");
+            setIsEditModalOpen(false);
+            setEditingProceso(null);
+        } catch (error) {
+            console.error("Error actualizando proceso:", error);
+            message.error("No se pudo actualizar el proceso.");
+        } finally {
+            setSaving(false);
+        }
+    }
+
+    async function handleDelete(id: number) {
+        try {
+            await deleteProcesoTrazabilidad(id);
+            setProcesos((current) => current.filter((p) => p.id !== id));
+            message.success("Proceso eliminado correctamente.");
+        } catch (error) {
+            console.error("Error eliminando proceso:", error);
+            message.error("No se pudo eliminar el proceso.");
+        }
     }
 
     function handleCloseDetailModal() {
@@ -203,6 +268,44 @@ export default function TrazabilidadPage() {
         0,
     );
 
+    const etapaOptions = useMemo(() => {
+        const etapas = Array.from(new Set(procesos.map((p) => p.etapa))).sort();
+        return etapas.map((etapa) => ({ value: etapa, label: etapa }));
+    }, [procesos]);
+
+    const loteOptions = useMemo(() => {
+        const lotes = Array.from(
+            new Set(procesos.map((p) => p.cosecha?.lotes ?? `Cosecha #${p.cosechaId}`)),
+        ).sort();
+        return lotes.map((lote) => ({ value: lote, label: lote }));
+    }, [procesos]);
+
+    const procesosFiltrados = useMemo(() => {
+        return procesos.filter((proceso) => {
+            if (filtroEtapa && proceso.etapa !== filtroEtapa) return false;
+
+            const loteProceso = proceso.cosecha?.lotes ?? `Cosecha #${proceso.cosechaId}`;
+            if (filtroLote && loteProceso !== filtroLote) return false;
+
+            if (filtroFecha) {
+                const fechaProceso = dayjs(proceso.fecha);
+                if (
+                    fechaProceso.isBefore(filtroFecha[0], "day") ||
+                    fechaProceso.isAfter(filtroFecha[1], "day")
+                )
+                    return false;
+            }
+
+            return true;
+        });
+    }, [procesos, filtroEtapa, filtroLote, filtroFecha]);
+
+    function handleLimpiarFiltros() {
+        setFiltroEtapa(undefined);
+        setFiltroLote(undefined);
+        setFiltroFecha(null);
+    }
+
     const columns: ColumnsType<ProcesoTrazabilidad> = [
         {
             title: "Fecha",
@@ -248,11 +351,32 @@ export default function TrazabilidadPage() {
             title: "Acciones",
             key: "acciones",
             render: (_, record) => (
-                <Button
-                    type="link"
-                    icon={<EyeOutlined />}
-                    onClick={() => handleView(record)}
-                />
+                <Space size="small">
+                    <Button
+                        type="link"
+                        icon={<EyeOutlined />}
+                        onClick={() => handleView(record)}
+                    />
+                    <Button
+                        type="link"
+                        icon={<EditOutlined />}
+                        onClick={() => handleEdit(record)}
+                    />
+                    <Popconfirm
+                        title="Eliminar proceso"
+                        description="¿Seguro que deseas eliminar este proceso?"
+                        okText="Eliminar"
+                        cancelText="Cancelar"
+                        okButtonProps={{ danger: true }}
+                        onConfirm={() => handleDelete(record.id)}
+                    >
+                        <Button
+                            type="link"
+                            danger
+                            icon={<DeleteOutlined />}
+                        />
+                    </Popconfirm>
+                </Space>
             ),
         },
     ];
@@ -400,6 +524,53 @@ export default function TrazabilidadPage() {
                     </Col>
                 </Row>
 
+                <Card variant="borderless" style={{ borderRadius: 12 }}>
+                    <Row gutter={[12, 12]} align="middle">
+                        <Col xs={24} sm={12} md={6}>
+                            <Select
+                                placeholder="Filtrar por etapa"
+                                value={filtroEtapa}
+                                onChange={setFiltroEtapa}
+                                options={etapaOptions}
+                                allowClear
+                                style={{ width: "100%" }}
+                            />
+                        </Col>
+                        <Col xs={24} sm={12} md={6}>
+                            <Select
+                                placeholder="Filtrar por lote origen"
+                                value={filtroLote}
+                                onChange={setFiltroLote}
+                                options={loteOptions}
+                                allowClear
+                                showSearch
+                                optionFilterProp="label"
+                                style={{ width: "100%" }}
+                            />
+                        </Col>
+                        <Col xs={24} sm={12} md={7}>
+                            <DatePicker.RangePicker
+                                value={filtroFecha}
+                                onChange={(values) =>
+                                    setFiltroFecha(values as [Dayjs, Dayjs] | null)
+                                }
+                                locale={esES}
+                                format="DD/MM/YYYY"
+                                style={{ width: "100%" }}
+                            />
+                        </Col>
+                        <Col xs={24} sm={12} md={5}>
+                            <Button
+                                icon={<ClearOutlined />}
+                                onClick={handleLimpiarFiltros}
+                                block
+                            >
+                                Limpiar Filtros
+                            </Button>
+                        </Col>
+                    </Row>
+                </Card>
+
                 <Table
                     columns={columns}
                     dataSource={procesosFiltrados}
@@ -420,6 +591,14 @@ export default function TrazabilidadPage() {
                 saving={saving}
                 onClose={handleCancel}
                 onSubmit={onFinish}
+            />
+            <EditarProcesoModal
+                open={isEditModalOpen}
+                proceso={editingProceso}
+                cosechas={cosechas}
+                saving={saving}
+                onClose={handleCloseEditModal}
+                onSubmit={handleEditSubmit}
             />
             <Modal
                 title="Detalle del Proceso"

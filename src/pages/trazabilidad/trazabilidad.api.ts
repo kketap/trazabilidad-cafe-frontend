@@ -44,3 +44,13 @@ export async function getTrazabilidadResumen() {
     const response = await apiClient.get<TrazabilidadResumen>("/trazabilidad/resumen");
     return response.data;
 }
+
+export async function updateProcesoTrazabilidad(id: number, data: Partial<CreateProcesoTrazabilidadDto>) {
+    const response = await apiClient.put<ProcesoTrazabilidad>(`/trazabilidad/${id}`, data);
+    return response.data;
+}
+
+export async function deleteProcesoTrazabilidad(id: number) {
+    const response = await apiClient.delete(`/trazabilidad/${id}`);
+    return response.data;
+}
