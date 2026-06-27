@@ -5,7 +5,6 @@ import {
     Card,
     Col,
     DatePicker,
-    DatePicker,
     Descriptions,
     message,
     Popconfirm,
@@ -16,12 +15,10 @@ import {
     Table,
     Typography,
     Tag,
-    Descriptions,
     Modal,
 } from "antd";
 import { DeleteOutlined, EditOutlined, EyeOutlined, PlusOutlined, ClearOutlined } from "@ant-design/icons";
 import type { ColumnsType } from "antd/es/table";
-import type { Dayjs } from "dayjs";
 import CrearProcesoModal, {
     type ProcesoFormValues,
 } from "../../components/trazabilidad-modals/CrearProcesoModal";
@@ -64,8 +61,6 @@ export default function TrazabilidadPage() {
 
     const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
 
-    const [filtroEtapa, setFiltroEtapa] = useState<string | undefined>(undefined);
-    const [filtroLote, setFiltroLote] = useState<string | undefined>(undefined);
     const [filtroFecha, setFiltroFecha] = useState<[Dayjs, Dayjs] | null>(null);
 
     const [filtroMes, setFiltroMes] = useState<Dayjs | null>(() => dayjs());
@@ -280,29 +275,9 @@ export default function TrazabilidadPage() {
         return lotes.map((lote) => ({ value: lote, label: lote }));
     }, [procesos]);
 
-    const procesosFiltrados = useMemo(() => {
-        return procesos.filter((proceso) => {
-            if (filtroEtapa && proceso.etapa !== filtroEtapa) return false;
-
-            const loteProceso = proceso.cosecha?.lotes ?? `Cosecha #${proceso.cosechaId}`;
-            if (filtroLote && loteProceso !== filtroLote) return false;
-
-            if (filtroFecha) {
-                const fechaProceso = dayjs(proceso.fecha);
-                if (
-                    fechaProceso.isBefore(filtroFecha[0], "day") ||
-                    fechaProceso.isAfter(filtroFecha[1], "day")
-                )
-                    return false;
-            }
-
-            return true;
-        });
-    }, [procesos, filtroEtapa, filtroLote, filtroFecha]);
-
     function handleLimpiarFiltros() {
-        setFiltroEtapa(undefined);
-        setFiltroLote(undefined);
+        setFiltroEtapa(null);
+        setFiltroLote(null);
         setFiltroFecha(null);
     }
 
