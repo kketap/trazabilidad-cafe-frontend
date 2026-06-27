@@ -14,6 +14,7 @@ import {
     Tabs,
     Typography,
     theme,
+    Statistic
 } from "antd";
 import type { ColumnsType } from "antd/es/table";
 import dayjs, { type Dayjs } from "dayjs";
@@ -66,7 +67,7 @@ export default function ReportesPage() {
     const { token } = theme.useToken();
     const [data, setData] = useState<KpiCosecha[]>([]);
     const [loading, setLoading] = useState(true);
-    const [mesSeleccionado, setMesSeleccionado] = useState<Dayjs>(dayjs());
+    const [mesSeleccionado, setMesSeleccionado] = useState<Dayjs | null>(dayjs());
 
     useEffect(() => {
         cargarKpis();
@@ -86,6 +87,8 @@ export default function ReportesPage() {
     }
 
     const dataFiltrada = useMemo(() => {
+        if (!mesSeleccionado) return data;
+
         return data.filter((item) => {
             const fecha = dayjs(item.fecha);
             return (
@@ -108,13 +111,43 @@ export default function ReportesPage() {
     }, [data]);
 
     const lineData: LineChartData[] = useMemo(() => {
-        return dataFiltrada
+        return [...dataFiltrada]
+            .sort((a, b) => dayjs(a.fecha).valueOf() - dayjs(b.fecha).valueOf())
             .map((item) => ({
                 fecha: formatDateShort(item.fecha),
                 kilos: item.kilosDia,
-            }))
-            .reverse();
+            }));
     }, [dataFiltrada]);
+
+    const kpisGenerales = useMemo(() => {
+        const totalKilos = dataFiltrada.reduce(
+            (total, item) => total + item.kilosDia,
+            0,
+        );
+
+        const totalRegistros = dataFiltrada.length;
+
+        const promedioDiario =
+            totalRegistros > 0 ? totalKilos / totalRegistros : 0;
+
+        const mejorDia = dataFiltrada.reduce<KpiCosecha | null>((mejor, item) => {
+            if (!mejor || item.kilosDia > mejor.kilosDia) return item;
+            return mejor;
+        }, null);
+
+        const kilosMesHistorico = barData.reduce(
+            (total, item) => total + item.kilos,
+            0,
+        );
+
+        return {
+            totalKilos,
+            totalRegistros,
+            promedioDiario,
+            mejorDia,
+            kilosMesHistorico,
+        };
+    }, [dataFiltrada, barData]);
 
     const columns: ColumnsType<KpiCosecha> = [
         {
@@ -159,7 +192,7 @@ export default function ReportesPage() {
     ];
 
     return (
-        <Space direction="vertical" size="large" style={{ width: "100%" }}>
+        <Space orientation="vertical" size="large" style={{ width: "100%" }}>
             <Typography.Title level={2} style={{ margin: 0 }}>
                 Reportes y Estadísticas
             </Typography.Title>
@@ -171,7 +204,7 @@ export default function ReportesPage() {
                         key: "cosechas",
                         label: "KPIs Cosechas",
                         children: (
-                            <Space direction="vertical" size="large" style={{ width: "100%" }}>
+                            <Space orientation="vertical" size="large" style={{ width: "100%" }}>
                                 <Card variant="borderless" style={{ borderRadius: 14 }}>
                                     <Space align="center">
                                         <Typography.Text strong>
@@ -180,14 +213,66 @@ export default function ReportesPage() {
                                         <DatePicker
                                             picker="month"
                                             value={mesSeleccionado}
-                                            onChange={(value) =>
-                                                setMesSeleccionado(value ?? dayjs())
-                                            }
+                                            onChange={(value) => setMesSeleccionado(value)}
                                             format="MMMM YYYY"
-                                            allowClear={false}
+                                            placeholder="Todos los meses"
+                                            allowClear
                                         />
                                     </Space>
                                 </Card>
+
+                                <Row gutter={[16, 16]}>
+                                    <Col xs={24} sm={12} lg={6}>
+                                        <Card className="report-kpi-card report-kpi-card-coffee">
+                                            <Statistic
+                                                title="Kg cosechados"
+                                                value={kpisGenerales.totalKilos}
+                                                suffix="kg"
+                                                formatter={(value) =>
+                                                    Number(value ?? 0).toLocaleString("es-CL")
+                                                }
+                                            />
+                                        </Card>
+                                    </Col>
+
+                                    <Col xs={24} sm={12} lg={6}>
+                                        <Card className="report-kpi-card report-kpi-card-plantation">
+                                            <Statistic
+                                                title="Registros"
+                                                value={kpisGenerales.totalRegistros}
+                                            />
+                                        </Card>
+                                    </Col>
+
+                                    <Col xs={24} sm={12} lg={6}>
+                                        <Card className="report-kpi-card report-kpi-card-earth">
+                                            <Statistic
+                                                title="Promedio diario"
+                                                value={kpisGenerales.promedioDiario}
+                                                precision={2}
+                                                suffix="kg"
+                                            />
+                                        </Card>
+                                    </Col>
+
+                                    <Col xs={24} sm={12} lg={6}>
+                                        <Card className="report-kpi-card report-kpi-card-gold">
+                                            <Statistic
+                                                title="Mejor día"
+                                                value={kpisGenerales.mejorDia?.kilosDia ?? 0}
+                                                suffix="kg"
+                                                formatter={(value) =>
+                                                    Number(value ?? 0).toLocaleString("es-CL")
+                                                }
+                                            />
+                                            <Typography.Text type="secondary">
+                                                {kpisGenerales.mejorDia
+                                                    ? formatDate(kpisGenerales.mejorDia.fecha)
+                                                    : "Sin datos"}
+                                            </Typography.Text>
+                                        </Card>
+                                    </Col>
+                                </Row>
 
                                 <Row gutter={[16, 16]}>
                                     <Col xs={24} lg={12}>
@@ -220,9 +305,10 @@ export default function ReportesPage() {
                                                         />
                                                         <YAxis tick={{ fontSize: 12, fill: token.colorTextSecondary }} />
                                                         <RTooltip
-                                                            formatter={(value: number) =>
-                                                                `${formatNumber(value)} kg`
-                                                            }
+                                                            formatter={(value) => {
+                                                                const numero = Number(value ?? 0);
+                                                                return `${formatNumber(numero)} kg`;
+                                                            }}
                                                             contentStyle={{
                                                                 background: token.colorBgElevated,
                                                                 border: `1px solid ${token.colorBorder}`,
@@ -244,7 +330,11 @@ export default function ReportesPage() {
 
                                     <Col xs={24} lg={12}>
                                         <Card
-                                            title={`Evolución diaria - ${mesSeleccionado.format("MMMM YYYY")}`}
+                                            title={
+                                                mesSeleccionado
+                                                    ? `Evolución diaria - ${mesSeleccionado.format("MMMM YYYY")}`
+                                                    : "Evolución diaria - Todos los meses"
+                                            }
                                             variant="borderless"
                                             style={{ borderRadius: 14 }}
                                         >
@@ -272,9 +362,10 @@ export default function ReportesPage() {
                                                         />
                                                         <YAxis tick={{ fontSize: 12, fill: token.colorTextSecondary }} />
                                                         <RTooltip
-                                                            formatter={(value: number) =>
-                                                                `${formatNumber(value)} kg`
-                                                            }
+                                                            formatter={(value) => {
+                                                                const numero = Number(value ?? 0);
+                                                                return `${formatNumber(numero)} kg`;
+                                                            }}
                                                             contentStyle={{
                                                                 background: token.colorBgElevated,
                                                                 border: `1px solid ${token.colorBorder}`,
@@ -297,7 +388,11 @@ export default function ReportesPage() {
                                 </Row>
 
                                 <Card
-                                    title={`Detalle de cosechas - ${mesSeleccionado.format("MMMM YYYY")}`}
+                                    title={
+                                        mesSeleccionado
+                                            ? `Detalle de cosechas - ${mesSeleccionado.format("MMMM YYYY")}`
+                                            : "Detalle de cosechas - Todos los meses"
+                                    }
                                     variant="borderless"
                                     style={{ borderRadius: 14 }}
                                 >

@@ -22,7 +22,6 @@ const { useBreakpoint } = Grid;
 
 // Acentos de la paleta corporativa para sidebar (oscuro) y topbar (claro).
 const SIDEBAR_DARK_BG = "#2a2118";
-const HEADER_LIGHT_BG = "#f5f1e8";
 
 type ThemeMode = "light" | "dark" | "system";
 type TextSize = "small" | "normal" | "large" | "xlarge";
@@ -73,7 +72,9 @@ export default function AppLayout({ themeMode, isDarkMode, onThemeModeChange, te
                     width={280}
                     collapsedWidth={88}
                     style={{
-                        background: isDarkMode ? SIDEBAR_DARK_BG : HEADER_LIGHT_BG,
+                        background: isDarkMode
+                            ? SIDEBAR_DARK_BG
+                            : "linear-gradient(180deg, #fff9ef 0%, #f1dfc7 100%)",
                         height: "100vh",
                         minHeight: "100vh",
                         position: "fixed",
@@ -180,7 +181,7 @@ export default function AppLayout({ themeMode, isDarkMode, onThemeModeChange, te
                         onClick={handleMenuClick}
                         style={{
                             // Fondo del menú igual al sidebar para mantener continuidad y contraste.
-                            background: isDarkMode ? SIDEBAR_DARK_BG : HEADER_LIGHT_BG,
+                            background: isDarkMode ? SIDEBAR_DARK_BG : "transparent",
                             borderRight: "none",
                             padding: "16px 8px",
                         }}
@@ -191,14 +192,14 @@ export default function AppLayout({ themeMode, isDarkMode, onThemeModeChange, te
                                 label: "Inicio",
                             },
                             {
-                                key: "/cosechas",
-                                icon: <ShopOutlined />,
-                                label: "Cosechas",
-                            },
-                            {
                                 key: "/lotes",
                                 icon: <AppstoreOutlined />,
                                 label: "Lotes",
+                            },
+                            {
+                                key: "/cosechas",
+                                icon: <ShopOutlined />,
+                                label: "Cosechas",
                             },
                             {
                                 key: "/trazabilidad",
@@ -244,7 +245,9 @@ export default function AppLayout({ themeMode, isDarkMode, onThemeModeChange, te
                         style={{
                             height: "auto",
                             padding: "16px",
-                            background: isDarkMode ? token.colorBgContainer : HEADER_LIGHT_BG,
+                            background: isDarkMode
+                                ? token.colorBgContainer
+                                : "linear-gradient(135deg, #fff9ef, #f1dfc7)",
                             borderBottom: `1px solid ${token.colorBorderSecondary}`,
                             zoom: "var(--app-zoom)",
                             display: "flex",
@@ -313,8 +316,12 @@ export default function AppLayout({ themeMode, isDarkMode, onThemeModeChange, te
                 )}
 
                 <Content
+                    className={
+                        isDarkMode
+                            ? "app-content-gradient app-content-gradient-dark theme-dark"
+                            : "app-content-gradient app-content-gradient-light theme-light"
+                    }
                     style={{
-                        background: token.colorBgLayout,
                         padding: isMobile ? 16 : "24px",
                         flex: 1,
                         minHeight: "100vh",

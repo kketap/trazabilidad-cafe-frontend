@@ -12,6 +12,8 @@ import ReportesPage from "./pages/reportes/ReportesPage";
 import ConfiguracionPage from "./pages/configuracion/ConfiguracionPage";
 import LotesPage from "./pages/lotes/LotesPage";
 
+import "./App.css";
+
 import esES from "antd/locale/es_ES";
 
 type ThemeMode = "light" | "dark" | "system";
@@ -20,6 +22,12 @@ type TextSize = "small" | "normal" | "large" | "xlarge";
 // Colores corporativos extraídos de los banners en src/assets/Logos/.
 const BRAND_GOLD = "#c4b795";
 const BRAND_DARK = "#161716";
+
+const BRAND_COFFEE = "#7A4A24";
+const BRAND_COFFEE_DARK = "#3B2A1A";
+const BRAND_CREAM = "#F8F1E4";
+const BRAND_CARD_LIGHT = "#FFF9EF";
+const BRAND_PLANTATION = "#5F7F43";
 
 // Escala de tamaño de texto para accesibilidad (más marcada para diferencias perceptibles).
 const textSizeScale: Record<TextSize, number> = {
@@ -84,18 +92,76 @@ function App() {
         token: isDarkMode
           ? {
             colorPrimary: BRAND_GOLD,
-            colorBgContainer: BRAND_DARK,
+            colorInfo: BRAND_GOLD,
+            colorSuccess: BRAND_PLANTATION,
+            colorWarning: "#B7791F",
+            colorError: "#B91C1C",
+
             colorBgLayout: BRAND_DARK,
+            colorBgContainer: BRAND_DARK,
+            colorBgElevated: "#1F170F",
+
+            colorText: "#E8E2D2",
+            colorTextSecondary: "#B8AE9A",
+
+            colorBorder: "rgba(196, 183, 149, 0.26)",
+            borderRadius: 12,
+
             ...fontTokens,
           }
           : {
-            colorPrimary: BRAND_GOLD,
-            colorBgLayout: '#F5F0E6',
-            colorBgContainer: '#EDE8DE',
-            colorText: '#2C241B',
-            colorTextSecondary: '#5A4C3F',
+            colorPrimary: BRAND_COFFEE,
+            colorInfo: BRAND_COFFEE,
+            colorSuccess: BRAND_PLANTATION,
+            colorWarning: "#B7791F",
+            colorError: "#B91C1C",
+
+            colorBgLayout: BRAND_CREAM,
+            colorBgContainer: BRAND_CARD_LIGHT,
+            colorBgElevated: "#FFFDF8",
+
+            colorText: BRAND_COFFEE_DARK,
+            colorTextSecondary: "#6F5A44",
+
+            colorBorder: "rgba(122, 74, 36, 0.22)",
+            borderRadius: 12,
+
             ...fontTokens,
           },
+        components: {
+          Layout: {
+            bodyBg: isDarkMode ? BRAND_DARK : BRAND_CREAM,
+            siderBg: isDarkMode ? "#2a2118" : BRAND_CARD_LIGHT,
+          },
+          Card: {
+            colorBgContainer: isDarkMode ? BRAND_DARK : BRAND_CARD_LIGHT,
+          },
+          Menu: {
+            itemSelectedBg: isDarkMode
+              ? "rgba(196, 183, 149, 0.14)"
+              : "rgba(122, 74, 36, 0.12)",
+            itemSelectedColor: isDarkMode ? "#F4EFE4" : "#5C3518",
+          },
+          Button: {
+            colorPrimary: isDarkMode ? BRAND_GOLD : BRAND_COFFEE,
+            colorPrimaryHover: isDarkMode ? "#D8CBA5" : "#9B612E",
+            colorPrimaryActive: isDarkMode ? "#A8976F" : "#5C3518",
+          },
+          Table: {
+            headerBg: isDarkMode ? "#21180F" : "#EADCC5",
+            headerColor: isDarkMode ? "#F4EFE4" : BRAND_COFFEE_DARK,
+            rowHoverBg: isDarkMode
+              ? "rgba(196, 183, 149, 0.08)"
+              : "rgba(196, 183, 149, 0.16)",
+          },
+          Modal: {
+            contentBg: isDarkMode ? "#17120D" : BRAND_CARD_LIGHT,
+            headerBg: isDarkMode ? "#17120D" : BRAND_CARD_LIGHT,
+          },
+          Drawer: {
+            colorBgElevated: isDarkMode ? "#17120D" : BRAND_CARD_LIGHT,
+          },
+        },
       }}
     >
       <Routes>

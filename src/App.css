@@ -1,0 +1,637 @@
+/*App.css*/
+
+/* =========================================================
+   1. FONDO GENERAL DE LA APP
+   ========================================================= */
+
+.app-content-gradient {
+    position: relative;
+    background-attachment: fixed;
+}
+
+.app-content-gradient-dark {
+    background:
+        radial-gradient(circle at top left, rgba(196, 183, 149, 0.13), transparent 30%),
+        radial-gradient(circle at top right, rgba(105, 143, 86, 0.12), transparent 34%),
+        radial-gradient(circle at bottom left, rgba(94, 57, 32, 0.22), transparent 36%),
+        linear-gradient(135deg, #111110 0%, #17120d 42%, #1f170f 100%);
+}
+
+.app-content-gradient-light {
+    background:
+        radial-gradient(circle at top left, rgba(196, 183, 149, 0.34), transparent 30%),
+        radial-gradient(circle at top right, rgba(95, 127, 67, 0.16), transparent 34%),
+        radial-gradient(circle at bottom left, rgba(122, 74, 36, 0.12), transparent 36%),
+        linear-gradient(135deg, #f8f1e4 0%, #efe1cc 46%, #fbf7ef 100%);
+}
+
+.app-content-gradient::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: 0;
+    background:
+        linear-gradient(rgba(255, 255, 255, 0.018) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255, 255, 255, 0.014) 1px, transparent 1px);
+    background-size: 42px 42px;
+    mask-image: linear-gradient(to bottom, rgba(0, 0, 0, 0.42), transparent 80%);
+}
+
+.app-content-gradient>* {
+    position: relative;
+    z-index: 1;
+}
+
+
+/* =========================================================
+   2. COMPONENTES BASE COMPARTIDOS
+   ========================================================= */
+
+.ant-card {
+    overflow: hidden;
+}
+
+.metric-card,
+.report-kpi-card,
+.home-module-card,
+.home-hero-card,
+.home-summary-card {
+    transition:
+        transform 0.25s ease,
+        box-shadow 0.25s ease,
+        border-color 0.25s ease,
+        background 0.25s ease;
+}
+
+.metric-card:hover,
+.report-kpi-card:hover,
+.home-module-card:hover {
+    transform: translateY(-5px);
+}
+
+
+/* =========================================================
+   3. CARDS DE MÉTRICAS DEL HOME
+   ========================================================= */
+
+.metric-card {
+    position: relative;
+    overflow: hidden;
+    min-height: 116px;
+    border-radius: 18px !important;
+    border: 1px solid rgba(196, 183, 149, 0.36) !important;
+    box-shadow: 0 10px 28px rgba(0, 0, 0, 0.22);
+    animation: metricCardEnter 0.45s ease both;
+}
+
+.metric-card:hover {
+    border-color: rgba(196, 183, 149, 0.78) !important;
+    box-shadow: 0 18px 38px rgba(0, 0, 0, 0.34);
+}
+
+.metric-card::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background:
+        linear-gradient(120deg,
+            transparent 0%,
+            rgba(244, 239, 228, 0.12) 45%,
+            transparent 70%);
+    transform: translateX(-110%);
+    transition: transform 0.6s ease;
+    pointer-events: none;
+}
+
+.metric-card:hover::before {
+    transform: translateX(110%);
+}
+
+.metric-card-glow {
+    position: absolute;
+    right: -38px;
+    bottom: -38px;
+    width: 118px;
+    height: 118px;
+    border-radius: 999px;
+    background: rgba(105, 143, 86, 0.2);
+    filter: blur(5px);
+    pointer-events: none;
+}
+
+.metric-card-content {
+    position: relative;
+    z-index: 1;
+}
+
+.metric-card .ant-statistic-title {
+    color: rgba(232, 226, 210, 0.74);
+    font-weight: 500;
+    letter-spacing: 0.2px;
+}
+
+.metric-card .ant-statistic-content,
+.metric-card .ant-statistic-content-value,
+.metric-card .ant-statistic-content-suffix {
+    color: #f4efe4;
+    font-weight: 700;
+}
+
+.metric-card-icon {
+    color: #c4b795;
+    margin-right: 4px;
+}
+
+.metric-card-coffee {
+    background:
+        radial-gradient(circle at top right, rgba(196, 183, 149, 0.22), transparent 34%),
+        linear-gradient(135deg, #2b1d12, #111110) !important;
+}
+
+.metric-card-plantation {
+    background:
+        radial-gradient(circle at top right, rgba(105, 143, 86, 0.28), transparent 34%),
+        linear-gradient(135deg, #1f2a18, #111110) !important;
+}
+
+.metric-card-gold {
+    background:
+        radial-gradient(circle at top right, rgba(196, 183, 149, 0.3), transparent 34%),
+        linear-gradient(135deg, #3a2b18, #111110) !important;
+}
+
+.metric-card-earth {
+    background:
+        radial-gradient(circle at top right, rgba(130, 84, 45, 0.28), transparent 34%),
+        linear-gradient(135deg, #2a1b12, #111110) !important;
+}
+
+
+/* =========================================================
+   4. HOME - HERO, MÓDULOS Y RESUMEN
+   ========================================================= */
+
+.home-hero-card {
+    position: relative;
+    overflow: hidden;
+    border-radius: 24px !important;
+    border: 1px solid rgba(196, 183, 149, 0.28) !important;
+    background:
+        radial-gradient(circle at top left, rgba(196, 183, 149, 0.16), transparent 28%),
+        radial-gradient(circle at bottom right, rgba(105, 143, 86, 0.12), transparent 34%),
+        linear-gradient(135deg, rgba(18, 18, 16, 0.96), rgba(33, 24, 16, 0.94)) !important;
+    box-shadow: 0 16px 42px rgba(0, 0, 0, 0.28);
+}
+
+.home-hero-card::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background:
+        linear-gradient(120deg,
+            transparent 0%,
+            rgba(196, 183, 149, 0.08) 48%,
+            transparent 72%);
+    pointer-events: none;
+}
+
+.home-module-card {
+    position: relative;
+    height: 100%;
+    min-height: 220px;
+    border-radius: 18px !important;
+    border: 1px solid rgba(196, 183, 149, 0.28) !important;
+    background:
+        radial-gradient(circle at top right, rgba(196, 183, 149, 0.14), transparent 34%),
+        linear-gradient(135deg, rgba(29, 22, 15, 0.96), rgba(14, 15, 13, 0.98)) !important;
+    box-shadow: 0 10px 28px rgba(0, 0, 0, 0.18);
+}
+
+.home-module-card:hover {
+    border-color: rgba(196, 183, 149, 0.68) !important;
+    box-shadow: 0 18px 38px rgba(0, 0, 0, 0.32);
+}
+
+.home-module-card::after {
+    content: "";
+    position: absolute;
+    right: -40px;
+    bottom: -40px;
+    width: 120px;
+    height: 120px;
+    border-radius: 999px;
+    background: rgba(105, 143, 86, 0.16);
+    pointer-events: none;
+}
+
+.home-module-card .ant-card-head {
+    border-bottom: 1px solid rgba(196, 183, 149, 0.18);
+}
+
+.home-module-card .ant-card-head-title {
+    color: #f4efe4;
+    font-weight: 700;
+}
+
+.home-module-card .ant-typography {
+    color: rgba(232, 226, 210, 0.78);
+}
+
+.home-module-card .ant-btn {
+    border-radius: 10px;
+    border-color: rgba(196, 183, 149, 0.38);
+}
+
+.home-module-card-field {
+    background:
+        radial-gradient(circle at top right, rgba(105, 143, 86, 0.22), transparent 34%),
+        linear-gradient(135deg, #1f2a18, #111110) !important;
+}
+
+.home-module-card-harvest {
+    background:
+        radial-gradient(circle at top right, rgba(196, 183, 149, 0.22), transparent 34%),
+        linear-gradient(135deg, #2b1d12, #111110) !important;
+}
+
+.home-module-card-process {
+    background:
+        radial-gradient(circle at top right, rgba(125, 96, 64, 0.26), transparent 34%),
+        linear-gradient(135deg, #26190f, #111110) !important;
+}
+
+.home-module-card-client {
+    background:
+        radial-gradient(circle at top right, rgba(80, 120, 95, 0.2), transparent 34%),
+        linear-gradient(135deg, #18221a, #111110) !important;
+}
+
+.home-module-card-sales {
+    background:
+        radial-gradient(circle at top right, rgba(180, 121, 56, 0.24), transparent 34%),
+        linear-gradient(135deg, #2c1c10, #111110) !important;
+}
+
+.home-module-card-report {
+    background:
+        radial-gradient(circle at top right, rgba(196, 183, 149, 0.24), transparent 34%),
+        linear-gradient(135deg, #2f2818, #111110) !important;
+}
+
+.home-summary-card {
+    border-radius: 18px !important;
+    border: 1px solid rgba(196, 183, 149, 0.32) !important;
+    background:
+        radial-gradient(circle at top left, rgba(105, 143, 86, 0.16), transparent 30%),
+        linear-gradient(135deg, rgba(29, 22, 15, 0.96), rgba(14, 15, 13, 0.98)) !important;
+    box-shadow: 0 12px 32px rgba(0, 0, 0, 0.22);
+}
+
+.home-summary-card .ant-typography {
+    color: rgba(244, 239, 228, 0.86);
+}
+
+
+/* =========================================================
+   5. REPORTES - KPI CARDS
+   ========================================================= */
+
+.report-kpi-card {
+    position: relative;
+    overflow: hidden;
+    min-height: 128px;
+    border-radius: 18px !important;
+    border: 1px solid rgba(196, 183, 149, 0.34) !important;
+    box-shadow: 0 12px 28px rgba(0, 0, 0, 0.22);
+}
+
+.report-kpi-card:hover {
+    border-color: rgba(196, 183, 149, 0.72) !important;
+    box-shadow: 0 18px 38px rgba(0, 0, 0, 0.32);
+}
+
+.report-kpi-card::after {
+    content: "";
+    position: absolute;
+    right: -36px;
+    bottom: -36px;
+    width: 110px;
+    height: 110px;
+    border-radius: 999px;
+    background: rgba(105, 143, 86, 0.18);
+    pointer-events: none;
+}
+
+.report-kpi-card .ant-statistic-title {
+    color: rgba(232, 226, 210, 0.72);
+    font-weight: 600;
+}
+
+.report-kpi-card .ant-statistic-content {
+    color: #f4efe4;
+    font-weight: 700;
+}
+
+.report-kpi-card .ant-typography {
+    color: rgba(232, 226, 210, 0.72);
+}
+
+.report-kpi-card-coffee {
+    background:
+        radial-gradient(circle at top right, rgba(196, 183, 149, 0.22), transparent 34%),
+        linear-gradient(135deg, #2b1d12, #111110) !important;
+}
+
+.report-kpi-card-plantation {
+    background:
+        radial-gradient(circle at top right, rgba(105, 143, 86, 0.28), transparent 34%),
+        linear-gradient(135deg, #1f2a18, #111110) !important;
+}
+
+.report-kpi-card-earth {
+    background:
+        radial-gradient(circle at top right, rgba(130, 84, 45, 0.28), transparent 34%),
+        linear-gradient(135deg, #2a1b12, #111110) !important;
+}
+
+.report-kpi-card-gold {
+    background:
+        radial-gradient(circle at top right, rgba(196, 183, 149, 0.3), transparent 34%),
+        linear-gradient(135deg, #3a2b18, #111110) !important;
+}
+
+
+/* =========================================================
+   6. MODO CLARO - BASE ANT DESIGN
+   ========================================================= */
+
+.theme-light .ant-card {
+    border-color: rgba(122, 74, 36, 0.18) !important;
+    box-shadow: 0 10px 24px rgba(92, 53, 24, 0.08);
+}
+
+.theme-light .ant-card-head {
+    border-bottom-color: rgba(122, 74, 36, 0.14) !important;
+}
+
+.theme-light .ant-card-head-title {
+    color: #3b2a1a;
+}
+
+.theme-light .ant-table-wrapper .ant-table {
+    background: #fff9ef;
+}
+
+.theme-light .ant-table-thead>tr>th {
+    background: #eadcc5 !important;
+    color: #3b2a1a !important;
+    border-bottom: 1px solid rgba(122, 74, 36, 0.2) !important;
+}
+
+.theme-light .ant-table-tbody>tr>td {
+    border-bottom: 1px solid rgba(122, 74, 36, 0.12) !important;
+}
+
+.theme-light .ant-table-tbody>tr:hover>td {
+    background: rgba(196, 183, 149, 0.16) !important;
+}
+
+.theme-light .ant-modal-content,
+.theme-light .ant-drawer-content {
+    background: #fff9ef !important;
+}
+
+.theme-light .ant-modal-header,
+.theme-light .ant-drawer-header {
+    background: #fff9ef !important;
+    border-bottom: 1px solid rgba(122, 74, 36, 0.16) !important;
+}
+
+.theme-light .ant-input,
+.theme-light .ant-input-number,
+.theme-light .ant-select-selector,
+.theme-light .ant-picker {
+    background: #fffdf8 !important;
+    border-color: rgba(122, 74, 36, 0.22) !important;
+}
+
+.theme-light .ant-input:hover,
+.theme-light .ant-input-number:hover,
+.theme-light .ant-select-selector:hover,
+.theme-light .ant-picker:hover {
+    border-color: rgba(122, 74, 36, 0.45) !important;
+}
+
+
+/* =========================================================
+   7. MODO CLARO - MÉTRICAS HOME
+   ========================================================= */
+
+.theme-light .metric-card {
+    border: 1px solid rgba(122, 74, 36, 0.22) !important;
+    box-shadow: 0 10px 24px rgba(92, 53, 24, 0.12);
+}
+
+.theme-light .metric-card:hover {
+    border-color: rgba(122, 74, 36, 0.42) !important;
+    box-shadow: 0 18px 34px rgba(92, 53, 24, 0.18);
+}
+
+.theme-light .metric-card .ant-statistic-title {
+    color: rgba(59, 42, 26, 0.72);
+}
+
+.theme-light .metric-card .ant-statistic-content,
+.theme-light .metric-card .ant-statistic-content-value,
+.theme-light .metric-card .ant-statistic-content-suffix {
+    color: #3b2a1a;
+}
+
+.theme-light .metric-card-icon {
+    color: #7a4a24;
+}
+
+.theme-light .metric-card-coffee {
+    background:
+        radial-gradient(circle at top right, rgba(122, 74, 36, 0.12), transparent 34%),
+        linear-gradient(135deg, #fff9ef, #f2dfc6) !important;
+}
+
+.theme-light .metric-card-plantation {
+    background:
+        radial-gradient(circle at top right, rgba(95, 127, 67, 0.16), transparent 34%),
+        linear-gradient(135deg, #f5f4e8, #e5ecd7) !important;
+}
+
+.theme-light .metric-card-gold {
+    background:
+        radial-gradient(circle at top right, rgba(196, 183, 149, 0.28), transparent 34%),
+        linear-gradient(135deg, #fff8e7, #ead8ae) !important;
+}
+
+.theme-light .metric-card-earth {
+    background:
+        radial-gradient(circle at top right, rgba(130, 84, 45, 0.14), transparent 34%),
+        linear-gradient(135deg, #f4e3cf, #fff9ef) !important;
+}
+
+
+/* =========================================================
+   8. MODO CLARO - HOME
+   ========================================================= */
+
+.theme-light .home-hero-card {
+    border: 1px solid rgba(122, 74, 36, 0.22) !important;
+    background:
+        radial-gradient(circle at top left, rgba(196, 183, 149, 0.34), transparent 28%),
+        radial-gradient(circle at bottom right, rgba(95, 127, 67, 0.14), transparent 34%),
+        linear-gradient(135deg, #fff9ef, #f2dfc6) !important;
+    box-shadow: 0 16px 36px rgba(92, 53, 24, 0.14);
+}
+
+.theme-light .home-module-card {
+    border: 1px solid rgba(122, 74, 36, 0.2) !important;
+    background:
+        radial-gradient(circle at top right, rgba(196, 183, 149, 0.18), transparent 34%),
+        linear-gradient(135deg, #fff9ef, #f6ead7) !important;
+    box-shadow: 0 12px 28px rgba(92, 53, 24, 0.1);
+}
+
+.theme-light .home-module-card:hover {
+    border-color: rgba(122, 74, 36, 0.42) !important;
+    box-shadow: 0 18px 34px rgba(92, 53, 24, 0.16);
+}
+
+.theme-light .home-module-card .ant-card-head {
+    border-bottom: 1px solid rgba(122, 74, 36, 0.16);
+}
+
+.theme-light .home-module-card .ant-card-head-title {
+    color: #3b2a1a;
+}
+
+.theme-light .home-module-card .ant-typography {
+    color: rgba(59, 42, 26, 0.78);
+}
+
+.theme-light .home-summary-card {
+    border: 1px solid rgba(122, 74, 36, 0.22) !important;
+    background:
+        radial-gradient(circle at top left, rgba(95, 127, 67, 0.14), transparent 30%),
+        linear-gradient(135deg, #fff9ef, #f3e2c8) !important;
+    box-shadow: 0 12px 28px rgba(92, 53, 24, 0.12);
+}
+
+.theme-light .home-summary-card .ant-typography {
+    color: rgba(59, 42, 26, 0.82);
+}
+
+
+/* =========================================================
+   9. MODO CLARO - REPORTES
+   ========================================================= */
+
+.theme-light .report-kpi-card {
+    border: 1px solid rgba(122, 74, 36, 0.22) !important;
+    box-shadow: 0 12px 28px rgba(92, 53, 24, 0.12);
+}
+
+.theme-light .report-kpi-card:hover {
+    border-color: rgba(122, 74, 36, 0.44) !important;
+    box-shadow: 0 18px 34px rgba(92, 53, 24, 0.18);
+}
+
+.theme-light .report-kpi-card .ant-statistic-title {
+    color: rgba(59, 42, 26, 0.72);
+}
+
+.theme-light .report-kpi-card .ant-statistic-content {
+    color: #3b2a1a;
+}
+
+.theme-light .report-kpi-card .ant-typography {
+    color: rgba(59, 42, 26, 0.72);
+}
+
+.theme-light .report-kpi-card-coffee {
+    background:
+        radial-gradient(circle at top right, rgba(122, 74, 36, 0.13), transparent 34%),
+        linear-gradient(135deg, #fff9ef, #f0dcc4) !important;
+}
+
+.theme-light .report-kpi-card-plantation {
+    background:
+        radial-gradient(circle at top right, rgba(95, 127, 67, 0.16), transparent 34%),
+        linear-gradient(135deg, #f7f5e8, #e5ecd7) !important;
+}
+
+.theme-light .report-kpi-card-earth {
+    background:
+        radial-gradient(circle at top right, rgba(130, 84, 45, 0.14), transparent 34%),
+        linear-gradient(135deg, #f4e3cf, #fff9ef) !important;
+}
+
+.theme-light .report-kpi-card-gold {
+    background:
+        radial-gradient(circle at top right, rgba(196, 183, 149, 0.28), transparent 34%),
+        linear-gradient(135deg, #fff8e7, #ead8ae) !important;
+}
+
+
+/* =========================================================
+   10. MODO OSCURO - AJUSTES ESPECÍFICOS
+   ========================================================= */
+
+.theme-dark .ant-card {
+    border-color: rgba(196, 183, 149, 0.18) !important;
+}
+
+.theme-dark .ant-card-head {
+    border-bottom-color: rgba(196, 183, 149, 0.14) !important;
+}
+
+.theme-dark .ant-table-thead>tr>th {
+    background: rgba(33, 24, 15, 0.96) !important;
+    color: #f4efe4 !important;
+    border-bottom: 1px solid rgba(196, 183, 149, 0.18) !important;
+}
+
+.theme-dark .ant-table-tbody>tr>td {
+    border-bottom: 1px solid rgba(196, 183, 149, 0.1) !important;
+}
+
+.theme-dark .ant-table-tbody>tr:hover>td {
+    background: rgba(196, 183, 149, 0.08) !important;
+}
+
+
+/* =========================================================
+   11. ANIMACIONES
+   ========================================================= */
+
+@keyframes metricCardEnter {
+    from {
+        opacity: 0;
+        transform: translateY(12px) scale(0.98);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+
+/* =========================================================
+   12. RESPONSIVE
+   ========================================================= */
+
+@media (max-width: 768px) {
+
+    .metric-card:hover,
+    .report-kpi-card:hover,
+    .home-module-card:hover {
+        transform: none;
+    }
+}

@@ -1,18 +1,20 @@
 // src/pages/trazabilidad/TrazabilidadPage.tsx
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
     Button,
     Card,
     Col,
+    DatePicker,
+    Descriptions,
     message,
+    Modal,
     Row,
+    Select,
     Space,
     Statistic,
     Table,
     Typography,
     Tag,
-    Descriptions,
-    Modal
 } from "antd";
 import { EyeOutlined, PlusOutlined } from "@ant-design/icons";
 import type { ColumnsType } from "antd/es/table";
@@ -29,7 +31,11 @@ import {
     type ProcesoTrazabilidad,
 } from "./trazabilidad.api";
 
+import type { Dayjs } from "dayjs";
 import dayjs from "dayjs";
+
+type SortField = "fecha" | "kilosIngresados" | "kilosResultantes" | "porcentajeMerma";
+type SortOrder = "asc" | "desc";
 
 export default function TrazabilidadPage() {
     const [procesos, setProcesos] = useState<ProcesoTrazabilidad[]>([]);
@@ -44,6 +50,14 @@ export default function TrazabilidadPage() {
         useState<ProcesoTrazabilidad | null>(null);
 
     const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
+
+    const [filtroMes, setFiltroMes] = useState<Dayjs | null>(() => dayjs());
+    const [filtroEtapa, setFiltroEtapa] = useState<string | null>(null);
+    const [filtroTipoCosecha, setFiltroTipoCosecha] = useState<string | null>(null);
+    const [filtroLote, setFiltroLote] = useState<string | null>(null);
+
+    const [ordenCampo, setOrdenCampo] = useState<SortField>("fecha");
+    const [ordenDireccion, setOrdenDireccion] = useState<SortOrder>("asc");
 
     useEffect(() => {
         cargarDatos();
@@ -112,20 +126,79 @@ export default function TrazabilidadPage() {
         setIsDetailModalOpen(false);
     }
 
+    function limpiarFiltros() {
+        setFiltroMes(null);
+        setFiltroEtapa(null);
+        setFiltroTipoCosecha(null);
+        setFiltroLote(null);
+        setOrdenCampo("fecha");
+        setOrdenDireccion("asc");
+    }
+
+    const procesosFiltrados = useMemo(() => {
+        const filtrados = procesos.filter((proceso) => {
+            const fecha = dayjs(proceso.fecha);
+
+            const cumpleMes = filtroMes
+                ? fecha.month() === filtroMes.month() &&
+                fecha.year() === filtroMes.year()
+                : true;
+
+            const cumpleEtapa = filtroEtapa
+                ? proceso.etapa === filtroEtapa
+                : true;
+
+            const cumpleTipoCosecha = filtroTipoCosecha
+                ? proceso.cosecha?.tipoCosecha === filtroTipoCosecha
+                : true;
+
+            const cumpleLote = filtroLote
+                ? proceso.cosecha?.lotes
+                    ?.toLowerCase()
+                    .includes(filtroLote.toLowerCase())
+                : true;
+
+            return cumpleMes && cumpleEtapa && cumpleTipoCosecha && cumpleLote;
+        });
+
+        return [...filtrados].sort((a, b) => {
+            let valorA: number;
+            let valorB: number;
+
+            if (ordenCampo === "fecha") {
+                valorA = dayjs(a.fecha).valueOf();
+                valorB = dayjs(b.fecha).valueOf();
+            } else {
+                valorA = Number(a[ordenCampo] ?? 0);
+                valorB = Number(b[ordenCampo] ?? 0);
+            }
+
+            return ordenDireccion === "asc" ? valorA - valorB : valorB - valorA;
+        });
+    }, [
+        procesos,
+        filtroMes,
+        filtroEtapa,
+        filtroTipoCosecha,
+        filtroLote,
+        ordenCampo,
+        ordenDireccion,
+    ]);
+
     const mermaPromedio =
-        procesos.length > 0
-            ? procesos.reduce(
+        procesosFiltrados.length > 0
+            ? procesosFiltrados.reduce(
                 (total, proceso) => total + proceso.porcentajeMerma,
                 0,
-            ) / procesos.length
+            ) / procesosFiltrados.length
             : 0;
 
-    const totalIngresado = procesos.reduce(
+    const totalIngresado = procesosFiltrados.reduce(
         (total, proceso) => total + proceso.kilosIngresados,
         0,
     );
 
-    const totalResultante = procesos.reduce(
+    const totalResultante = procesosFiltrados.reduce(
         (total, proceso) => total + proceso.kilosResultantes,
         0,
     );
@@ -205,6 +278,93 @@ export default function TrazabilidadPage() {
                     </Button>
                 </div>
 
+                <Card>
+                    <Space wrap align="center">
+                        <DatePicker
+                            picker="month"
+                            value={filtroMes}
+                            onChange={(value) => setFiltroMes(value)}
+                            format="MMMM YYYY"
+                            placeholder="Todos los meses"
+                            allowClear
+                        />
+
+                        <Select
+                            allowClear
+                            placeholder="Etapa"
+                            value={filtroEtapa}
+                            onChange={(value) => setFiltroEtapa(value ?? null)}
+                            style={{ minWidth: 180 }}
+                            options={[
+                                { value: "Despulpado", label: "Despulpado" },
+                                { value: "Lavado", label: "Lavado" },
+                                { value: "Secado", label: "Secado" },
+                                { value: "Trilla", label: "Trilla" },
+                                { value: "Clasificación", label: "Clasificación" },
+                            ]}
+                        />
+
+                        <Select
+                            allowClear
+                            placeholder="Tipo de cosecha"
+                            value={filtroTipoCosecha}
+                            onChange={(value) => setFiltroTipoCosecha(value ?? null)}
+                            style={{ minWidth: 180 }}
+                            options={[
+                                { value: "Rebusque", label: "Rebusque" },
+                                { value: "Selectiva", label: "Selectiva" },
+                                { value: "Manual", label: "Manual" },
+                            ]}
+                        />
+
+                        <Select
+                            allowClear
+                            showSearch
+                            optionFilterProp="label"
+                            placeholder="Lote origen"
+                            value={filtroLote}
+                            onChange={(value) => setFiltroLote(value ?? null)}
+                            style={{ minWidth: 200 }}
+                            options={Array.from(
+                                new Set(
+                                    cosechas
+                                        .map((cosecha) => cosecha.lotes)
+                                        .filter(Boolean),
+                                ),
+                            ).map((lote) => ({
+                                value: lote,
+                                label: lote,
+                            }))}
+                        />
+
+                        <Select
+                            value={ordenCampo}
+                            onChange={setOrdenCampo}
+                            style={{ minWidth: 210 }}
+                            options={[
+                                { value: "fecha", label: "Ordenar por fecha" },
+                                { value: "kilosIngresados", label: "Ordenar por kg ingresados" },
+                                { value: "kilosResultantes", label: "Ordenar por kg resultantes" },
+                                { value: "porcentajeMerma", label: "Ordenar por merma" },
+                            ]}
+                        />
+
+                        <Select
+                            value={ordenDireccion}
+                            onChange={setOrdenDireccion}
+                            style={{ minWidth: 150 }}
+                            options={[
+                                { value: "asc", label: "Ascendente" },
+                                { value: "desc", label: "Descendente" },
+                            ]}
+                        />
+
+                        <Button onClick={limpiarFiltros}>
+                            Limpiar filtros
+                        </Button>
+                    </Space>
+                </Card>
+
                 <Row gutter={[16, 16]}>
                     <Col xs={24} md={8}>
                         <Card hoverable>
@@ -242,11 +402,14 @@ export default function TrazabilidadPage() {
 
                 <Table
                     columns={columns}
-                    dataSource={procesos}
+                    dataSource={procesosFiltrados}
                     rowKey="id"
                     bordered
                     loading={loading}
                     pagination={false}
+                    locale={{
+                        emptyText: "No hay procesos que coincidan con los filtros seleccionados",
+                    }}
                 />
             </Space>
 

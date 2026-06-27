@@ -6,18 +6,26 @@ import {
     Card,
     Col,
     DatePicker,
+    Descriptions,
     Form,
     InputNumber,
     message,
     Modal,
+    Popconfirm,
     Row,
     Select,
     Space,
-    Statistic,
     Table,
+    Tag,
     Typography,
+    Statistic
 } from "antd";
-import { DeleteOutlined, EditOutlined, PlusOutlined } from "@ant-design/icons";
+import {
+    DeleteOutlined,
+    EditOutlined,
+    EyeOutlined,
+    PlusOutlined,
+} from "@ant-design/icons";
 import type { ColumnsType } from "antd/es/table";
 import type { Dayjs } from "dayjs";
 import esES from "antd/es/date-picker/locale/es_ES";
@@ -44,6 +52,9 @@ type CosechaFormValues = {
     tipoCosecha: string;
 };
 
+type SortField = "fecha" | "kilosCosechados" | "totalHectareas";
+type SortOrder = "asc" | "desc";
+
 export default function CosechasPage() {
     dayjs.locale("es");
     const [cosechas, setCosechas] = useState<Cosecha[]>([]);
@@ -54,7 +65,14 @@ export default function CosechasPage() {
     const [editingCosecha, setEditingCosecha] = useState<Cosecha | null>(null);
 
     const [lotesDisponibles, setLotesDisponibles] = useState<Lote[]>([]);
-    const [filtroMes, setFiltroMes] = useState<Dayjs | null>(null);
+    const [filtroMes, setFiltroMes] = useState<Dayjs | null>(() => dayjs());
+    const [filtroTipoCosecha, setFiltroTipoCosecha] = useState<string | null>(null);
+    const [filtroLoteId, setFiltroLoteId] = useState<number | null>(null);
+    const [ordenCampo, setOrdenCampo] = useState<SortField>("fecha");
+    const [ordenDireccion, setOrdenDireccion] = useState<SortOrder>("asc");
+
+    const [selectedCosecha, setSelectedCosecha] = useState<Cosecha | null>(null);
+    const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
 
     const [form] = Form.useForm<CosechaFormValues>();
 
@@ -145,6 +163,16 @@ export default function CosechasPage() {
         }
     }
 
+    function handleView(cosecha: Cosecha) {
+        setSelectedCosecha(cosecha);
+        setIsDetailModalOpen(true);
+    }
+
+    function handleCloseDetailModal() {
+        setSelectedCosecha(null);
+        setIsDetailModalOpen(false);
+    }
+
     function handleEdit(cosecha: Cosecha) {
         setEditingCosecha(cosecha);
 
@@ -188,16 +216,56 @@ export default function CosechasPage() {
         });
     }
 
+    function limpiarFiltros() {
+        setFiltroMes(dayjs());
+        setFiltroTipoCosecha(null);
+        setFiltroLoteId(null);
+        setOrdenCampo("fecha");
+        setOrdenDireccion("asc");
+    }
+
     const cosechasFiltradas = useMemo(() => {
-        if (!filtroMes) return cosechas;
-        return cosechas.filter((cosecha) => {
+        const filtradas = cosechas.filter((cosecha) => {
             const fecha = dayjs(cosecha.fecha);
-            return (
-                fecha.month() === filtroMes.month() &&
+
+            const cumpleMes = filtroMes
+                ? fecha.month() === filtroMes.month() &&
                 fecha.year() === filtroMes.year()
-            );
+                : true;
+
+            const cumpleTipo = filtroTipoCosecha
+                ? cosecha.tipoCosecha === filtroTipoCosecha
+                : true;
+
+            const cumpleLote = filtroLoteId
+                ? cosecha.cosechaLotes?.some((item) => item.loteId === filtroLoteId)
+                : true;
+
+            return cumpleMes && cumpleTipo && cumpleLote;
         });
-    }, [cosechas, filtroMes]);
+
+        return [...filtradas].sort((a, b) => {
+            let valorA: number;
+            let valorB: number;
+
+            if (ordenCampo === "fecha") {
+                valorA = dayjs(a.fecha).valueOf();
+                valorB = dayjs(b.fecha).valueOf();
+            } else {
+                valorA = Number(a[ordenCampo] ?? 0);
+                valorB = Number(b[ordenCampo] ?? 0);
+            }
+
+            return ordenDireccion === "asc" ? valorA - valorB : valorB - valorA;
+        });
+    }, [
+        cosechas,
+        filtroMes,
+        filtroTipoCosecha,
+        filtroLoteId,
+        ordenCampo,
+        ordenDireccion,
+    ]);
 
     const kilosTotales = cosechasFiltradas.reduce(
         (total, cosecha) => total + cosecha.kilosCosechados,
@@ -257,23 +325,33 @@ export default function CosechasPage() {
         {
             title: "Acciones",
             key: "acciones",
+            width: 150,
             render: (_, record) => (
-                <Space size="small">
+                <Space>
                     <Button
-                        type="link"
-                        icon={<EditOutlined />}
-                        onClick={() => handleEdit(record)}
+                        icon={<EyeOutlined />}
+                        onClick={() => handleView(record)}
+                        title="Ver detalle"
                     />
 
                     <Button
-                        type="link"
-                        danger
-                        icon={<DeleteOutlined />}
-                        onClick={() => handleDelete(record.id)}
+                        icon={<EditOutlined />}
+                        onClick={() => handleEdit(record)}
+                        title="Editar cosecha"
                     />
+
+                    <Popconfirm
+                        title="Eliminar cosecha"
+                        description="¿Estás seguro de eliminar esta cosecha?"
+                        onConfirm={() => handleDelete(record.id)}
+                        okText="Sí"
+                        cancelText="No"
+                    >
+                        <Button danger icon={<DeleteOutlined />} title="Eliminar cosecha" />
+                    </Popconfirm>
                 </Space>
             ),
-        },
+        }
     ];
 
     return (
@@ -298,7 +376,7 @@ export default function CosechasPage() {
                         </Typography.Text>
                     </div>
 
-                    <Space align="center">
+                    <Space wrap align="center">
                         <DatePicker
                             picker="month"
                             value={filtroMes}
@@ -307,6 +385,59 @@ export default function CosechasPage() {
                             placeholder="Filtrar por mes"
                             allowClear
                         />
+
+                        <Select
+                            allowClear
+                            placeholder="Tipo de cosecha"
+                            value={filtroTipoCosecha}
+                            onChange={(value) => setFiltroTipoCosecha(value ?? null)}
+                            style={{ minWidth: 180 }}
+                            options={[
+                                { value: "Rebusque", label: "Rebusque" },
+                                { value: "Selectiva", label: "Selectiva" },
+                                { value: "Manual", label: "Manual" },
+                            ]}
+                        />
+
+                        <Select
+                            allowClear
+                            showSearch
+                            optionFilterProp="label"
+                            placeholder="Lote"
+                            value={filtroLoteId}
+                            onChange={(value) => setFiltroLoteId(value ?? null)}
+                            style={{ minWidth: 200 }}
+                            options={lotesDisponibles.map((lote) => ({
+                                value: lote.id,
+                                label: `${lote.codigo}${lote.nombre ? ` - ${lote.nombre}` : ""}`,
+                            }))}
+                        />
+
+                        <Select
+                            value={ordenCampo}
+                            onChange={setOrdenCampo}
+                            style={{ minWidth: 190 }}
+                            options={[
+                                { value: "fecha", label: "Ordenar por fecha" },
+                                { value: "kilosCosechados", label: "Ordenar por kilos" },
+                                { value: "totalHectareas", label: "Ordenar por hectáreas" },
+                            ]}
+                        />
+
+                        <Select
+                            value={ordenDireccion}
+                            onChange={setOrdenDireccion}
+                            style={{ minWidth: 150 }}
+                            options={[
+                                { value: "desc", label: "Descendente" },
+                                { value: "asc", label: "Ascendente" },
+                            ]}
+                        />
+
+                        <Button onClick={limpiarFiltros}>
+                            Limpiar filtros
+                        </Button>
+
                         <Button type="primary" icon={<PlusOutlined />} onClick={showModal}>
                             Registrar Cosecha
                         </Button>
@@ -356,10 +487,98 @@ export default function CosechasPage() {
                     loading={loading}
                     pagination={false}
                     locale={{
-                        emptyText: "No hay cosechas registradas en este mes",
+                        emptyText: "No hay cosechas que coincidan con los filtros seleccionados",
                     }}
                 />
             </Space>
+
+            <Modal
+                title="Detalle de Cosecha"
+                open={isDetailModalOpen}
+                onCancel={handleCloseDetailModal}
+                footer={[
+                    <Button key="close" onClick={handleCloseDetailModal}>
+                        Cerrar
+                    </Button>,
+                ]}
+                centered
+                width="min(780px, 95vw)"
+            >
+                {selectedCosecha && (
+                    <Descriptions
+                        bordered
+                        column={{
+                            xs: 1,
+                            sm: 1,
+                            md: 2,
+                        }}
+                        size="middle"
+                    >
+                        <Descriptions.Item label="Fecha">
+                            {dayjs(selectedCosecha.fecha).format("DD/MM/YYYY")}
+                        </Descriptions.Item>
+
+                        <Descriptions.Item label="Tipo de Cosecha">
+                            <Tag color="green">{selectedCosecha.tipoCosecha}</Tag>
+                        </Descriptions.Item>
+
+                        <Descriptions.Item label="Lotes">
+                            {selectedCosecha.cosechaLotes &&
+                                selectedCosecha.cosechaLotes.length > 0 ? (
+                                <Space wrap>
+                                    {selectedCosecha.cosechaLotes.map((item) => (
+                                        <Tag key={item.id} color="gold">
+                                            {item.lote.codigo}
+                                            {item.lote.nombre ? ` - ${item.lote.nombre}` : ""}
+                                        </Tag>
+                                    ))}
+                                </Space>
+                            ) : (
+                                selectedCosecha.lotes || "-"
+                            )}
+                        </Descriptions.Item>
+
+                        <Descriptions.Item label="Kilos Cosechados">
+                            {selectedCosecha.kilosCosechados.toLocaleString("es-CL")} kg
+                        </Descriptions.Item>
+
+                        <Descriptions.Item label="Cantidad de Cosechadores">
+                            {selectedCosecha.cantidadCosechadores}
+                        </Descriptions.Item>
+
+                        <Descriptions.Item label="Total Hectáreas">
+                            {selectedCosecha.totalHectareas.toLocaleString("es-CL", {
+                                maximumFractionDigits: 2,
+                            })}{" "}
+                            ha
+                        </Descriptions.Item>
+
+                        <Descriptions.Item label="Rendimiento">
+                            {selectedCosecha.totalHectareas > 0
+                                ? (
+                                    selectedCosecha.kilosCosechados /
+                                    selectedCosecha.totalHectareas
+                                ).toLocaleString("es-CL", {
+                                    maximumFractionDigits: 2,
+                                })
+                                : "0"}{" "}
+                            kg/ha
+                        </Descriptions.Item>
+
+                        <Descriptions.Item label="Fecha de Registro">
+                            {selectedCosecha.createdAt
+                                ? dayjs(selectedCosecha.createdAt).format("DD/MM/YYYY HH:mm")
+                                : "-"}
+                        </Descriptions.Item>
+
+                        <Descriptions.Item label="Última Actualización">
+                            {selectedCosecha.updatedAt
+                                ? dayjs(selectedCosecha.updatedAt).format("DD/MM/YYYY HH:mm")
+                                : "-"}
+                        </Descriptions.Item>
+                    </Descriptions>
+                )}
+            </Modal>
 
             <Modal
                 title={editingCosecha ? "Editar Cosecha" : "Registrar Cosecha"}
