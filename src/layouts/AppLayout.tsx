@@ -3,6 +3,7 @@ import {
     FileExcelOutlined,
     FileTextOutlined,
     HomeOutlined,
+    LogoutOutlined,
     MenuFoldOutlined,
     MenuUnfoldOutlined,
     PartitionOutlined,
@@ -15,6 +16,7 @@ import { Button, Grid, Layout, Menu, Tooltip, Typography, theme as antdTheme } f
 import { useState } from "react";
 import { useNavigate, Outlet, useLocation } from "react-router-dom";
 import MenuAccesibilidad from "../components/accesibilidad/MenuAccesibilidad";
+import { removeToken, getUserName } from "../api/auth";
 
 const { Header, Sider, Content } = Layout;
 const { Text } = Typography;
@@ -56,6 +58,11 @@ export default function AppLayout({ themeMode, isDarkMode, onThemeModeChange, te
     const location = useLocation();
 
     const sidebarCollapsed = isMobile ? true : collapsed;
+
+    const handleLogout = () => {
+        removeToken();
+        navigate("/login", { replace: true });
+    };
 
     return (
         <Layout
@@ -168,6 +175,16 @@ export default function AppLayout({ themeMode, isDarkMode, onThemeModeChange, te
                                 >
                                     Gestión de producción
                                 </Text>
+                                <Text
+                                    style={{
+                                        color: token.colorPrimary,
+                                        fontSize: token.fontSizeSM,
+                                        display: "block",
+                                        marginTop: 4,
+                                    }}
+                                >
+                                    Bienvenido, {getUserName() ?? "Usuario"}
+                                </Text>
                             </div>
                         )}
                     </div>
@@ -227,6 +244,33 @@ export default function AppLayout({ themeMode, isDarkMode, onThemeModeChange, te
                             },
                         ]}
                     />
+
+                    <div
+                        style={{
+                            marginTop: "auto",
+                            padding: "16px 8px",
+                            borderTop: `1px solid ${token.colorSplit}`,
+                        }}
+                    >
+                        <Button
+                            type="text"
+                            icon={<LogoutOutlined />}
+                            onClick={handleLogout}
+                            style={{
+                                color: token.colorText,
+                                fontSize: token.fontSize,
+                                borderRadius: 8,
+                                width: "100%",
+                                display: "flex",
+                                alignItems: "center",
+                                justifyContent: "flex-start",
+                                gap: 8,
+                            }}
+                            aria-label="Cerrar sesión"
+                        >
+                            Cerrar sesión
+                        </Button>
+                    </div>
                 </Sider>
             )}
 
@@ -308,6 +352,18 @@ export default function AppLayout({ themeMode, isDarkMode, onThemeModeChange, te
                                     label: "Configuración",
                                 },
                             ]}
+                        />
+                        <Button
+                            type="text"
+                            icon={<LogoutOutlined />}
+                            onClick={handleLogout}
+                            style={{
+                                color: token.colorText,
+                                fontSize: 18,
+                                borderRadius: 8,
+                                alignSelf: "flex-end",
+                            }}
+                            aria-label="Cerrar sesión"
                         />
                     </Header>
                 )}

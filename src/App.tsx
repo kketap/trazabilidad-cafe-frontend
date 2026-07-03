@@ -11,6 +11,8 @@ import TrazabilidadPage from "./pages/trazabilidad/TrazabilidadPage";
 import ReportesPage from "./pages/reportes/ReportesPage";
 import ConfiguracionPage from "./pages/configuracion/ConfiguracionPage";
 import LotesPage from "./pages/lotes/LotesPage";
+import LoginPage from "./pages/auth/LoginPage";
+import ProtectedRoute from "./components/auth/ProtectedRoute";
 
 import esES from "antd/locale/es_ES";
 
@@ -99,8 +101,8 @@ function App() {
       }}
     >
       <Routes>
-        {/* isDarkMode sincroniza el estilo del sidebar con el tema activo. */}
-        <Route element={<AppLayout themeMode={themeMode} isDarkMode={isDarkMode} onThemeModeChange={setThemeMode} textSize={textSize} onTextSizeChange={setTextSize} />}>
+        <Route path="/login" element={<LoginPage themeMode={themeMode} onThemeModeChange={setThemeMode} textSize={textSize} onTextSizeChange={setTextSize} />} />
+        <Route element={<ProtectedRoute><AppLayout themeMode={themeMode} isDarkMode={isDarkMode} onThemeModeChange={setThemeMode} textSize={textSize} onTextSizeChange={setTextSize} /></ProtectedRoute>}>
           <Route path="/" element={<Navigate to="/inicio" replace />} />
           <Route path="/inicio" element={<HomePage />} />
           <Route path="/cosechas" element={<CosechasPage />} />
