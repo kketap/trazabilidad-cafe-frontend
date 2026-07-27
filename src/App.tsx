@@ -6,6 +6,7 @@ import AppLayout from "./layouts/AppLayout";
 import HomePage from "./pages/inicio/HomePage";
 import CosechasPage from "./pages/cosechas/CosechasPage";
 import ClientesPage from "./pages/clientes/ClientesPage";
+import TrabajadoresPage from "./pages/trabajadores/TrabajadoresPage";
 import FacturacionPage from "./pages/facturacion/FacturacionPage";
 import TrazabilidadPage from "./pages/trazabilidad/TrazabilidadPage";
 import ReportesPage from "./pages/reportes/ReportesPage";
@@ -108,6 +109,7 @@ function App() {
           <Route path="/cosechas" element={<CosechasPage />} />
           <Route path="/lotes" element={<LotesPage />} />
           <Route path="/clientes" element={<ClientesPage />} />
+          <Route path="/trabajadores" element={<TrabajadoresPage />} />
           <Route path="/facturacion" element={<FacturacionPage />} />
           <Route path="/trazabilidad" element={<TrazabilidadPage />} />
           <Route path="/reportes" element={<ReportesPage />} />

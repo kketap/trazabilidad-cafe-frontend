@@ -10,6 +10,7 @@ import {
     SettingOutlined,
     ShopOutlined,
     TeamOutlined,
+    SolutionOutlined,
     AppstoreOutlined
 } from "@ant-design/icons";
 import { Button, Grid, Layout, Menu, Tooltip, Typography, theme as antdTheme } from "antd";
@@ -238,6 +239,11 @@ export default function AppLayout({ themeMode, isDarkMode, onThemeModeChange, te
                                 label: "Clientes",
                             },
                             {
+                                key: "/trabajadores",
+                                icon: <SolutionOutlined />,
+                                label: "Trabajadores",
+                            },
+                            {
                                 key: "/configuracion",
                                 icon: <SettingOutlined />,
                                 label: "Configuración",
@@ -345,6 +351,11 @@ export default function AppLayout({ themeMode, isDarkMode, onThemeModeChange, te
                                     key: "/clientes",
                                     icon: <TeamOutlined />,
                                     label: "Clientes",
+                                },
+                                {
+                                    key: "/trabajadores",
+                                    icon: <SolutionOutlined />,
+                                    label: "Trabajadores",
                                 },
                                 {
                                     key: "/configuracion",

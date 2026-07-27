@@ -220,8 +220,8 @@ export default function ReportesPage() {
                                                         />
                                                         <YAxis tick={{ fontSize: 12, fill: token.colorTextSecondary }} />
                                                         <RTooltip
-                                                            formatter={(value: number) =>
-                                                                `${formatNumber(value)} kg`
+                                                            formatter={(value: any) =>
+                                                                `${formatNumber(Number(value || 0))} kg`
                                                             }
                                                             contentStyle={{
                                                                 background: token.colorBgElevated,
@@ -272,8 +272,8 @@ export default function ReportesPage() {
                                                         />
                                                         <YAxis tick={{ fontSize: 12, fill: token.colorTextSecondary }} />
                                                         <RTooltip
-                                                            formatter={(value: number) =>
-                                                                `${formatNumber(value)} kg`
+                                                            formatter={(value: any) =>
+                                                                `${formatNumber(Number(value || 0))} kg`
                                                             }
                                                             contentStyle={{
                                                                 background: token.colorBgElevated,

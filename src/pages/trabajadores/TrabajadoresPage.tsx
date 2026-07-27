@@ -1,4 +1,4 @@
-// src/pages/clientes/ClientesPage.tsx
+// src/pages/trabajadores/TrabajadoresPage.tsx
 import { useEffect, useState } from "react";
 import {
   Button,
@@ -7,7 +7,6 @@ import {
   Input,
   Modal,
   Popconfirm,
-  Radio,
   Space,
   Table,
   Tag,
@@ -20,71 +19,69 @@ import {
   EditOutlined,
   PlusOutlined,
   SearchOutlined,
-  TeamOutlined,
-  IdcardOutlined,
-  BankOutlined,
   UserOutlined,
+  IdcardOutlined,
+  SolutionOutlined,
 } from "@ant-design/icons";
-import type { Cliente } from "../../api/clientes";
+import type { Trabajador } from "../../api/trabajadores";
 import {
-  getClientesApi,
-  createClienteApi,
-  updateClienteApi,
-  deleteClienteApi,
-} from "../../api/clientes";
+  getTrabajadoresApi,
+  createTrabajadorApi,
+  updateTrabajadorApi,
+  deleteTrabajadorApi,
+} from "../../api/trabajadores";
 
-export default function ClientesPage() {
+export default function TrabajadoresPage() {
   const { token } = theme.useToken();
-  const [clientes, setClientes] = useState<Cliente[]>([]);
+  const [trabajadores, setTrabajadores] = useState<Trabajador[]>([]);
   const [loading, setLoading] = useState(false);
   const [searchText, setSearchText] = useState("");
 
   // Estado para modal CRUD
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [editingCliente, setEditingCliente] = useState<Cliente | null>(null);
+  const [editingTrabajador, setEditingTrabajador] = useState<Trabajador | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [form] = Form.useForm();
 
-  const fetchClientes = async () => {
+  const fetchTrabajadores = async () => {
     setLoading(true);
     try {
-      const data = await getClientesApi();
-      setClientes(data);
+      const data = await getTrabajadoresApi();
+      setTrabajadores(data);
     } catch (error: any) {
-      message.error(error?.response?.data?.message || "Error al cargar la lista de clientes");
+      message.error(error?.response?.data?.message || "Error al cargar la lista de trabajadores");
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchClientes();
+    fetchTrabajadores();
   }, []);
 
   const handleOpenCreateModal = () => {
-    setEditingCliente(null);
+    setEditingTrabajador(null);
     form.resetFields();
-    form.setFieldsValue({ persona_juridica: false });
     setIsModalOpen(true);
   };
 
-  const handleOpenEditModal = (record: Cliente) => {
-    setEditingCliente(record);
+  const handleOpenEditModal = (record: Trabajador) => {
+    setEditingTrabajador(record);
     form.setFieldsValue({
-      dni_rut: record.dni_rut,
-      nombre: record.nombre,
-      persona_juridica: record.persona_juridica,
+      nombres: record.nombres,
+      dni: record.dni,
+      rol: record.rol || "",
     });
     setIsModalOpen(true);
   };
 
   const handleDelete = async (id: number) => {
     try {
-      await deleteClienteApi(id);
-      message.success("Cliente eliminado correctamente");
-      fetchClientes();
+      await deleteTrabajadorApi(id);
+      message.success("Trabajador eliminado correctamente");
+      fetchTrabajadores();
     } catch (error: any) {
-      message.error(error?.response?.data?.message || "Error al eliminar cliente");
+      message.error(error?.response?.data?.message || "Error al eliminar trabajador");
     }
   };
 
@@ -92,16 +89,16 @@ export default function ClientesPage() {
     try {
       const values = await form.validateFields();
       setSubmitting(true);
-      if (editingCliente) {
-        await updateClienteApi(editingCliente.id, values);
-        message.success("Cliente actualizado con éxito");
+      if (editingTrabajador) {
+        await updateTrabajadorApi(editingTrabajador.id, values);
+        message.success("Trabajador actualizado con éxito");
       } else {
-        await createClienteApi(values);
-        message.success("Cliente registrado con éxito");
+        await createTrabajadorApi(values);
+        message.success("Trabajador registrado con éxito");
       }
       setIsModalOpen(false);
       form.resetFields();
-      fetchClientes();
+      fetchTrabajadores();
     } catch (error: any) {
       if (error?.response?.data?.message) {
         message.error(error.response.data.message);
@@ -111,10 +108,11 @@ export default function ClientesPage() {
     }
   };
 
-  const filteredData = clientes.filter(
-    (c) =>
-      c.nombre.toLowerCase().includes(searchText.toLowerCase()) ||
-      c.dni_rut.toLowerCase().includes(searchText.toLowerCase())
+  const filteredData = trabajadores.filter(
+    (t) =>
+      t.nombres.toLowerCase().includes(searchText.toLowerCase()) ||
+      t.dni.includes(searchText) ||
+      (t.rol && t.rol.toLowerCase().includes(searchText.toLowerCase()))
   );
 
   const columns = [
@@ -123,28 +121,24 @@ export default function ClientesPage() {
       dataIndex: "id",
       key: "id",
       width: 70,
-      sorter: (a: Cliente, b: Cliente) => a.id - b.id,
+      sorter: (a: Trabajador, b: Trabajador) => a.id - b.id,
     },
     {
-      title: "Nombre / Razón Social",
-      dataIndex: "nombre",
-      key: "nombre",
-      render: (text: string, record: Cliente) => (
+      title: "Nombres",
+      dataIndex: "nombres",
+      key: "nombres",
+      render: (text: string) => (
         <Space>
-          {record.persona_juridica ? (
-            <BankOutlined style={{ color: token.colorPrimary }} />
-          ) : (
-            <UserOutlined style={{ color: token.colorPrimary }} />
-          )}
+          <UserOutlined style={{ color: token.colorPrimary }} />
           <Typography.Text strong>{text}</Typography.Text>
         </Space>
       ),
-      sorter: (a: Cliente, b: Cliente) => a.nombre.localeCompare(b.nombre),
+      sorter: (a: Trabajador, b: Trabajador) => a.nombres.localeCompare(b.nombres),
     },
     {
-      title: "DNI / RUT",
-      dataIndex: "dni_rut",
-      key: "dni_rut",
+      title: "DNI",
+      dataIndex: "dni",
+      key: "dni",
       render: (text: string) => (
         <Tag icon={<IdcardOutlined />} color="gold">
           {text}
@@ -152,25 +146,23 @@ export default function ClientesPage() {
       ),
     },
     {
-      title: "Tipo de Persona",
-      dataIndex: "persona_juridica",
-      key: "persona_juridica",
-      render: (pj: boolean) =>
-        pj ? (
-          <Tag color="purple" icon={<BankOutlined />}>
-            Persona Jurídica
+      title: "Rol / Cargo",
+      dataIndex: "rol",
+      key: "rol",
+      render: (text: string | null) =>
+        text ? (
+          <Tag color="blue" icon={<SolutionOutlined />}>
+            {text}
           </Tag>
         ) : (
-          <Tag color="blue" icon={<UserOutlined />}>
-            Persona Natural
-          </Tag>
+          <Typography.Text type="secondary">Sin asignar</Typography.Text>
         ),
     },
     {
       title: "Acciones",
       key: "acciones",
       width: 140,
-      render: (_: any, record: Cliente) => (
+      render: (_: any, record: Trabajador) => (
         <Space size="small">
           <Button
             type="text"
@@ -178,8 +170,8 @@ export default function ClientesPage() {
             onClick={() => handleOpenEditModal(record)}
           />
           <Popconfirm
-            title="Eliminar cliente"
-            description="¿Está seguro de eliminar este cliente?"
+            title="Eliminar trabajador"
+            description="¿Está seguro de eliminar este trabajador?"
             onConfirm={() => handleDelete(record.id)}
             okText="Sí, eliminar"
             cancelText="Cancelar"
@@ -205,10 +197,10 @@ export default function ClientesPage() {
       >
         <div>
           <Typography.Title level={2} style={{ margin: 0 }}>
-            Gestión de Clientes
+            Gestión de Trabajadores
           </Typography.Title>
           <Typography.Text type="secondary">
-            Registro, edición y control de clientes comerciales (Naturales o Jurídicos).
+            Registro, edición y control del personal operativo y técnico.
           </Typography.Text>
         </div>
         <Button
@@ -218,7 +210,7 @@ export default function ClientesPage() {
           onClick={handleOpenCreateModal}
           style={{ borderRadius: 8 }}
         >
-          Nuevo Cliente
+          Nuevo Trabajador
         </Button>
       </div>
 
@@ -230,7 +222,7 @@ export default function ClientesPage() {
       >
         <div style={{ marginBottom: 16, maxWidth: 360 }}>
           <Input
-            placeholder="Buscar por nombre o DNI/RUT..."
+            placeholder="Buscar por nombre, DNI o rol..."
             prefix={<SearchOutlined style={{ color: token.colorTextSecondary }} />}
             value={searchText}
             onChange={(e) => setSearchText(e.target.value)}
@@ -249,37 +241,37 @@ export default function ClientesPage() {
       </Card>
 
       <Modal
-        title={editingCliente ? "Editar Cliente" : "Nuevo Cliente"}
+        title={editingTrabajador ? "Editar Trabajador" : "Nuevo Trabajador"}
         open={isModalOpen}
         onOk={handleSubmit}
         onCancel={() => setIsModalOpen(false)}
         confirmLoading={submitting}
-        okText={editingCliente ? "Guardar Cambios" : "Registrar"}
+        okText={editingTrabajador ? "Guardar Cambios" : "Registrar"}
         cancelText="Cancelar"
         destroyOnClose
       >
         <Form form={form} layout="vertical" style={{ marginTop: 16 }}>
           <Form.Item
-            name="nombre"
-            label="Nombre o Razón Social"
-            rules={[{ required: true, message: "Ingrese el nombre o razón social del cliente" }]}
+            name="nombres"
+            label="Nombres y Apellidos"
+            rules={[{ required: true, message: "Ingrese los nombres del trabajador" }]}
           >
-            <Input prefix={<TeamOutlined />} placeholder="Ej: San Crispín S.A.C. / Juan Pérez" />
+            <Input prefix={<UserOutlined />} placeholder="Ej: Juan Carlos Pérez" />
           </Form.Item>
 
           <Form.Item
-            name="dni_rut"
-            label="DNI / RUT / RUC"
-            rules={[{ required: true, message: "Ingrese el DNI, RUT o RUC" }]}
+            name="dni"
+            label="DNI"
+            rules={[
+              { required: true, message: "Ingrese el DNI" },
+              { pattern: /^\d{8}$/, message: "El DNI debe contener 8 dígitos numéricos" },
+            ]}
           >
-            <Input prefix={<IdcardOutlined />} placeholder="Ej: 20123456789 / 76.123.456-7" />
+            <Input prefix={<IdcardOutlined />} placeholder="Ej: 12345678" maxLength={8} />
           </Form.Item>
 
-          <Form.Item name="persona_juridica" label="Tipo de Persona">
-            <Radio.Group buttonStyle="solid">
-              <Radio.Button value={false}>Persona Natural</Radio.Button>
-              <Radio.Button value={true}>Persona Jurídica</Radio.Button>
-            </Radio.Group>
+          <Form.Item name="rol" label="Rol / Cargo (Opcional)">
+            <Input prefix={<SolutionOutlined />} placeholder="Ej: Cosechador, Operario, Supervisor" />
           </Form.Item>
         </Form>
       </Modal>
