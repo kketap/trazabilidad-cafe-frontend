@@ -305,10 +305,16 @@ export default function ReportesPage() {
                                                         />
                                                         <YAxis tick={{ fontSize: 12, fill: token.colorTextSecondary }} />
                                                         <RTooltip
+<<<<<<< HEAD
                                                             formatter={(value) => {
                                                                 const numero = Number(value ?? 0);
                                                                 return `${formatNumber(numero)} kg`;
                                                             }}
+=======
+                                                            formatter={(value: any) =>
+                                                                `${formatNumber(Number(value || 0))} kg`
+                                                            }
+>>>>>>> 2e51d57ebd7ef037ec51f79bb932a6df326a6f8f
                                                             contentStyle={{
                                                                 background: token.colorBgElevated,
                                                                 border: `1px solid ${token.colorBorder}`,
@@ -362,10 +368,16 @@ export default function ReportesPage() {
                                                         />
                                                         <YAxis tick={{ fontSize: 12, fill: token.colorTextSecondary }} />
                                                         <RTooltip
+<<<<<<< HEAD
                                                             formatter={(value) => {
                                                                 const numero = Number(value ?? 0);
                                                                 return `${formatNumber(numero)} kg`;
                                                             }}
+=======
+                                                            formatter={(value: any) =>
+                                                                `${formatNumber(Number(value || 0))} kg`
+                                                            }
+>>>>>>> 2e51d57ebd7ef037ec51f79bb932a6df326a6f8f
                                                             contentStyle={{
                                                                 background: token.colorBgElevated,
                                                                 border: `1px solid ${token.colorBorder}`,

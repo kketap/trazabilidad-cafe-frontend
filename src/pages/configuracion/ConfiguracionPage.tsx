@@ -1,15 +1,47 @@
 // src/pages/configuracion/ConfiguracionPage.tsx
+import { useEffect, useState } from "react";
 import { Button, Card, Col, Form, Input, Row, message } from "antd";
+import type { AxiosError } from "axios";
+import {
+    actualizarPerfilApi,
+    cambiarPasswordApi,
+    getUserName,
+    saveUserName,
+} from "../../api/auth";
 
 export default function ConfiguracionPage() {
     const [profileForm] = Form.useForm();
     const [passwordForm] = Form.useForm();
+    const [loadingProfile, setLoadingProfile] = useState(false);
+    const [loadingPassword, setLoadingPassword] = useState(false);
 
-    const handleProfileFinish = (values: { nombreUsuario: string }) => {
-        message.success(`Perfil de ${values.nombreUsuario} guardado correctamente.`);
+    useEffect(() => {
+        const nombreGuardado = getUserName();
+
+        if (nombreGuardado) {
+            profileForm.setFieldsValue({ nombreUsuario: nombreGuardado });
+        }
+    }, [profileForm]);
+
+    const handleProfileFinish = async (values: { nombreUsuario: string }) => {
+        setLoadingProfile(true);
+
+        try {
+            await actualizarPerfilApi(values.nombreUsuario);
+
+            saveUserName(values.nombreUsuario);
+
+            message.success("Perfil guardado correctamente.");
+        } catch (error) {
+            const axiosError = error as AxiosError<{ message?: string }>;
+
+            message.error(axiosError.response?.data?.message ?? "Error al guardar el perfil.");
+        } finally {
+            setLoadingProfile(false);
+        }
     };
 
-    const handlePasswordFinish = (values: {
+    const handlePasswordFinish = async (values: {
         contrasenaActual: string;
         nuevaContrasena: string;
         confirmarContrasena: string;
@@ -24,8 +56,20 @@ export default function ConfiguracionPage() {
             return;
         }
 
-        message.success("Contraseña actualizada correctamente.");
-        passwordForm.resetFields();
+        setLoadingPassword(true);
+
+        try {
+            await cambiarPasswordApi(values.contrasenaActual, values.nuevaContrasena);
+
+            message.success("Contraseña actualizada correctamente.");
+            passwordForm.resetFields();
+        } catch (error) {
+            const axiosError = error as AxiosError<{ message?: string }>;
+
+            message.error(axiosError.response?.data?.message ?? "Error al cambiar la contraseña.");
+        } finally {
+            setLoadingPassword(false);
+        }
     };
 
     return (
@@ -47,7 +91,7 @@ export default function ConfiguracionPage() {
                         </Form.Item>
 
                         <Form.Item>
-                            <Button type="primary" htmlType="submit">
+                            <Button type="primary" htmlType="submit" loading={loadingProfile}>
                                 Guardar Perfil
                             </Button>
                         </Form.Item>
@@ -88,7 +132,7 @@ export default function ConfiguracionPage() {
                         </Form.Item>
 
                         <Form.Item>
-                            <Button type="primary" htmlType="submit">
+                            <Button type="primary" htmlType="submit" loading={loadingPassword}>
                                 Actualizar Contraseña
                             </Button>
                         </Form.Item>

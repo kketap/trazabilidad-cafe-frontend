@@ -6,11 +6,14 @@ import AppLayout from "./layouts/AppLayout";
 import HomePage from "./pages/inicio/HomePage";
 import CosechasPage from "./pages/cosechas/CosechasPage";
 import ClientesPage from "./pages/clientes/ClientesPage";
+import TrabajadoresPage from "./pages/trabajadores/TrabajadoresPage";
 import FacturacionPage from "./pages/facturacion/FacturacionPage";
 import TrazabilidadPage from "./pages/trazabilidad/TrazabilidadPage";
 import ReportesPage from "./pages/reportes/ReportesPage";
 import ConfiguracionPage from "./pages/configuracion/ConfiguracionPage";
 import LotesPage from "./pages/lotes/LotesPage";
+import LoginPage from "./pages/auth/LoginPage";
+import ProtectedRoute from "./components/auth/ProtectedRoute";
 
 import "./App.css";
 
@@ -165,13 +168,14 @@ function App() {
       }}
     >
       <Routes>
-        {/* isDarkMode sincroniza el estilo del sidebar con el tema activo. */}
-        <Route element={<AppLayout themeMode={themeMode} isDarkMode={isDarkMode} onThemeModeChange={setThemeMode} textSize={textSize} onTextSizeChange={setTextSize} />}>
+        <Route path="/login" element={<LoginPage themeMode={themeMode} onThemeModeChange={setThemeMode} textSize={textSize} onTextSizeChange={setTextSize} />} />
+        <Route element={<ProtectedRoute><AppLayout themeMode={themeMode} isDarkMode={isDarkMode} onThemeModeChange={setThemeMode} textSize={textSize} onTextSizeChange={setTextSize} /></ProtectedRoute>}>
           <Route path="/" element={<Navigate to="/inicio" replace />} />
           <Route path="/inicio" element={<HomePage />} />
           <Route path="/cosechas" element={<CosechasPage />} />
           <Route path="/lotes" element={<LotesPage />} />
           <Route path="/clientes" element={<ClientesPage />} />
+          <Route path="/trabajadores" element={<TrabajadoresPage />} />
           <Route path="/facturacion" element={<FacturacionPage />} />
           <Route path="/trazabilidad" element={<TrazabilidadPage />} />
           <Route path="/reportes" element={<ReportesPage />} />
