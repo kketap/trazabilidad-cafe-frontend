@@ -1,5 +1,5 @@
 // src/pages/clientes/ClientesPage.tsx
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   Button,
   Card,
@@ -8,6 +8,7 @@ import {
   Modal,
   Popconfirm,
   Radio,
+  Select,
   Space,
   Table,
   Tag,
@@ -24,22 +25,25 @@ import {
   IdcardOutlined,
   BankOutlined,
   UserOutlined,
+  PhoneOutlined,
+  MailOutlined,
+  EnvironmentOutlined,
 } from "@ant-design/icons";
-import type { Cliente } from "../../api/clientes";
+import type { Cliente } from "./clientes.api";
 import {
   getClientesApi,
   createClienteApi,
   updateClienteApi,
   deleteClienteApi,
-} from "../../api/clientes";
+} from "./clientes.api";
 
 export default function ClientesPage() {
   const { token } = theme.useToken();
+
   const [clientes, setClientes] = useState<Cliente[]>([]);
   const [loading, setLoading] = useState(false);
   const [searchText, setSearchText] = useState("");
 
-  // Estado para modal CRUD
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingCliente, setEditingCliente] = useState<Cliente | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -47,11 +51,14 @@ export default function ClientesPage() {
 
   const fetchClientes = async () => {
     setLoading(true);
+
     try {
       const data = await getClientesApi();
       setClientes(data);
     } catch (error: any) {
-      message.error(error?.response?.data?.message || "Error al cargar la lista de clientes");
+      message.error(
+        error?.response?.data?.message || "Error al cargar la lista de clientes",
+      );
     } finally {
       setLoading(false);
     }
@@ -64,16 +71,23 @@ export default function ClientesPage() {
   const handleOpenCreateModal = () => {
     setEditingCliente(null);
     form.resetFields();
-    form.setFieldsValue({ persona_juridica: false });
+    form.setFieldsValue({
+      personaJuridica: false,
+      activo: true,
+    });
     setIsModalOpen(true);
   };
 
   const handleOpenEditModal = (record: Cliente) => {
     setEditingCliente(record);
     form.setFieldsValue({
-      dni_rut: record.dni_rut,
+      dniRut: record.dniRut,
       nombre: record.nombre,
-      persona_juridica: record.persona_juridica,
+      personaJuridica: record.personaJuridica,
+      telefono: record.telefono || "",
+      email: record.email || "",
+      direccion: record.direccion || "",
+      activo: record.activo,
     });
     setIsModalOpen(true);
   };
@@ -81,10 +95,12 @@ export default function ClientesPage() {
   const handleDelete = async (id: number) => {
     try {
       await deleteClienteApi(id);
-      message.success("Cliente eliminado correctamente");
+      message.success("Cliente desactivado correctamente");
       fetchClientes();
     } catch (error: any) {
-      message.error(error?.response?.data?.message || "Error al eliminar cliente");
+      message.error(
+        error?.response?.data?.message || "Error al eliminar cliente",
+      );
     }
   };
 
@@ -92,6 +108,7 @@ export default function ClientesPage() {
     try {
       const values = await form.validateFields();
       setSubmitting(true);
+
       if (editingCliente) {
         await updateClienteApi(editingCliente.id, values);
         message.success("Cliente actualizado con éxito");
@@ -99,6 +116,7 @@ export default function ClientesPage() {
         await createClienteApi(values);
         message.success("Cliente registrado con éxito");
       }
+
       setIsModalOpen(false);
       form.resetFields();
       fetchClientes();
@@ -111,11 +129,23 @@ export default function ClientesPage() {
     }
   };
 
-  const filteredData = clientes.filter(
-    (c) =>
-      c.nombre.toLowerCase().includes(searchText.toLowerCase()) ||
-      c.dni_rut.toLowerCase().includes(searchText.toLowerCase())
-  );
+  const filteredData = useMemo(() => {
+    const search = searchText.toLowerCase();
+
+    return clientes.filter((cliente) => {
+      return (
+        cliente.nombre.toLowerCase().includes(search) ||
+        cliente.dniRut.toLowerCase().includes(search) ||
+        (cliente.telefono?.toLowerCase().includes(search) ?? false) ||
+        (cliente.email?.toLowerCase().includes(search) ?? false) ||
+        (cliente.direccion?.toLowerCase().includes(search) ?? false) ||
+        (cliente.personaJuridica ? "persona jurídica" : "persona natural")
+          .toLowerCase()
+          .includes(search) ||
+        (cliente.activo ? "activo" : "inactivo").includes(search)
+      );
+    });
+  }, [clientes, searchText]);
 
   const columns = [
     {
@@ -131,7 +161,7 @@ export default function ClientesPage() {
       key: "nombre",
       render: (text: string, record: Cliente) => (
         <Space>
-          {record.persona_juridica ? (
+          {record.personaJuridica ? (
             <BankOutlined style={{ color: token.colorPrimary }} />
           ) : (
             <UserOutlined style={{ color: token.colorPrimary }} />
@@ -142,9 +172,9 @@ export default function ClientesPage() {
       sorter: (a: Cliente, b: Cliente) => a.nombre.localeCompare(b.nombre),
     },
     {
-      title: "DNI / RUT",
-      dataIndex: "dni_rut",
-      key: "dni_rut",
+      title: "DNI / RUT / RUC",
+      dataIndex: "dniRut",
+      key: "dniRut",
       render: (text: string) => (
         <Tag icon={<IdcardOutlined />} color="gold">
           {text}
@@ -152,11 +182,11 @@ export default function ClientesPage() {
       ),
     },
     {
-      title: "Tipo de Persona",
-      dataIndex: "persona_juridica",
-      key: "persona_juridica",
-      render: (pj: boolean) =>
-        pj ? (
+      title: "Tipo",
+      dataIndex: "personaJuridica",
+      key: "personaJuridica",
+      render: (personaJuridica: boolean) =>
+        personaJuridica ? (
           <Tag color="purple" icon={<BankOutlined />}>
             Persona Jurídica
           </Tag>
@@ -167,21 +197,45 @@ export default function ClientesPage() {
         ),
     },
     {
+      title: "Teléfono",
+      dataIndex: "telefono",
+      key: "telefono",
+      render: (text: string | null) => text || "-",
+    },
+    {
+      title: "Email",
+      dataIndex: "email",
+      key: "email",
+      render: (text: string | null) => text || "-",
+    },
+    {
+      title: "Estado",
+      dataIndex: "activo",
+      key: "activo",
+      render: (activo: boolean) =>
+        activo ? (
+          <Tag color="success">Activo</Tag>
+        ) : (
+          <Tag color="default">Inactivo</Tag>
+        ),
+    },
+    {
       title: "Acciones",
       key: "acciones",
       width: 140,
-      render: (_: any, record: Cliente) => (
+      render: (_: unknown, record: Cliente) => (
         <Space size="small">
           <Button
             type="text"
             icon={<EditOutlined style={{ color: token.colorPrimary }} />}
             onClick={() => handleOpenEditModal(record)}
           />
+
           <Popconfirm
-            title="Eliminar cliente"
-            description="¿Está seguro de eliminar este cliente?"
+            title="Desactivar cliente"
+            description="¿Está seguro de desactivar este cliente?"
             onConfirm={() => handleDelete(record.id)}
-            okText="Sí, eliminar"
+            okText="Sí, desactivar"
             cancelText="Cancelar"
             okButtonProps={{ danger: true }}
           >
@@ -207,10 +261,13 @@ export default function ClientesPage() {
           <Typography.Title level={2} style={{ margin: 0 }}>
             Gestión de Clientes
           </Typography.Title>
+
           <Typography.Text type="secondary">
-            Registro, edición y control de clientes comerciales (Naturales o Jurídicos).
+            Registro, edición y control de clientes comerciales naturales o
+            jurídicos.
           </Typography.Text>
         </div>
+
         <Button
           type="primary"
           icon={<PlusOutlined />}
@@ -228,12 +285,12 @@ export default function ClientesPage() {
           boxShadow: "0 4px 20px rgba(0,0,0,0.06)",
         }}
       >
-        <div style={{ marginBottom: 16, maxWidth: 360 }}>
+        <div style={{ marginBottom: 16, maxWidth: 420 }}>
           <Input
-            placeholder="Buscar por nombre o DNI/RUT..."
+            placeholder="Buscar por nombre, DNI/RUT, teléfono o correo..."
             prefix={<SearchOutlined style={{ color: token.colorTextSecondary }} />}
             value={searchText}
-            onChange={(e) => setSearchText(e.target.value)}
+            onChange={(event) => setSearchText(event.target.value)}
             allowClear
           />
         </div>
@@ -244,7 +301,7 @@ export default function ClientesPage() {
           rowKey="id"
           loading={loading}
           pagination={{ pageSize: 8, showSizeChanger: true }}
-          scroll={{ x: 600 }}
+          scroll={{ x: 950 }}
         />
       </Card>
 
@@ -262,24 +319,79 @@ export default function ClientesPage() {
           <Form.Item
             name="nombre"
             label="Nombre o Razón Social"
-            rules={[{ required: true, message: "Ingrese el nombre o razón social del cliente" }]}
+            rules={[
+              {
+                required: true,
+                message: "Ingrese el nombre o razón social del cliente",
+              },
+            ]}
           >
-            <Input prefix={<TeamOutlined />} placeholder="Ej: San Crispín S.A.C. / Juan Pérez" />
+            <Input
+              prefix={<TeamOutlined />}
+              placeholder="Ej: San Crispín S.A.C. / Juan Pérez"
+            />
           </Form.Item>
 
           <Form.Item
-            name="dni_rut"
+            name="dniRut"
             label="DNI / RUT / RUC"
-            rules={[{ required: true, message: "Ingrese el DNI, RUT o RUC" }]}
+            rules={[
+              {
+                required: true,
+                message: "Ingrese el DNI, RUT o RUC",
+              },
+            ]}
           >
-            <Input prefix={<IdcardOutlined />} placeholder="Ej: 20123456789 / 76.123.456-7" />
+            <Input
+              prefix={<IdcardOutlined />}
+              placeholder="Ej: 20123456789 / 76.123.456-7"
+            />
           </Form.Item>
 
-          <Form.Item name="persona_juridica" label="Tipo de Persona">
+          <Form.Item name="personaJuridica" label="Tipo de Persona">
             <Radio.Group buttonStyle="solid">
               <Radio.Button value={false}>Persona Natural</Radio.Button>
               <Radio.Button value={true}>Persona Jurídica</Radio.Button>
             </Radio.Group>
+          </Form.Item>
+
+          <Form.Item name="telefono" label="Teléfono">
+            <Input
+              prefix={<PhoneOutlined />}
+              placeholder="Ej: +56 9 1234 5678"
+            />
+          </Form.Item>
+
+          <Form.Item
+            name="email"
+            label="Correo"
+            rules={[
+              {
+                type: "email",
+                message: "Ingrese un correo válido",
+              },
+            ]}
+          >
+            <Input
+              prefix={<MailOutlined />}
+              placeholder="Ej: cliente@correo.com"
+            />
+          </Form.Item>
+
+          <Form.Item name="direccion" label="Dirección">
+            <Input
+              prefix={<EnvironmentOutlined />}
+              placeholder="Ej: Av. Principal 123"
+            />
+          </Form.Item>
+
+          <Form.Item name="activo" label="Estado">
+            <Select
+              options={[
+                { value: true, label: "Activo" },
+                { value: false, label: "Inactivo" },
+              ]}
+            />
           </Form.Item>
         </Form>
       </Modal>

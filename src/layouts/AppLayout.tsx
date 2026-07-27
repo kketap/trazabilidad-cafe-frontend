@@ -64,6 +64,126 @@ export default function AppLayout({ themeMode, isDarkMode, onThemeModeChange, te
         navigate("/login", { replace: true });
     };
 
+    const menuItems = [
+        {
+            key: "/inicio",
+            icon: <HomeOutlined />,
+            label: "Inicio",
+        },
+        {
+            type: "group" as const,
+            label: sidebarCollapsed ? "" : "Producción",
+            children: [
+                {
+                    key: "/cosechas",
+                    icon: <ShopOutlined />,
+                    label: "Cosechas",
+                },
+                {
+                    key: "/lotes",
+                    icon: <AppstoreOutlined />,
+                    label: "Lotes",
+                },
+                {
+                    key: "/trazabilidad",
+                    icon: <PartitionOutlined />,
+                    label: "Proceso Trazabilidad",
+                },
+            ],
+        },
+        {
+            type: "group" as const,
+            label: sidebarCollapsed ? "" : "Análisis y gestión",
+            children: [
+                {
+                    key: "/reportes",
+                    icon: <FileExcelOutlined />,
+                    label: "Reportes",
+                },
+                {
+                    key: "/facturacion",
+                    icon: <FileTextOutlined />,
+                    label: "Facturación",
+                },
+            ],
+        },
+        {
+            type: "group" as const,
+            label: sidebarCollapsed ? "" : "Personas",
+            children: [
+                {
+                    key: "/clientes",
+                    icon: <TeamOutlined />,
+                    label: "Clientes",
+                },
+                {
+                    key: "/trabajadores",
+                    icon: <SolutionOutlined />,
+                    label: "Trabajadores",
+                },
+            ],
+        },
+        {
+            type: "group" as const,
+            label: sidebarCollapsed ? "" : "Sistema",
+            children: [
+                {
+                    key: "/configuracion",
+                    icon: <SettingOutlined />,
+                    label: "Configuración",
+                },
+            ],
+        },
+    ];
+
+    const mobileMenuItems = [
+        {
+            key: "/inicio",
+            icon: <HomeOutlined />,
+            label: "Inicio",
+        },
+        {
+            key: "/lotes",
+            icon: <AppstoreOutlined />,
+            label: "Lotes",
+        },
+        {
+            key: "/cosechas",
+            icon: <ShopOutlined />,
+            label: "Cosechas",
+        },
+        {
+            key: "/trazabilidad",
+            icon: <PartitionOutlined />,
+            label: "Proceso Trazabilidad",
+        },
+        {
+            key: "/reportes",
+            icon: <FileExcelOutlined />,
+            label: "Reportes",
+        },
+        {
+            key: "/facturacion",
+            icon: <FileTextOutlined />,
+            label: "Facturación",
+        },
+        {
+            key: "/clientes",
+            icon: <TeamOutlined />,
+            label: "Clientes",
+        },
+        {
+            key: "/trabajadores",
+            icon: <SolutionOutlined />,
+            label: "Trabajadores",
+        },
+        {
+            key: "/configuracion",
+            icon: <SettingOutlined />,
+            label: "Configuración",
+        },
+    ];
+
     return (
         <Layout
             style={{
@@ -203,53 +323,7 @@ export default function AppLayout({ themeMode, isDarkMode, onThemeModeChange, te
                             borderRight: "none",
                             padding: "16px 8px",
                         }}
-                        items={[
-                            {
-                                key: "/inicio",
-                                icon: <HomeOutlined />,
-                                label: "Inicio",
-                            },
-                            {
-                                key: "/lotes",
-                                icon: <AppstoreOutlined />,
-                                label: "Lotes",
-                            },
-                            {
-                                key: "/cosechas",
-                                icon: <ShopOutlined />,
-                                label: "Cosechas",
-                            },
-                            {
-                                key: "/trazabilidad",
-                                icon: <PartitionOutlined />,
-                                label: "Trazabilidad",
-                            },
-                            {
-                                key: "/reportes",
-                                icon: <FileExcelOutlined />,
-                                label: "Reportes",
-                            },
-                            {
-                                key: "/facturacion",
-                                icon: <FileTextOutlined />,
-                                label: "Facturación",
-                            },
-                            {
-                                key: "/clientes",
-                                icon: <TeamOutlined />,
-                                label: "Clientes",
-                            },
-                            {
-                                key: "/trabajadores",
-                                icon: <SolutionOutlined />,
-                                label: "Trabajadores",
-                            },
-                            {
-                                key: "/configuracion",
-                                icon: <SettingOutlined />,
-                                label: "Configuración",
-                            },
-                        ]}
+                        items={menuItems}
                     />
 
                     <div
@@ -319,53 +393,7 @@ export default function AppLayout({ themeMode, isDarkMode, onThemeModeChange, te
                                 width: "100%",
                                 borderBottom: "none",
                             }}
-                            items={[
-                                {
-                                    key: "/inicio",
-                                    icon: <HomeOutlined />,
-                                    label: "Inicio",
-                                },
-                                {
-                                    key: "/cosechas",
-                                    icon: <ShopOutlined />,
-                                    label: "Cosechas",
-                                },
-                                {
-                                    key: "/lotes",
-                                    icon: <AppstoreOutlined />,
-                                    label: "Lotes",
-                                },
-                                {
-                                    key: "/trazabilidad",
-                                    icon: <PartitionOutlined />,
-                                    label: "Trazabilidad",
-                                },
-                                {
-                                    key: "/reportes",
-                                    icon: <FileExcelOutlined />,
-                                    label: "Reportes",
-                                },
-                                {
-                                    key: "/facturacion",
-                                    icon: <FileTextOutlined />,
-                                    label: "Facturación",
-                                },
-                                {
-                                    key: "/clientes",
-                                    icon: <TeamOutlined />,
-                                    label: "Clientes",
-                                },
-                                {
-                                    key: "/trabajadores",
-                                    icon: <SolutionOutlined />,
-                                    label: "Trabajadores",
-                                },
-                                {
-                                    key: "/configuracion",
-                                    icon: <SettingOutlined />,
-                                    label: "Configuración",
-                                },
-                            ]}
+                            items={mobileMenuItems}
                         />
                         <Button
                             type="text"

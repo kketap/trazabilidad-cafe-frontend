@@ -635,3 +635,52 @@
         transform: none;
     }
 }
+
+/* =========================================================
+   SIDEBAR - GRUPOS Y SEPARADORES
+   ========================================================= */
+
+.ant-layout-sider .ant-menu-item-group-title {
+    padding: 18px 16px 8px !important;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+}
+
+.theme-dark .ant-layout-sider .ant-menu-item-group-title {
+    color: rgba(196, 183, 149, 0.72) !important;
+}
+
+.theme-light .ant-layout-sider .ant-menu-item-group-title {
+    color: rgba(122, 74, 36, 0.72) !important;
+}
+
+.ant-layout-sider .ant-menu-item-group:not(:first-child) {
+    position: relative;
+}
+
+.ant-layout-sider .ant-menu-item-group:not(:first-child)::before {
+    content: "";
+    display: block;
+    height: 1px;
+    margin: 6px 14px 2px;
+}
+
+.theme-dark .ant-layout-sider .ant-menu-item-group:not(:first-child)::before {
+    background: rgba(196, 183, 149, 0.16);
+}
+
+.theme-light .ant-layout-sider .ant-menu-item-group:not(:first-child)::before {
+    background: rgba(122, 74, 36, 0.16);
+}
+
+.ant-layout-sider .ant-menu-item {
+    border-radius: 10px;
+    margin-inline: 4px;
+    width: calc(100% - 8px);
+}
+
+.ant-layout-sider .ant-menu-item-selected {
+    font-weight: 700;
+}

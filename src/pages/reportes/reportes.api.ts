@@ -1,17 +1,61 @@
 // src/pages/reportes/reportes.api.ts
 import { apiClient } from "../../api/apiClient";
 
-export type KpiCosecha = {
-    id: number;
-    fecha: string;
-    kilosDia: number;
-    kilosTotalesMes: number;
-    porcentaje: number;
-    mes: string;
-    anio: number;
+type ApiResponse<T> = {
+    ok: boolean;
+    data: T;
+    message?: string;
 };
 
-export async function getKpisCosechas(): Promise<KpiCosecha[]> {
-    const response = await apiClient.get<KpiCosecha[]>("/kpis/cosechas");
-    return response.data;
+export type ReportePorDia = {
+    fecha: string;
+    kilos: number;
+};
+
+export type ReportePorMes = {
+    mes: string;
+    kilos: number;
+};
+
+export type ReportePorQuincena = {
+    quincena: string;
+    kilos: number;
+};
+
+export type ReportePorTipoCosecha = {
+    tipoCosecha: string;
+    kilos: number;
+};
+
+export type ReportePorTrabajador = {
+    trabajadorId: number;
+    nombre: string;
+    dni: string;
+    kilos: number;
+    cosechas: number;
+};
+
+export type ReportePorLote = {
+    loteId: number;
+    codigo: string;
+    nombre: string | null;
+    kilos: number;
+    cosechas: number;
+};
+
+export type CosechasReporte = {
+    porDia: ReportePorDia[];
+    porMes: ReportePorMes[];
+    porQuincena: ReportePorQuincena[];
+    porTipoCosecha: ReportePorTipoCosecha[];
+    porTrabajador: ReportePorTrabajador[];
+    porLote: ReportePorLote[];
+};
+
+export async function getCosechasReporteApi(): Promise<CosechasReporte> {
+    const response = await apiClient.get<ApiResponse<CosechasReporte>>(
+        "/cosechas/reporte",
+    );
+
+    return response.data.data;
 }

@@ -23,6 +23,8 @@ import {
     RiseOutlined,
     SafetyCertificateOutlined,
     ShopOutlined,
+    TeamOutlined,
+    UserOutlined,
 } from "@ant-design/icons";
 import { useNavigate } from "react-router-dom";
 
@@ -34,6 +36,10 @@ import {
 const { Title, Text, Paragraph } = Typography;
 const { useBreakpoint } = Grid;
 
+/**
+ * Estructura vacía para evitar errores mientras se cargan los indicadores.
+ * Se mantiene compatible con el endpoint actual de Home.
+ */
 const emptyStats = {
     totalCosechas: 0,
     kilosTotales: 0,
@@ -45,9 +51,20 @@ const emptyStats = {
     mermaPromedio: 0,
 };
 
+/**
+ * Estado inicial del resumen.
+ * general = datos acumulados.
+ * mesActual = datos filtrados al mes actual desde backend.
+ */
 const initialResumen: HomeResumen = {
     general: emptyStats,
     mesActual: emptyStats,
+    reporteCosechas: {
+        trabajadoresConCosechas: 0,
+        lotesConCosechas: 0,
+        mejorTrabajador: null,
+        mejorLote: null,
+    },
 };
 
 type MetricCardProps = {
@@ -60,6 +77,10 @@ type MetricCardProps = {
     formatter?: (value: string | number) => ReactNode;
 };
 
+/**
+ * Card reutilizable para métricas principales del Home.
+ * Permite mostrar skeleton mientras se carga la información.
+ */
 function MetricCard({
     loading,
     title,
@@ -108,6 +129,11 @@ export default function HomePage() {
         cargarResumen();
     }, []);
 
+    /**
+     * Carga los indicadores generales del Home.
+     * Por ahora se mantiene usando getHomeResumen().
+     * Más adelante se puede ampliar para incluir mejor trabajador, mejor lote, etc.
+     */
     async function cargarResumen() {
         try {
             setLoading(true);
@@ -123,6 +149,10 @@ export default function HomePage() {
 
     return (
         <div style={{ width: "100%" }}>
+            {/* =========================================================
+                HERO PRINCIPAL
+                Presentación general del sistema.
+               ========================================================= */}
             <Card
                 style={{
                     borderRadius: 18,
@@ -168,9 +198,10 @@ export default function HomePage() {
                                     maxWidth: 980,
                                 }}
                             >
-                                Sistema para registrar lotes, cosechas, procesos productivos,
-                                mermas y reportes de producción, manteniendo el seguimiento del
-                                café desde el campo hasta sus etapas de transformación.
+                                Sistema para registrar trabajadores, lotes, cosechas,
+                                procesos productivos, mermas y reportes, manteniendo
+                                el seguimiento del café desde el campo hasta sus etapas
+                                de transformación.
                             </Paragraph>
 
                             <Space
@@ -197,10 +228,10 @@ export default function HomePage() {
                                 </Button>
 
                                 <Button
-                                    icon={<PartitionOutlined />}
-                                    onClick={() => navigate("/trazabilidad")}
+                                    icon={<FileExcelOutlined />}
+                                    onClick={() => navigate("/reportes")}
                                 >
-                                    Ver trazabilidad
+                                    Ver reportes
                                 </Button>
                             </Space>
                         </Space>
@@ -248,8 +279,9 @@ export default function HomePage() {
                                         lineHeight: 1.7,
                                     }}
                                 >
-                                    Los módulos de lotes, cosechas y trazabilidad están
-                                    disponibles para registrar y controlar la producción de café.
+                                    Los módulos de trabajadores, lotes, cosechas,
+                                    trazabilidad y reportes están disponibles para
+                                    registrar y analizar la producción de café.
                                 </Paragraph>
                             </Space>
                         </Card>
@@ -257,6 +289,10 @@ export default function HomePage() {
                 </Row>
             </Card>
 
+            {/* =========================================================
+                MÉTRICAS DEL MES ACTUAL
+                Se mantienen conectadas al endpoint actual del Home.
+               ========================================================= */}
             <Title level={3} style={{ marginTop: 24 }}>
                 Producción del mes actual
             </Title>
@@ -303,6 +339,10 @@ export default function HomePage() {
                 </Col>
             </Row>
 
+            {/* =========================================================
+                RESUMEN ACUMULADO
+                Indicadores generales de toda la operación registrada.
+               ========================================================= */}
             <Title level={3} style={{ marginTop: 8 }}>
                 Resumen acumulado
             </Title>
@@ -328,29 +368,127 @@ export default function HomePage() {
                     />
                 </Col>
 
+                {/* Muestra cuántos trabajadores ya tienen cosechas asociadas */}
                 <Col xs={24} sm={12} xl={6}>
                     <MetricCard
                         loading={loading}
-                        title="Hectáreas cosechadas"
-                        value={resumen.general.totalHectareas}
-                        suffix="ha"
-                        precision={2}
-                        prefix={<AppstoreOutlined />}
+                        title="Trabajadores con cosechas"
+                        value={resumen.reporteCosechas.trabajadoresConCosechas}
+                        prefix={<UserOutlined />}
                     />
                 </Col>
 
+                {/* Muestra cuántos lotes ya tienen cosechas asociadas */}
                 <Col xs={24} sm={12} xl={6}>
                     <MetricCard
                         loading={loading}
-                        title="Rendimiento promedio"
-                        value={resumen.general.rendimiento}
-                        suffix="kg/ha"
-                        precision={2}
-                        prefix={<RiseOutlined />}
+                        title="Lotes con cosechas"
+                        value={resumen.reporteCosechas.lotesConCosechas}
+                        prefix={<AppstoreOutlined />}
                     />
                 </Col>
             </Row>
 
+            {/* =========================================================
+    DESTACADOS DE PRODUCCIÓN
+    Usa datos provenientes de /cosechas/reporte:
+    mejor trabajador y mejor lote por kilos acumulados.
+   ========================================================= */}
+            <Title level={3} style={{ marginTop: 8 }}>
+                Destacados de producción
+            </Title>
+
+            <Row gutter={[16, 16]} style={{ marginBottom: 24 }}>
+                <Col xs={24} lg={12}>
+                    <Card
+                        variant="borderless"
+                        style={{
+                            borderRadius: 14,
+                            minHeight: 150,
+                        }}
+                    >
+                        {loading ? (
+                            <Skeleton active paragraph={{ rows: 2 }} />
+                        ) : resumen.reporteCosechas.mejorTrabajador ? (
+                            <Space orientation="vertical" size={6}>
+                                <Tag color="lime" icon={<UserOutlined />}>
+                                    Mejor trabajador
+                                </Tag>
+
+                                <Typography.Title level={4} style={{ margin: 0 }}>
+                                    {resumen.reporteCosechas.mejorTrabajador.nombre}
+                                </Typography.Title>
+
+                                <Typography.Text type="secondary">
+                                    DNI: {resumen.reporteCosechas.mejorTrabajador.dni}
+                                </Typography.Text>
+
+                                <Typography.Text strong>
+                                    {resumen.reporteCosechas.mejorTrabajador.kilos.toLocaleString("es-CL")} kg
+                                    {" "}en {resumen.reporteCosechas.mejorTrabajador.cosechas} cosecha(s)
+                                </Typography.Text>
+                            </Space>
+                        ) : (
+                            <Space orientation="vertical" size={6}>
+                                <Tag color="default" icon={<UserOutlined />}>
+                                    Mejor trabajador
+                                </Tag>
+
+                                <Typography.Text type="secondary">
+                                    Aún no hay trabajadores asociados a cosechas.
+                                </Typography.Text>
+                            </Space>
+                        )}
+                    </Card>
+                </Col>
+
+                <Col xs={24} lg={12}>
+                    <Card
+                        variant="borderless"
+                        style={{
+                            borderRadius: 14,
+                            minHeight: 150,
+                        }}
+                    >
+                        {loading ? (
+                            <Skeleton active paragraph={{ rows: 2 }} />
+                        ) : resumen.reporteCosechas.mejorLote ? (
+                            <Space orientation="vertical" size={6}>
+                                <Tag color="gold" icon={<AppstoreOutlined />}>
+                                    Lote más productivo
+                                </Tag>
+
+                                <Typography.Title level={4} style={{ margin: 0 }}>
+                                    {resumen.reporteCosechas.mejorLote.codigo}
+                                </Typography.Title>
+
+                                <Typography.Text type="secondary">
+                                    {resumen.reporteCosechas.mejorLote.nombre || "Sin nombre"}
+                                </Typography.Text>
+
+                                <Typography.Text strong>
+                                    {resumen.reporteCosechas.mejorLote.kilos.toLocaleString("es-CL")} kg
+                                    {" "}en {resumen.reporteCosechas.mejorLote.cosechas} cosecha(s)
+                                </Typography.Text>
+                            </Space>
+                        ) : (
+                            <Space orientation="vertical" size={6}>
+                                <Tag color="default" icon={<AppstoreOutlined />}>
+                                    Lote más productivo
+                                </Tag>
+
+                                <Typography.Text type="secondary">
+                                    Aún no hay lotes asociados a cosechas.
+                                </Typography.Text>
+                            </Space>
+                        )}
+                    </Card>
+                </Col>
+            </Row>
+
+            {/* =========================================================
+                MÓDULOS PRINCIPALES DE PRODUCCIÓN
+               ========================================================= */}
             <Title level={3} style={{ marginTop: 8 }}>
                 Módulos de gestión
             </Title>
@@ -363,8 +501,9 @@ export default function HomePage() {
                         style={{ height: "100%", borderRadius: 14 }}
                     >
                         <Paragraph>
-                            Administración de los lotes productivos, sus hectáreas,
-                            ubicación, estado y observaciones relevantes para la cosecha.
+                            Administración de lotes agrícolas, hectáreas, ubicación,
+                            estado y observaciones relevantes para el origen de cada
+                            cosecha.
                         </Paragraph>
 
                         <Button block onClick={() => navigate("/lotes")}>
@@ -380,8 +519,9 @@ export default function HomePage() {
                         style={{ height: "100%", borderRadius: 14 }}
                     >
                         <Paragraph>
-                            Registro de fechas de cosecha, kilos recolectados, cantidad de
-                            cosechadores, tipo de cosecha y lotes asociados.
+                            Registro de fechas de cosecha, kilos recolectados, tipo de
+                            cosecha, trabajadores participantes y lotes reales asociados
+                            a cada jornada.
                         </Paragraph>
 
                         <Button block onClick={() => navigate("/cosechas")}>
@@ -408,7 +548,32 @@ export default function HomePage() {
                 </Col>
             </Row>
 
+            {/* =========================================================
+                MÓDULOS DE PERSONAS, CLIENTES Y ANÁLISIS
+               ========================================================= */}
             <Row gutter={[16, 16]} style={{ marginTop: 16 }}>
+                <Col xs={24} lg={8}>
+                    <Card
+                        title="Trabajadores"
+                        extra={<Tag color="lime">Personal</Tag>}
+                        style={{ height: "100%", borderRadius: 14 }}
+                    >
+                        <Paragraph>
+                            Registro y control de trabajadores asociados a cosechas,
+                            permitiendo analizar kilos recolectados por persona y
+                            participación en producción.
+                        </Paragraph>
+
+                        <Button
+                            block
+                            icon={<UserOutlined />}
+                            onClick={() => navigate("/trabajadores")}
+                        >
+                            Ver trabajadores
+                        </Button>
+                    </Card>
+                </Col>
+
                 <Col xs={24} lg={8}>
                     <Card
                         title="Clientes"
@@ -416,16 +581,49 @@ export default function HomePage() {
                         style={{ height: "100%", borderRadius: 14 }}
                     >
                         <Paragraph>
-                            Registro de clientes vinculados a ventas, salidas de café,
-                            facturación y seguimiento comercial de la producción.
+                            Registro de clientes naturales o jurídicos vinculados a
+                            ventas, salidas de café, facturación y seguimiento comercial.
                         </Paragraph>
 
-                        <Button block onClick={() => navigate("/clientes")}>
+                        <Button
+                            block
+                            icon={<TeamOutlined />}
+                            onClick={() => navigate("/clientes")}
+                        >
                             Ver clientes
                         </Button>
                     </Card>
                 </Col>
 
+                <Col xs={24} lg={8}>
+                    <Card
+                        title="Reportes"
+                        extra={<Tag color="green">Análisis</Tag>}
+                        style={{ height: "100%", borderRadius: 14 }}
+                    >
+                        <Paragraph>
+                            Consulta de indicadores por día, mes, quincena, tipo de
+                            cosecha, trabajador y lote, con rankings y evolución
+                            productiva.
+                        </Paragraph>
+
+                        <Button
+                            block
+                            icon={<FileExcelOutlined />}
+                            onClick={() => navigate("/reportes")}
+                        >
+                            Ver reportes
+                        </Button>
+                    </Card>
+                </Col>
+            </Row>
+
+            {/* =========================================================
+                MÓDULO COMERCIAL PREPARADO
+                Se mantiene como card separada porque ventas/facturación
+                todavía dependen del futuro inventario y trilla.
+               ========================================================= */}
+            <Row gutter={[16, 16]} style={{ marginTop: 16 }}>
                 <Col xs={24} lg={8}>
                     <Card
                         title="Facturación"
@@ -442,29 +640,12 @@ export default function HomePage() {
                         </Button>
                     </Card>
                 </Col>
-
-                <Col xs={24} lg={8}>
-                    <Card
-                        title="Reportes"
-                        extra={<Tag color="green">Análisis</Tag>}
-                        style={{ height: "100%", borderRadius: 14 }}
-                    >
-                        <Paragraph>
-                            Consulta de indicadores de producción, rendimiento por lote,
-                            mermas, kilos procesados y datos acumulados del sistema.
-                        </Paragraph>
-
-                        <Button
-                            block
-                            icon={<FileExcelOutlined />}
-                            onClick={() => navigate("/reportes")}
-                        >
-                            Ver reportes
-                        </Button>
-                    </Card>
-                </Col>
             </Row>
 
+            {/* =========================================================
+                MENSAJE FINAL
+                Resume el valor del sistema después de los últimos cambios.
+               ========================================================= */}
             <Card
                 style={{
                     marginTop: 24,
@@ -501,9 +682,10 @@ export default function HomePage() {
                                 textAlign: isMobile ? "center" : "left",
                             }}
                         >
-                            Fundos Noche puede mantener un control ordenado de su producción,
-                            relacionando lotes, cosechas y procesos para obtener información
-                            clara sobre rendimiento, mermas y evolución productiva.
+                            Fundos Noche puede mantener un control ordenado de su
+                            producción, relacionando lotes, cosechas, trabajadores y
+                            procesos para obtener información clara sobre rendimiento,
+                            producción por persona, mermas y evolución productiva.
                         </Paragraph>
                     </Col>
                 </Row>

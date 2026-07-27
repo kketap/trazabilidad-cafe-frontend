@@ -13,6 +13,7 @@ import {
   Typography,
   message,
   theme,
+  Select
 } from "antd";
 import {
   DeleteOutlined,
@@ -23,13 +24,13 @@ import {
   IdcardOutlined,
   SolutionOutlined,
 } from "@ant-design/icons";
-import type { Trabajador } from "../../api/trabajadores";
+import type { Trabajador } from "./trabajadores.api";
 import {
   getTrabajadoresApi,
   createTrabajadorApi,
   updateTrabajadorApi,
   deleteTrabajadorApi,
-} from "../../api/trabajadores";
+} from "./trabajadores.api";
 
 export default function TrabajadoresPage() {
   const { token } = theme.useToken();
@@ -62,6 +63,9 @@ export default function TrabajadoresPage() {
   const handleOpenCreateModal = () => {
     setEditingTrabajador(null);
     form.resetFields();
+    form.setFieldsValue({
+      activo: true,
+    });
     setIsModalOpen(true);
   };
 
@@ -69,8 +73,11 @@ export default function TrabajadoresPage() {
     setEditingTrabajador(record);
     form.setFieldsValue({
       nombres: record.nombres,
+      apellidos: record.apellidos || "",
       dni: record.dni,
       rol: record.rol || "",
+      telefono: record.telefono || "",
+      activo: record.activo,
     });
     setIsModalOpen(true);
   };
@@ -108,12 +115,18 @@ export default function TrabajadoresPage() {
     }
   };
 
-  const filteredData = trabajadores.filter(
-    (t) =>
-      t.nombres.toLowerCase().includes(searchText.toLowerCase()) ||
+  const filteredData = trabajadores.filter((t) => {
+    const search = searchText.toLowerCase();
+
+    return (
+      t.nombres.toLowerCase().includes(search) ||
+      (t.apellidos?.toLowerCase().includes(search) ?? false) ||
       t.dni.includes(searchText) ||
-      (t.rol && t.rol.toLowerCase().includes(searchText.toLowerCase()))
-  );
+      (t.telefono?.toLowerCase().includes(search) ?? false) ||
+      (t.rol?.toLowerCase().includes(search) ?? false) ||
+      (t.activo ? "activo" : "inactivo").includes(search)
+    );
+  });
 
   const columns = [
     {
@@ -134,6 +147,25 @@ export default function TrabajadoresPage() {
         </Space>
       ),
       sorter: (a: Trabajador, b: Trabajador) => a.nombres.localeCompare(b.nombres),
+    },
+    {
+      title: "Apellidos",
+      dataIndex: "apellidos",
+      key: "apellidos",
+      render: (text: string | null) => text || "-",
+    },
+    {
+      title: "Teléfono",
+      dataIndex: "telefono",
+      key: "telefono",
+      render: (text: string | null) => text || "-",
+    },
+    {
+      title: "Estado",
+      dataIndex: "activo",
+      key: "activo",
+      render: (activo: boolean) =>
+        activo ? <Tag color="success">Activo</Tag> : <Tag color="default">Inactivo</Tag>,
     },
     {
       title: "DNI",
@@ -236,7 +268,7 @@ export default function TrabajadoresPage() {
           rowKey="id"
           loading={loading}
           pagination={{ pageSize: 8, showSizeChanger: true }}
-          scroll={{ x: 600 }}
+          scroll={{ x: 900 }}
         />
       </Card>
 
@@ -253,10 +285,27 @@ export default function TrabajadoresPage() {
         <Form form={form} layout="vertical" style={{ marginTop: 16 }}>
           <Form.Item
             name="nombres"
-            label="Nombres y Apellidos"
+            label="Nombres"
             rules={[{ required: true, message: "Ingrese los nombres del trabajador" }]}
           >
-            <Input prefix={<UserOutlined />} placeholder="Ej: Juan Carlos Pérez" />
+            <Input prefix={<UserOutlined />} placeholder="Ej: Juan Carlos" />
+          </Form.Item>
+
+          <Form.Item name="apellidos" label="Apellidos">
+            <Input placeholder="Ej: Pérez González" />
+          </Form.Item>
+
+          <Form.Item name="telefono" label="Teléfono">
+            <Input placeholder="Ej: +56 9 1234 5678" />
+          </Form.Item>
+
+          <Form.Item name="activo" label="Estado">
+            <Select
+              options={[
+                { value: true, label: "Activo" },
+                { value: false, label: "Inactivo" },
+              ]}
+            />
           </Form.Item>
 
           <Form.Item
