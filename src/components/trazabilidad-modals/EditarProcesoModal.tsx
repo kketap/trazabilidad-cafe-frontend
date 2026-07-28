@@ -3,6 +3,7 @@ import { useEffect } from "react";
 import { Button, DatePicker, Form, InputNumber, Modal, Row, Col, Space, Select } from "antd";
 import dayjs from "dayjs";
 import type { Cosecha } from "../../pages/cosechas/cosechas.api";
+import type { Lote } from "../../pages/lotes/lotes.api";
 import type { ProcesoTrazabilidad } from "../../pages/trazabilidad/trazabilidad.api";
 import type { ProcesoFormValues } from "./CrearProcesoModal";
 
@@ -12,6 +13,7 @@ type EditarProcesoModalProps = {
     open: boolean;
     proceso: ProcesoTrazabilidad | null;
     cosechas: Cosecha[];
+    lotes: Lote[];
     saving?: boolean;
     onClose: () => void;
     onSubmit: (id: number, values: ProcesoFormValues) => Promise<void> | void;
@@ -21,6 +23,7 @@ export default function EditarProcesoModal({
     open,
     proceso,
     cosechas,
+    lotes,
     saving = false,
     onClose,
     onSubmit,
@@ -31,6 +34,7 @@ export default function EditarProcesoModal({
         if (open && proceso) {
             form.setFieldsValue({
                 fecha: dayjs(proceso.fecha),
+                loteId: proceso.loteId,
                 cosechaId: proceso.cosechaId,
                 etapa: proceso.etapa,
                 kilosIngresados: proceso.kilosIngresados,
@@ -70,9 +74,14 @@ export default function EditarProcesoModal({
         onClose();
     };
 
-    const cosechaOptions = cosechas.map((cosecha) => ({
+    const loteOptions = (lotes || []).map((lote) => ({
+        value: lote.id,
+        label: lote.nombre ? `${lote.codigo} - ${lote.nombre}` : lote.codigo,
+    }));
+
+    const cosechaOptions = (cosechas || []).map((cosecha) => ({
         value: cosecha.id,
-        label: `${cosecha.lotes} - ${cosecha.fecha.slice(0, 10)} - ${cosecha.kilosCosechados.toLocaleString("es-CL")} kg`,
+        label: `${cosecha.lotes} - ${cosecha.fecha ? cosecha.fecha.slice(0, 10) : ""} - ${(cosecha.kilosCosechados ?? 0).toLocaleString("es-CL")} kg`,
     }));
 
     return (
@@ -118,14 +127,29 @@ export default function EditarProcesoModal({
                     <Col xs={24} md={12}>
                         <Form.Item
                             label="Lote Origen"
-                            name="cosechaId"
+                            name="loteId"
                             rules={[{ required: true, message: "El lote origen es obligatorio" }]}
                         >
                             <Select
-                                placeholder="Seleccione una cosecha"
+                                placeholder="Seleccione un lote"
+                                options={loteOptions}
+                                showSearch
+                                optionFilterProp="label"
+                            />
+                        </Form.Item>
+                    </Col>
+
+                    <Col xs={24} md={12}>
+                        <Form.Item
+                            label="Cosecha (Opcional)"
+                            name="cosechaId"
+                        >
+                            <Select
+                                placeholder="Seleccione una cosecha (opcional)"
                                 options={cosechaOptions}
                                 showSearch
                                 optionFilterProp="label"
+                                allowClear
                             />
                         </Form.Item>
                     </Col>

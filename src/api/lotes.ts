@@ -12,6 +12,9 @@ export type Lote = {
   tipo_cafe: string; // "comercial" | "especial"
   horas_oxidacion?: number | null;
   horas_fermentacion?: number | null;
+  estado?: string;
+  kilosActuales?: number | null;
+  kilosIniciales?: number | null;
   createdAt?: string;
   updatedAt?: string;
 };

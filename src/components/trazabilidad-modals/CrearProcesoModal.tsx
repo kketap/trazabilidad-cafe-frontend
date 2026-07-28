@@ -2,12 +2,14 @@
 import { Button, DatePicker, Form, InputNumber, Modal, Select, Row, Col, Space } from "antd";
 import type { Dayjs } from "dayjs";
 import type { Cosecha } from "../../pages/cosechas/cosechas.api";
+import type { Lote } from "../../pages/lotes/lotes.api";
 
 import esES from "antd/es/date-picker/locale/es_ES";
 
 export type ProcesoFormValues = {
     fecha: Dayjs;
-    cosechaId: number;
+    loteId?: number | null;
+    cosechaId?: number | null;
     etapa: string;
     kilosIngresados: number;
     kilosResultantes: number;
@@ -17,6 +19,7 @@ export type ProcesoFormValues = {
 type CrearProcesoModalProps = {
     open: boolean;
     cosechas: Cosecha[];
+    lotes: Lote[];
     loading?: boolean;
     saving?: boolean;
     onClose: () => void;
@@ -26,6 +29,7 @@ type CrearProcesoModalProps = {
 export default function CrearProcesoModal({
     open,
     cosechas,
+    lotes,
     loading = false,
     saving = false,
     onClose,
@@ -62,12 +66,14 @@ export default function CrearProcesoModal({
         onClose();
     };
 
-    const cosechaOptions = cosechas.map((cosecha) => ({
+    const loteOptions = (lotes || []).map((lote) => ({
+        value: lote.id,
+        label: lote.nombre ? `${lote.codigo} - ${lote.nombre}` : lote.codigo,
+    }));
+
+    const cosechaOptions = (cosechas || []).map((cosecha) => ({
         value: cosecha.id,
-        label: `${cosecha.lotes} - ${cosecha.fecha.slice(
-            0,
-            10,
-        )} - ${cosecha.kilosCosechados.toLocaleString("es-CL")} kg`,
+        label: `${cosecha.lotes} - ${cosecha.fecha ? cosecha.fecha.slice(0, 10) : ""} - ${(cosecha.kilosCosechados ?? 0).toLocaleString("es-CL")} kg`,
     }));
 
     return (
@@ -115,7 +121,7 @@ export default function CrearProcesoModal({
                     <Col xs={24} md={12}>
                         <Form.Item
                             label="Lote Origen"
-                            name="cosechaId"
+                            name="loteId"
                             rules={[
                                 {
                                     required: true,
@@ -124,12 +130,29 @@ export default function CrearProcesoModal({
                             ]}
                         >
                             <Select
-                                placeholder="Seleccione una cosecha"
-                                options={cosechaOptions}
+                                placeholder="Seleccione un lote"
+                                options={loteOptions}
                                 showSearch
                                 optionFilterProp="label"
                                 loading={loading}
-                                disabled={loading || cosechas.length === 0}
+                                disabled={loading || (lotes || []).length === 0}
+                            />
+                        </Form.Item>
+                    </Col>
+
+                    <Col xs={24} md={12}>
+                        <Form.Item
+                            label="Cosecha (Opcional)"
+                            name="cosechaId"
+                        >
+                            <Select
+                                placeholder="Seleccione una cosecha (opcional)"
+                                options={cosechaOptions}
+                                showSearch
+                                optionFilterProp="label"
+                                allowClear
+                                loading={loading}
+                                disabled={loading || (cosechas || []).length === 0}
                             />
                         </Form.Item>
                     </Col>

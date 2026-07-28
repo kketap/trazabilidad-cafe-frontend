@@ -1,6 +1,7 @@
 // src/pages/trazabilidad/trazabilidad.api.ts
 import { apiClient } from "./../../api/apiClient";
 import type { Cosecha } from "./../cosechas/cosechas.api";
+import type { Lote } from "../lotes/lotes.api";
 
 export type ProcesoTrazabilidad = {
     id: number;
@@ -9,7 +10,9 @@ export type ProcesoTrazabilidad = {
     kilosIngresados: number;
     kilosResultantes: number;
     porcentajeMerma: number;
-    cosechaId: number;
+    loteId?: number | null;
+    lote?: Lote;
+    cosechaId?: number | null;
     cosecha?: Cosecha;
     createdAt?: string;
     updatedAt?: string;
@@ -17,7 +20,8 @@ export type ProcesoTrazabilidad = {
 
 export type CreateProcesoTrazabilidadDto = {
     fecha: string;
-    cosechaId: number;
+    loteId?: number | null;
+    cosechaId?: number | null;
     etapa: string;
     kilosIngresados: number;
     kilosResultantes: number;

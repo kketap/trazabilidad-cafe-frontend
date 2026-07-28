@@ -217,6 +217,23 @@ export default function LotesPage() {
       render: (text: string | null) => text || "-",
     },
     {
+      title: "Etapa",
+      dataIndex: "estado",
+      key: "estado",
+      render: (estado: string) => {
+        const colores: Record<string, string> = {
+          EN_PROCESO: "blue",
+          EN_SECADO: "orange",
+          EN_ALMACEN: "purple",
+          TRILLADO: "magenta",
+          VENDIDO: "success",
+          CERRADO: "default",
+          INACTIVO: "error",
+        };
+        return <Tag color={colores[estado] || "default"}>{estado ? estado.replace('_', ' ') : 'EN PROCESO'}</Tag>;
+      },
+    },
+    {
       title: "Estado",
       dataIndex: "activo",
       key: "activo",

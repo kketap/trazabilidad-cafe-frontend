@@ -26,6 +26,7 @@ import CrearProcesoModal, {
 import EditarProcesoModal from "../../components/trazabilidad-modals/EditarProcesoModal";
 
 import { getCosechas, type Cosecha } from "../cosechas/cosechas.api";
+import { getLotes, type Lote } from "../lotes/lotes.api";
 
 import {
     createProcesoTrazabilidad,
@@ -45,6 +46,7 @@ dayjs.locale("es");
 export default function TrazabilidadPage() {
     const [procesos, setProcesos] = useState<ProcesoTrazabilidad[]>([]);
     const [cosechas, setCosechas] = useState<Cosecha[]>([]);
+    const [lotes, setLotes] = useState<Lote[]>([]);
 
     const [loading, setLoading] = useState(false);
     const [saving, setSaving] = useState(false);
@@ -70,13 +72,33 @@ export default function TrazabilidadPage() {
         try {
             setLoading(true);
 
-            const [procesosData, cosechasData] = await Promise.all([
+            const [procesosRes, cosechasRes, lotesRes] = await Promise.all([
                 getProcesosTrazabilidad(),
                 getCosechas(),
+                getLotes(),
             ]);
 
-            setProcesos(procesosData);
-            setCosechas(cosechasData);
+            const procesosArr = Array.isArray(procesosRes)
+                ? procesosRes
+                : Array.isArray((procesosRes as any)?.data)
+                ? (procesosRes as any).data
+                : [];
+
+            const cosechasArr = Array.isArray(cosechasRes)
+                ? cosechasRes
+                : Array.isArray((cosechasRes as any)?.data)
+                ? (cosechasRes as any).data
+                : [];
+
+            const lotesArr = Array.isArray(lotesRes)
+                ? lotesRes
+                : Array.isArray((lotesRes as any)?.data)
+                ? (lotesRes as any).data
+                : [];
+
+            setProcesos(procesosArr);
+            setCosechas(cosechasArr);
+            setLotes(lotesArr);
         } catch (error) {
             console.error("Error cargando trazabilidad:", error);
             message.error("No se pudieron cargar los datos de trazabilidad.");
@@ -99,6 +121,7 @@ export default function TrazabilidadPage() {
 
             const payload: CreateProcesoTrazabilidadDto = {
                 fecha: values.fecha.format("YYYY-MM-DD"),
+                loteId: values.loteId,
                 cosechaId: values.cosechaId,
                 etapa: values.etapa,
                 kilosIngresados: values.kilosIngresados,
@@ -139,6 +162,7 @@ export default function TrazabilidadPage() {
             setSaving(true);
             const payload: Partial<CreateProcesoTrazabilidadDto> = {
                 fecha: values.fecha.format("YYYY-MM-DD"),
+                loteId: values.loteId,
                 cosechaId: values.cosechaId,
                 etapa: values.etapa,
                 kilosIngresados: values.kilosIngresados,
@@ -201,17 +225,25 @@ export default function TrazabilidadPage() {
     }, [procesos]);
 
     const loteOptions = useMemo(() => {
-        const lotes = Array.from(
-            new Set(procesos.map((p) => p.cosecha?.lotes ?? `Cosecha #${p.cosechaId}`)),
+        const lotesUnicos = Array.from(
+            new Set(
+                procesos.map((p) =>
+                    p.lote
+                        ? (p.lote.nombre ? `${p.lote.codigo} - ${p.lote.nombre}` : p.lote.codigo)
+                        : p.cosecha?.lotes ?? (p.cosechaId ? `Cosecha #${p.cosechaId}` : `Proceso #${p.id}`)
+                )
+            )
         ).sort();
-        return lotes.map((lote) => ({ value: lote, label: lote }));
+        return lotesUnicos.map((lote) => ({ value: lote, label: lote }));
     }, [procesos]);
 
     const procesosFiltrados = useMemo(() => {
         return procesos.filter((proceso) => {
             if (filtroEtapa && proceso.etapa !== filtroEtapa) return false;
 
-            const loteProceso = proceso.cosecha?.lotes ?? `Cosecha #${proceso.cosechaId}`;
+            const loteProceso = proceso.lote
+                ? (proceso.lote.nombre ? `${proceso.lote.codigo} - ${proceso.lote.nombre}` : proceso.lote.codigo)
+                : proceso.cosecha?.lotes ?? (proceso.cosechaId ? `Cosecha #${proceso.cosechaId}` : `Proceso #${proceso.id}`);
             if (filtroLote && loteProceso !== filtroLote) return false;
 
             if (filtroFecha) {
@@ -244,7 +276,9 @@ export default function TrazabilidadPage() {
             title: "Lote Origen",
             key: "loteOrigen",
             render: (_, record) =>
-                record.cosecha?.lotes ?? `Cosecha #${record.cosechaId}`,
+                record.lote
+                    ? (record.lote.nombre ? `${record.lote.codigo} - ${record.lote.nombre}` : record.lote.codigo)
+                    : record.cosecha?.lotes ?? (record.cosechaId ? `Cosecha #${record.cosechaId}` : "-"),
         },
         {
             title: "Etapa",
@@ -423,7 +457,8 @@ export default function TrazabilidadPage() {
 
             <CrearProcesoModal
                 open={isModalOpen}
-                cosechas={cosechas}
+                cosechas={Array.isArray(cosechas) ? cosechas : []}
+                lotes={Array.isArray(lotes) ? lotes : []}
                 loading={loading}
                 saving={saving}
                 onClose={handleCancel}
@@ -432,7 +467,8 @@ export default function TrazabilidadPage() {
             <EditarProcesoModal
                 open={isEditModalOpen}
                 proceso={editingProceso}
-                cosechas={cosechas}
+                cosechas={Array.isArray(cosechas) ? cosechas : []}
+                lotes={Array.isArray(lotes) ? lotes : []}
                 saving={saving}
                 onClose={handleCloseEditModal}
                 onSubmit={handleEditSubmit}
@@ -447,7 +483,7 @@ export default function TrazabilidadPage() {
                     </Button>,
                 ]}
                 centered
-                width="min(760px, 95vw)"
+                width="min(780px, 95vw)"
             >
                 {selectedProceso && (
                     <Descriptions
@@ -468,8 +504,9 @@ export default function TrazabilidadPage() {
                         </Descriptions.Item>
 
                         <Descriptions.Item label="Lote Origen">
-                            {selectedProceso.cosecha?.lotes ??
-                                `Cosecha #${selectedProceso.cosechaId}`}
+                            {selectedProceso.lote
+                                ? (selectedProceso.lote.nombre ? `${selectedProceso.lote.codigo} - ${selectedProceso.lote.nombre}` : selectedProceso.lote.codigo)
+                                : selectedProceso.cosecha?.lotes ?? (selectedProceso.cosechaId ? `Cosecha #${selectedProceso.cosechaId}` : "-")}
                         </Descriptions.Item>
 
                         <Descriptions.Item label="Tipo de Cosecha">

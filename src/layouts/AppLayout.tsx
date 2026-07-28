@@ -11,7 +11,9 @@ import {
     ShopOutlined,
     TeamOutlined,
     SolutionOutlined,
-    AppstoreOutlined
+    AppstoreOutlined,
+    FireOutlined,
+    InboxOutlined,
 } from "@ant-design/icons";
 import { Button, Grid, Layout, Menu, Tooltip, Typography, theme as antdTheme } from "antd";
 import { useState } from "react";
@@ -224,6 +226,16 @@ export default function AppLayout({ themeMode, isDarkMode, onThemeModeChange, te
                                 label: "Trazabilidad",
                             },
                             {
+                                key: "/secado",
+                                icon: <FireOutlined />,
+                                label: "Secado",
+                            },
+                            {
+                                key: "/empaque",
+                                icon: <InboxOutlined />,
+                                label: "Empaque",
+                            },
+                            {
                                 key: "/reportes",
                                 icon: <FileExcelOutlined />,
                                 label: "Reportes",
@@ -336,6 +348,16 @@ export default function AppLayout({ themeMode, isDarkMode, onThemeModeChange, te
                                     key: "/trazabilidad",
                                     icon: <PartitionOutlined />,
                                     label: "Trazabilidad",
+                                },
+                                {
+                                    key: "/secado",
+                                    icon: <FireOutlined />,
+                                    label: "Secado",
+                                },
+                                {
+                                    key: "/empaque",
+                                    icon: <InboxOutlined />,
+                                    label: "Empaque",
                                 },
                                 {
                                     key: "/reportes",
