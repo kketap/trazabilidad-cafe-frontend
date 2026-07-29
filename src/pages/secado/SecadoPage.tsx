@@ -172,6 +172,12 @@ export default function SecadoPage() {
       render: (val: number) => <strong>{val?.toLocaleString() ?? 0} kg</strong>,
     },
     {
+      title: "Perfil",
+      dataIndex: "perfilProceso",
+      key: "perfilProceso",
+      render: (perfil: string) => perfil ? <Tag color="purple">{perfil}</Tag> : "-",
+    },
+    {
       title: "Kilos Resultantes",
       dataIndex: "kilosResultantes",
       key: "kilosResultantes",

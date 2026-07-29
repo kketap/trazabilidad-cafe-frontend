@@ -28,6 +28,7 @@ export default function EditarSecadoModal({ open, onClose, onSubmit, secado, lot
         kilosIngresados: secado.kilosIngresados,
         kilosResultantes: secado.kilosResultantes,
         observaciones: secado.observaciones || "",
+        perfilProceso: secado.perfilProceso,
       });
     }
   }, [secado, form]);
@@ -46,6 +47,7 @@ export default function EditarSecadoModal({ open, onClose, onSubmit, secado, lot
       kilosIngresados: Number(values.kilosIngresados),
       kilosResultantes: Number(values.kilosResultantes),
       observaciones: values.observaciones || "",
+      perfilProceso: values.perfilProceso,
     };
     await onSubmit(secado.id, payload);
   };
@@ -141,6 +143,18 @@ export default function EditarSecadoModal({ open, onClose, onSubmit, secado, lot
             </Typography.Text>
           </div>
         )}
+
+        <Form.Item
+          name="perfilProceso"
+          label="Perfil de Proceso"
+          rules={[{ required: true, message: "Seleccione un perfil de proceso" }]}
+        >
+          <Select placeholder="Seleccione perfil...">
+            <Select.Option value="HONEY">Honey</Select.Option>
+            <Select.Option value="NATURAL">Natural</Select.Option>
+            <Select.Option value="LAVADO">Lavado</Select.Option>
+          </Select>
+        </Form.Item>
 
         <Form.Item name="observaciones" label="Observaciones">
           <Input.TextArea rows={3} />

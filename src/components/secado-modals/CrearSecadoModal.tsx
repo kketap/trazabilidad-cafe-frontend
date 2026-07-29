@@ -157,6 +157,18 @@ export default function CrearSecadoModal({ open, onClose, onSubmit, lotes, loadi
           </div>
         )}
 
+        <Form.Item
+          name="perfilProceso"
+          label="Perfil de Proceso"
+          rules={[{ required: true, message: "Seleccione un perfil de proceso" }]}
+        >
+          <Select placeholder="Seleccione perfil...">
+            <Select.Option value="HONEY">Honey</Select.Option>
+            <Select.Option value="NATURAL">Natural</Select.Option>
+            <Select.Option value="LAVADO">Lavado</Select.Option>
+          </Select>
+        </Form.Item>
+
         <Form.Item name="observaciones" label="Observaciones">
           <Input.TextArea rows={3} placeholder="Método de secado, porcentaje de humedad final, notas..." />
         </Form.Item>

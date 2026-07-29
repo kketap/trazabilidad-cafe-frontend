@@ -223,7 +223,7 @@ export default function AppLayout({ themeMode, isDarkMode, onThemeModeChange, te
                             {
                                 key: "/trazabilidad",
                                 icon: <PartitionOutlined />,
-                                label: "Trazabilidad",
+                                label: "Proceso Húmedo",
                             },
                             {
                                 key: "/secado",
@@ -347,7 +347,7 @@ export default function AppLayout({ themeMode, isDarkMode, onThemeModeChange, te
                                 {
                                     key: "/trazabilidad",
                                     icon: <PartitionOutlined />,
-                                    label: "Trazabilidad",
+                                    label: "Proceso Húmedo",
                                 },
                                 {
                                     key: "/secado",

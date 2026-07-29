@@ -10,10 +10,13 @@ export type ProcesoFormValues = {
     fecha: Dayjs;
     loteId?: number | null;
     cosechaId?: number | null;
-    etapa: string;
+    etapa?: string;
+    tipoProceso?: string;
     kilosIngresados: number;
-    kilosResultantes: number;
+    kilosResultantes?: number;
     porcentajeMerma?: number;
+    fechaInicio?: Dayjs;
+    fechaFin?: Dayjs;
 };
 
 type CrearProcesoModalProps = {
@@ -37,25 +40,6 @@ export default function CrearProcesoModal({
 }: CrearProcesoModalProps) {
     const [form] = Form.useForm<ProcesoFormValues>();
 
-    const handleValuesChange = (changedValues: Partial<ProcesoFormValues>) => {
-        if (
-            "kilosIngresados" in changedValues ||
-            "kilosResultantes" in changedValues
-        ) {
-            const kilosIngresados = form.getFieldValue("kilosIngresados") ?? 0;
-            const kilosResultantes = form.getFieldValue("kilosResultantes") ?? 0;
-
-            const porcentajeMerma =
-                kilosIngresados > 0
-                    ? ((kilosIngresados - kilosResultantes) / kilosIngresados) * 100
-                    : 0;
-
-            form.setFieldsValue({
-                porcentajeMerma: Number(porcentajeMerma.toFixed(2)),
-            });
-        }
-    };
-
     const handleFinish = async (values: ProcesoFormValues) => {
         await onSubmit(values);
         form.resetFields();
@@ -78,7 +62,7 @@ export default function CrearProcesoModal({
 
     return (
         <Modal
-            title="Registrar Proceso"
+            title="Registrar Proceso Húmedo"
             open={open}
             onCancel={handleCancel}
             footer={null}
@@ -97,13 +81,12 @@ export default function CrearProcesoModal({
                 form={form}
                 layout="vertical"
                 onFinish={handleFinish}
-                onValuesChange={handleValuesChange}
                 autoComplete="off"
             >
                 <Row gutter={[16, 0]}>
                     <Col xs={24} md={12}>
                         <Form.Item
-                            label="Fecha"
+                            label="Fecha de Registro"
                             name="fecha"
                             rules={[
                                 { required: true, message: "La fecha es obligatoria" },
@@ -159,21 +142,47 @@ export default function CrearProcesoModal({
 
                     <Col xs={24} md={12}>
                         <Form.Item
-                            label="Etapa"
-                            name="etapa"
-                            rules={[
-                                { required: true, message: "La etapa es obligatoria" },
-                            ]}
+                            label="Tipo de Proceso"
+                            name="tipoProceso"
                         >
                             <Select
-                                placeholder="Seleccione una etapa"
+                                placeholder="Seleccione un tipo de proceso"
                                 options={[
-                                    { value: "Despulpado", label: "Despulpado" },
-                                    { value: "Lavado", label: "Lavado" },
-                                    { value: "Secado", label: "Secado" },
-                                    { value: "Trilla", label: "Trilla" },
-                                    { value: "Clasificación", label: "Clasificación" },
+                                    { value: "OXIDACION_CEREZA", label: "Oxidación en cereza" },
+                                    { value: "OXIDACION_MUCILAGO", label: "Oxidación en mucílago" },
+                                    { value: "ANAEROBICO_CEREZA", label: "Anaeróbico en cereza" },
+                                    { value: "ANAEROBICO_MUCILAGO", label: "Anaeróbico en mucílago" },
                                 ]}
+                            />
+                        </Form.Item>
+                    </Col>
+                    
+                    <Col xs={24} md={12}>
+                        <Form.Item
+                            label="Fecha/Hora de Inicio"
+                            name="fechaInicio"
+                        >
+                            <DatePicker
+                                style={{ width: "100%" }}
+                                locale={esES}
+                                showTime
+                                format="DD/MM/YYYY HH:mm"
+                                placeholder="Inicio del proceso"
+                            />
+                        </Form.Item>
+                    </Col>
+
+                    <Col xs={24} md={12}>
+                        <Form.Item
+                            label="Fecha/Hora de Fin"
+                            name="fechaFin"
+                        >
+                            <DatePicker
+                                style={{ width: "100%" }}
+                                locale={esES}
+                                showTime
+                                format="DD/MM/YYYY HH:mm"
+                                placeholder="Fin del proceso"
                             />
                         </Form.Item>
                     </Col>
@@ -193,35 +202,6 @@ export default function CrearProcesoModal({
                                 style={{ width: "100%" }}
                                 min={0}
                                 placeholder="Ej: 180"
-                            />
-                        </Form.Item>
-                    </Col>
-
-                    <Col xs={24} md={12}>
-                        <Form.Item
-                            label="Kilos Resultantes"
-                            name="kilosResultantes"
-                            rules={[
-                                {
-                                    required: true,
-                                    message: "Los kilos resultantes son obligatorios",
-                                },
-                            ]}
-                        >
-                            <InputNumber
-                                style={{ width: "100%" }}
-                                min={0}
-                                placeholder="Ej: 145"
-                            />
-                        </Form.Item>
-                    </Col>
-
-                    <Col xs={24} md={12}>
-                        <Form.Item label="% Merma" name="porcentajeMerma">
-                            <InputNumber
-                                style={{ width: "100%" }}
-                                readOnly
-                                placeholder="Merma calculada"
                             />
                         </Form.Item>
                     </Col>

@@ -6,14 +6,18 @@ import type { Lote } from "../lotes/lotes.api";
 export type ProcesoTrazabilidad = {
     id: number;
     fecha: string;
-    etapa: string;
+    etapa?: string;
+    tipoProceso?: string;
     kilosIngresados: number;
-    kilosResultantes: number;
-    porcentajeMerma: number;
+    kilosResultantes?: number;
+    porcentajeMerma?: number;
     loteId?: number | null;
     lote?: Lote;
     cosechaId?: number | null;
     cosecha?: Cosecha;
+    duracionHoras?: number;
+    fechaInicio?: string;
+    fechaFin?: string;
     createdAt?: string;
     updatedAt?: string;
 };
@@ -22,16 +26,19 @@ export type CreateProcesoTrazabilidadDto = {
     fecha: string;
     loteId?: number | null;
     cosechaId?: number | null;
-    etapa: string;
+    etapa?: string;
+    tipoProceso?: string;
     kilosIngresados: number;
-    kilosResultantes: number;
+    kilosResultantes?: number;
+    fechaInicio?: string;
+    fechaFin?: string;
 };
 
 export type TrazabilidadResumen = {
     totalProcesos: number;
     totalIngresado: number;
-    totalResultante: number;
-    mermaPromedio: number;
+    totalResultante?: number;
+    mermaPromedio?: number;
 };
 
 export async function getProcesosTrazabilidad() {

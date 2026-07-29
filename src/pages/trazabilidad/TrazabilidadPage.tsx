@@ -124,8 +124,10 @@ export default function TrazabilidadPage() {
                 loteId: values.loteId,
                 cosechaId: values.cosechaId,
                 etapa: values.etapa,
+                tipoProceso: values.tipoProceso,
+                fechaInicio: values.fechaInicio ? values.fechaInicio.toISOString() : undefined,
+                fechaFin: values.fechaFin ? values.fechaFin.toISOString() : undefined,
                 kilosIngresados: values.kilosIngresados,
-                kilosResultantes: values.kilosResultantes,
             };
 
             const nuevoProceso = await createProcesoTrazabilidad(payload);
@@ -165,8 +167,10 @@ export default function TrazabilidadPage() {
                 loteId: values.loteId,
                 cosechaId: values.cosechaId,
                 etapa: values.etapa,
+                tipoProceso: values.tipoProceso,
+                fechaInicio: values.fechaInicio ? values.fechaInicio.toISOString() : undefined,
+                fechaFin: values.fechaFin ? values.fechaFin.toISOString() : undefined,
                 kilosIngresados: values.kilosIngresados,
-                kilosResultantes: values.kilosResultantes,
             };
 
             const procesoActualizado = await updateProcesoTrazabilidad(id, payload);
@@ -201,21 +205,8 @@ export default function TrazabilidadPage() {
         setIsDetailModalOpen(false);
     }
 
-    const mermaPromedio =
-        procesos.length > 0
-            ? procesos.reduce(
-                (total, proceso) => total + proceso.porcentajeMerma,
-                0,
-            ) / procesos.length
-            : 0;
-
     const totalIngresado = procesos.reduce(
         (total, proceso) => total + proceso.kilosIngresados,
-        0,
-    );
-
-    const totalResultante = procesos.reduce(
-        (total, proceso) => total + proceso.kilosResultantes,
         0,
     );
 
@@ -293,22 +284,6 @@ export default function TrazabilidadPage() {
                 kilosIngresados.toLocaleString("es-CL"),
         },
         {
-            title: "Kilos Resultantes",
-            dataIndex: "kilosResultantes",
-            key: "kilosResultantes",
-            render: (kilosResultantes: number) =>
-                kilosResultantes.toLocaleString("es-CL"),
-        },
-        {
-            title: "% Merma",
-            dataIndex: "porcentajeMerma",
-            key: "porcentajeMerma",
-            render: (porcentajeMerma: number) =>
-                `${porcentajeMerma.toLocaleString("es-CL", {
-                    maximumFractionDigits: 2,
-                })}%`,
-        },
-        {
             title: "Acciones",
             key: "acciones",
             render: (_, record) => (
@@ -355,7 +330,7 @@ export default function TrazabilidadPage() {
                     }}
                 >
                     <Typography.Title level={2} style={{ margin: 0 }}>
-                        Control de Trazabilidad
+                        Proceso Húmedo
                     </Typography.Title>
 
                     <Button type="primary" icon={<PlusOutlined />} onClick={handleRegister}>
@@ -364,33 +339,20 @@ export default function TrazabilidadPage() {
                 </div>
 
                 <Row gutter={[16, 16]}>
-                    <Col xs={24} md={8}>
+                    <Col xs={24} md={12}>
                         <Card hoverable>
                             <Statistic
-                                title="Merma Promedio"
-                                value={mermaPromedio}
-                                suffix="%"
-                                precision={2}
+                                title="Total Procesos Registrados"
+                                value={procesos.length}
                             />
                         </Card>
                     </Col>
 
-                    <Col xs={24} md={8}>
+                    <Col xs={24} md={12}>
                         <Card hoverable>
                             <Statistic
                                 title="Total Ingresado (Kg)"
                                 value={totalIngresado}
-                                suffix="kg"
-                                formatter={(value) => Number(value).toLocaleString("es-CL")}
-                            />
-                        </Card>
-                    </Col>
-
-                    <Col xs={24} md={8}>
-                        <Card hoverable>
-                            <Statistic
-                                title="Total Resultante (Kg)"
-                                value={totalResultante}
                                 suffix="kg"
                                 formatter={(value) => Number(value).toLocaleString("es-CL")}
                             />
@@ -522,27 +484,6 @@ export default function TrazabilidadPage() {
 
                         <Descriptions.Item label="Kg Ingresados">
                             {selectedProceso.kilosIngresados.toLocaleString("es-CL")} kg
-                        </Descriptions.Item>
-
-                        <Descriptions.Item label="Kg Resultantes">
-                            {selectedProceso.kilosResultantes.toLocaleString("es-CL")} kg
-                        </Descriptions.Item>
-
-                        <Descriptions.Item label="Merma">
-                            <Tag
-                                color={
-                                    selectedProceso.porcentajeMerma >= 30
-                                        ? "red"
-                                        : selectedProceso.porcentajeMerma >= 15
-                                            ? "orange"
-                                            : "green"
-                                }
-                            >
-                                {selectedProceso.porcentajeMerma.toLocaleString("es-CL", {
-                                    maximumFractionDigits: 2,
-                                })}
-                                %
-                            </Tag>
                         </Descriptions.Item>
 
                         <Descriptions.Item label="Fecha de Registro">

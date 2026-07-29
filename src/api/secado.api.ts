@@ -11,6 +11,7 @@ export type Secado = {
   kilosResultantes: number;
   merma: number;
   observaciones?: string | null;
+  perfilProceso?: string;
   createdAt?: string;
   updatedAt?: string;
   lote?: Lote;
@@ -23,6 +24,7 @@ export type CreateSecadoDTO = {
   kilosIngresados: number;
   kilosResultantes: number;
   observaciones?: string | null;
+  perfilProceso?: string;
 };
 
 export type UpdateSecadoDTO = Partial<CreateSecadoDTO>;
