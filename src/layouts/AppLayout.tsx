@@ -14,6 +14,7 @@ import {
     AppstoreOutlined,
     FireOutlined,
     InboxOutlined,
+    ExperimentOutlined,
 } from "@ant-design/icons";
 import { Button, Grid, Layout, Menu, Tooltip, Typography, theme as antdTheme } from "antd";
 import { useState } from "react";
@@ -236,6 +237,11 @@ export default function AppLayout({ themeMode, isDarkMode, onThemeModeChange, te
                                 label: "Empaque",
                             },
                             {
+                                key: "/trilla",
+                                icon: <ExperimentOutlined />,
+                                label: "Trilla",
+                            },
+                            {
                                 key: "/reportes",
                                 icon: <FileExcelOutlined />,
                                 label: "Reportes",
@@ -358,6 +364,11 @@ export default function AppLayout({ themeMode, isDarkMode, onThemeModeChange, te
                                     key: "/empaque",
                                     icon: <InboxOutlined />,
                                     label: "Empaque",
+                                },
+                                {
+                                    key: "/trilla",
+                                    icon: <ExperimentOutlined />,
+                                    label: "Trilla",
                                 },
                                 {
                                     key: "/reportes",

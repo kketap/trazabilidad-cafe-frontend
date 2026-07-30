@@ -14,6 +14,7 @@ import ConfiguracionPage from "./pages/configuracion/ConfiguracionPage";
 import LotesPage from "./pages/lotes/LotesPage";
 import SecadoPage from "./pages/secado/SecadoPage";
 import EmpaquePage from "./pages/empaque/EmpaquePage";
+import TrillaPage from "./pages/trilla/TrillaPage";
 import LoginPage from "./pages/auth/LoginPage";
 import ProtectedRoute from "./components/auth/ProtectedRoute";
 
@@ -116,6 +117,7 @@ function App() {
           <Route path="/trazabilidad" element={<TrazabilidadPage />} />
           <Route path="/secado" element={<SecadoPage />} />
           <Route path="/empaque" element={<EmpaquePage />} />
+          <Route path="/trilla" element={<TrillaPage />} />
           <Route path="/reportes" element={<ReportesPage />} />
           <Route path="/configuracion" element={<ConfiguracionPage />} />
           <Route path="*" element={<div style={{ padding: 24 }}>Página no encontrada (404)</div>} />

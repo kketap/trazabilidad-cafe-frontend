@@ -10,6 +10,7 @@ export type Cosecha = {
   lotes: string;
   totalHectareas: number;
   tipoCosecha: string;
+  varietal?: string | null;
   trabajadorId?: number | null;
   trabajador?: Trabajador | null;
   tipo_cosecha?: string | null;
