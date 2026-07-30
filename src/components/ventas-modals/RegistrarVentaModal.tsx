@@ -177,7 +177,7 @@ export default function RegistrarVentaModal({
 
       <Form form={form} layout="vertical" onFinish={handleFinish}>
         {/* Datos comerciales */}
-        <Divider orientation="left" style={{ fontSize: 13 }}>
+        <Divider style={{ fontSize: 13 }}>
           Datos de la Venta
         </Divider>
 
@@ -222,7 +222,7 @@ export default function RegistrarVentaModal({
         </Form.Item>
 
         {/* Selección de cliente y orden de trilla */}
-        <Divider orientation="left" style={{ fontSize: 13 }}>
+        <Divider style={{ fontSize: 13 }}>
           Cliente y Origen
         </Divider>
 
@@ -294,7 +294,7 @@ export default function RegistrarVentaModal({
         </Form.Item>
 
         {/* Kilos y presentación */}
-        <Divider orientation="left" style={{ fontSize: 13 }}>
+        <Divider style={{ fontSize: 13 }}>
           Cantidades y Precio
         </Divider>
 
@@ -384,7 +384,7 @@ export default function RegistrarVentaModal({
         )}
 
         {/* Documentos */}
-        <Divider orientation="left" style={{ fontSize: 13 }}>
+        <Divider style={{ fontSize: 13 }}>
           Documentos (opcionales)
         </Divider>
 
