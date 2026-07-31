@@ -201,10 +201,10 @@ export default function AppLayout({ themeMode, isDarkMode, onThemeModeChange, te
                         selectedKeys={[location.pathname]}
                         onClick={handleMenuClick}
                         style={{
-                            // Fondo del menú igual al sidebar para mantener continuidad y contraste.
                             background: isDarkMode ? SIDEBAR_DARK_BG : HEADER_LIGHT_BG,
                             borderRight: "none",
-                            padding: "16px 8px",
+                            padding: "8px 4px",
+                            fontSize: 13,
                         }}
                         items={[
                             {
@@ -213,64 +213,34 @@ export default function AppLayout({ themeMode, isDarkMode, onThemeModeChange, te
                                 label: "Inicio",
                             },
                             {
-                                key: "/cosechas",
-                                icon: <ShopOutlined />,
-                                label: "Cosechas",
+                                type: "group",
+                                label: sidebarCollapsed ? null : "Campo & Producción",
+                                children: [
+                                    { key: "/cosechas", icon: <ShopOutlined />, label: "Cosechas" },
+                                    { key: "/lotes", icon: <AppstoreOutlined />, label: "Lotes" },
+                                    { key: "/trazabilidad", icon: <PartitionOutlined />, label: "Proceso Húmedo" },
+                                    { key: "/secado", icon: <FireOutlined />, label: "Secado" },
+                                    { key: "/empaque", icon: <InboxOutlined />, label: "Empaque" },
+                                    { key: "/trilla", icon: <ExperimentOutlined />, label: "Trilla" },
+                                ],
                             },
                             {
-                                key: "/lotes",
-                                icon: <AppstoreOutlined />,
-                                label: "Lotes",
+                                type: "group",
+                                label: sidebarCollapsed ? null : "Comercial & Gestión",
+                                children: [
+                                    { key: "/ventas", icon: <DollarOutlined />, label: "Ventas" },
+                                    { key: "/facturacion", icon: <FileTextOutlined />, label: "Facturación" },
+                                    { key: "/clientes", icon: <TeamOutlined />, label: "Clientes" },
+                                    { key: "/reportes", icon: <FileExcelOutlined />, label: "Reportes" },
+                                ],
                             },
                             {
-                                key: "/trazabilidad",
-                                icon: <PartitionOutlined />,
-                                label: "Proceso Húmedo",
-                            },
-                            {
-                                key: "/secado",
-                                icon: <FireOutlined />,
-                                label: "Secado",
-                            },
-                            {
-                                key: "/empaque",
-                                icon: <InboxOutlined />,
-                                label: "Empaque",
-                            },
-                            {
-                                key: "/trilla",
-                                icon: <ExperimentOutlined />,
-                                label: "Trilla",
-                            },
-                            {
-                                key: "/ventas",
-                                icon: <DollarOutlined />,
-                                label: "Ventas",
-                            },
-                            {
-                                key: "/reportes",
-                                icon: <FileExcelOutlined />,
-                                label: "Reportes",
-                            },
-                            {
-                                key: "/facturacion",
-                                icon: <FileTextOutlined />,
-                                label: "Facturación",
-                            },
-                            {
-                                key: "/clientes",
-                                icon: <TeamOutlined />,
-                                label: "Clientes",
-                            },
-                            {
-                                key: "/trabajadores",
-                                icon: <SolutionOutlined />,
-                                label: "Trabajadores",
-                            },
-                            {
-                                key: "/configuracion",
-                                icon: <SettingOutlined />,
-                                label: "Configuración",
+                                type: "group",
+                                label: sidebarCollapsed ? null : "Administración",
+                                children: [
+                                    { key: "/trabajadores", icon: <SolutionOutlined />, label: "Trabajadores" },
+                                    { key: "/configuracion", icon: <SettingOutlined />, label: "Configuración" },
+                                ],
                             },
                         ]}
                     />

@@ -4,10 +4,12 @@ import {
   Button,
   Card,
   Col,
+  DatePicker,
   Input,
   message,
   Popconfirm,
   Row,
+  Select,
   Space,
   Statistic,
   Table,
@@ -26,9 +28,11 @@ import {
   DollarOutlined,
   FileTextOutlined,
   WarningOutlined,
+  ClearOutlined,
 } from "@ant-design/icons";
 import type { ColumnsType } from "antd/es/table";
-import dayjs from "dayjs";
+import dayjs, { type Dayjs } from "dayjs";
+
 
 import type { Venta, CreateVentaDTO, UpdateVentaDTO } from "../../api/ventas.api";
 import {
@@ -134,20 +138,47 @@ export default function VentasPage() {
     return { totalVentas, kilosTotales, ingresoTotal, sinFactura };
   }, [ventas]);
 
+  const [filtroFecha, setFiltroFecha] = useState<[Dayjs, Dayjs] | null>(null);
+  const [filtroEstado, setFiltroEstado] = useState<string | undefined>(undefined);
+
+  const handleLimpiarFiltros = () => {
+    setSearchText("");
+    setFiltroFecha(null);
+    setFiltroEstado(undefined);
+  };
+
   // Búsqueda y filtrado
   const filteredVentas = useMemo(() => {
-    if (!searchText) return ventas;
-    const term = searchText.toLowerCase();
-    return ventas.filter(
-      (v) =>
-        v.producto?.toLowerCase().includes(term) ||
-        v.numeroFactura?.toLowerCase().includes(term) ||
-        v.numeroGuiaRemision?.toLowerCase().includes(term) ||
-        v.fincaOrigen?.toLowerCase().includes(term) ||
-        v.cliente?.nombre?.toLowerCase().includes(term) ||
-        v.ordenTrilla?.codigoTrilla?.toLowerCase().includes(term)
-    );
-  }, [ventas, searchText]);
+    return ventas.filter((v) => {
+      if (searchText) {
+        const term = searchText.toLowerCase();
+        const matchesProducto = v.producto?.toLowerCase().includes(term);
+        const matchesFactura = v.numeroFactura?.toLowerCase().includes(term);
+        const matchesGuia = v.numeroGuiaRemision?.toLowerCase().includes(term);
+        const matchesFinca = v.fincaOrigen?.toLowerCase().includes(term);
+        const matchesCliente = v.cliente?.nombre?.toLowerCase().includes(term);
+        const matchesOrden = v.ordenTrilla?.codigoTrilla?.toLowerCase().includes(term);
+        if (!matchesProducto && !matchesFactura && !matchesGuia && !matchesFinca && !matchesCliente && !matchesOrden) {
+          return false;
+        }
+      }
+
+      if (filtroFecha && v.fechaVenta) {
+        const f = dayjs(v.fechaVenta);
+        if (f.isBefore(filtroFecha[0], "day") || f.isAfter(filtroFecha[1], "day")) {
+          return false;
+        }
+      }
+
+      if (filtroEstado) {
+        const tieneFactura = Boolean(v.numeroFactura);
+        if (filtroEstado === "FACTURADO" && !tieneFactura) return false;
+        if (filtroEstado === "PENDIENTE" && tieneFactura) return false;
+      }
+
+      return true;
+    });
+  }, [ventas, searchText, filtroFecha, filtroEstado]);
 
   const columns: ColumnsType<Venta> = [
     {
@@ -369,17 +400,45 @@ export default function VentasPage() {
         </Col>
       </Row>
 
-      {/* Tabla */}
+      {/* Tabla y Filtros */}
       <Card style={{ borderRadius: 8 }}>
-        <Row justify="space-between" align="middle" style={{ marginBottom: 16 }}>
-          <Col xs={24} sm={14} md={10}>
+        <Row gutter={[12, 12]} align="middle" style={{ marginBottom: 16 }}>
+          <Col xs={24} sm={12} md={8}>
             <Input
-              placeholder="Buscar por cliente, producto, factura, guía, finca u orden de trilla..."
+              placeholder="Buscar por cliente, producto, factura, guía o trilla..."
               prefix={<SearchOutlined />}
               value={searchText}
               onChange={(e) => setSearchText(e.target.value)}
               allowClear
+              style={{ width: "100%" }}
             />
+          </Col>
+          <Col xs={24} sm={12} md={7}>
+            <DatePicker.RangePicker
+              value={filtroFecha}
+              onChange={(val) => setFiltroFecha(val as [Dayjs, Dayjs] | null)}
+              format="DD/MM/YYYY"
+              placeholder={["Fecha inicio", "Fecha fin"]}
+              style={{ width: "100%" }}
+            />
+          </Col>
+          <Col xs={24} sm={12} md={5}>
+            <Select
+              placeholder="Estado Facturación"
+              value={filtroEstado}
+              onChange={setFiltroEstado}
+              allowClear
+              style={{ width: "100%" }}
+              options={[
+                { value: "FACTURADO", label: "Facturado" },
+                { value: "PENDIENTE", label: "Pendiente" },
+              ]}
+            />
+          </Col>
+          <Col xs={24} sm={12} md={4}>
+            <Button icon={<ClearOutlined />} onClick={handleLimpiarFiltros} block>
+              Limpiar
+            </Button>
           </Col>
         </Row>
 
@@ -390,7 +449,7 @@ export default function VentasPage() {
           loading={loading}
           pagination={{ pageSize: 10, showSizeChanger: true }}
           locale={{ emptyText: "No hay ventas registradas" }}
-          scroll={{ x: 1400 }}
+          scroll={{ x: "max-content" }}
         />
       </Card>
 

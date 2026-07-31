@@ -4,10 +4,12 @@ import {
   Button,
   Card,
   Col,
+  DatePicker,
   Input,
   message,
   Popconfirm,
   Row,
+  Select,
   Space,
   Statistic,
   Table,
@@ -22,9 +24,10 @@ import {
   SearchOutlined,
   ReloadOutlined,
   InboxOutlined,
+  ClearOutlined,
 } from "@ant-design/icons";
 import type { ColumnsType } from "antd/es/table";
-import dayjs from "dayjs";
+import dayjs, { type Dayjs } from "dayjs";
 
 import type { Empaque, CreateEmpaqueDTO, UpdateEmpaqueDTO } from "../../api/empaque.api";
 import {
@@ -39,6 +42,7 @@ import { getLotesApi } from "../../api/lotes";
 
 import CrearEmpaqueModal from "../../components/empaque-modals/CrearEmpaqueModal";
 import EditarEmpaqueModal from "../../components/empaque-modals/EditarEmpaqueModal";
+import { formatEstadoEnum } from "../../utils/enumFormatters";
 
 const { Title, Text } = Typography;
 
@@ -48,7 +52,11 @@ export default function EmpaquePage() {
   const [lotes, setLotes] = useState<Lote[]>([]);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
+
+  // Filtros
   const [searchText, setSearchText] = useState("");
+  const [filtroFecha, setFiltroFecha] = useState<[Dayjs, Dayjs] | null>(null);
+  const [filtroEstado, setFiltroEstado] = useState<string | undefined>(undefined);
 
   // Modales
   const [isCreateOpen, setIsCreateOpen] = useState(false);
@@ -76,7 +84,6 @@ export default function EmpaquePage() {
     fetchData();
   }, []);
 
-  // Crear Empaque
   const handleCreate = async (values: CreateEmpaqueDTO) => {
     setSaving(true);
     try {
@@ -92,7 +99,6 @@ export default function EmpaquePage() {
     }
   };
 
-  // Editar Empaque
   const handleUpdate = async (id: number, values: UpdateEmpaqueDTO) => {
     setSaving(true);
     try {
@@ -109,7 +115,6 @@ export default function EmpaquePage() {
     }
   };
 
-  // Eliminar Empaque
   const handleDelete = async (id: number) => {
     try {
       await deleteEmpaqueApi(id);
@@ -121,7 +126,12 @@ export default function EmpaquePage() {
     }
   };
 
-  // Estadísticas
+  const handleLimpiarFiltros = () => {
+    setSearchText("");
+    setFiltroFecha(null);
+    setFiltroEstado(undefined);
+  };
+
   const stats = useMemo(() => {
     const totalRegistros = empaques.length;
     const totalIngresados = empaques.reduce((acc, curr) => acc + (curr.kilosIngresados || 0), 0);
@@ -132,18 +142,31 @@ export default function EmpaquePage() {
     return { totalRegistros, totalIngresados, totalResultantes, totalMerma, porcentajeMermaPromedio };
   }, [empaques]);
 
-  // Filtrado por búsqueda
   const filteredEmpaques = useMemo(() => {
-    if (!searchText) return empaques;
-    const term = searchText.toLowerCase();
-    return empaques.filter(
-      (e) =>
-        (e.lote?.codigo && e.lote.codigo.toLowerCase().includes(term)) ||
-        (e.observaciones && e.observaciones.toLowerCase().includes(term))
-    );
-  }, [empaques, searchText]);
+    return empaques.filter((e) => {
+      if (searchText) {
+        const term = searchText.toLowerCase();
+        const codigoMatches = e.lote?.codigo && e.lote.codigo.toLowerCase().includes(term);
+        const obsMatches = e.observaciones && e.observaciones.toLowerCase().includes(term);
+        if (!codigoMatches && !obsMatches) return false;
+      }
 
-  // Columnas de la tabla
+      if (filtroFecha && e.fechaInicio) {
+        const f = dayjs(e.fechaInicio);
+        if (f.isBefore(filtroFecha[0], "day") || f.isAfter(filtroFecha[1], "day")) {
+          return false;
+        }
+      }
+
+      if (filtroEstado) {
+        const estado = (e as any).estado || (e.kilosResultantes ? "EN_ALMACEN" : "EN_PROCESO");
+        if (estado !== filtroEstado) return false;
+      }
+
+      return true;
+    });
+  }, [empaques, searchText, filtroFecha, filtroEstado]);
+
   const columns: ColumnsType<Empaque> = [
     {
       title: "Código del Lote",
@@ -193,6 +216,18 @@ export default function EmpaquePage() {
       },
     },
     {
+      title: "Estado",
+      key: "estado",
+      render: (_, record: Empaque) => {
+        const estado = (record as any).estado || (record.kilosResultantes ? "EN_ALMACEN" : "EN_PROCESO");
+        return (
+          <Tag color={estado === "EN_ALMACEN" ? "purple" : "blue"}>
+            {formatEstadoEnum(estado)}
+          </Tag>
+        );
+      },
+    },
+    {
       title: "Observaciones",
       dataIndex: "observaciones",
       key: "observaciones",
@@ -222,12 +257,7 @@ export default function EmpaquePage() {
             cancelText="Cancelar"
             okButtonProps={{ danger: true }}
           >
-            <Button
-              type="text"
-              danger
-              icon={<DeleteOutlined />}
-              title="Eliminar Empaque"
-            />
+            <Button type="text" danger icon={<DeleteOutlined />} title="Eliminar" />
           </Popconfirm>
         </Space>
       ),
@@ -235,49 +265,66 @@ export default function EmpaquePage() {
   ];
 
   return (
-    <div style={{ padding: 24 }}>
+    <div style={{ padding: "24px" }}>
       {/* Encabezado */}
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
-        <div>
-          <Title level={2} style={{ margin: 0 }}>
-            <InboxOutlined style={{ color: token.colorPrimary, marginRight: 10 }} />
-            Procesamiento Físico: Empaque
-          </Title>
-          <Text type="secondary">
-            Registro y control del empaque de lotes de café y transición al almacén con actualización automática de inventario.
-          </Text>
-        </div>
-        <Space>
-          <Button icon={<ReloadOutlined />} onClick={fetchData} loading={loading}>
-            Refrescar
-          </Button>
-          <Button type="primary" icon={<PlusOutlined />} onClick={() => setIsCreateOpen(true)}>
-            Nuevo Proceso de Empaque
-          </Button>
-        </Space>
-      </div>
+      <Row justify="space-between" align="middle" style={{ marginBottom: 24 }}>
+        <Col>
+          <Space align="center" size="middle">
+            <InboxOutlined style={{ fontSize: 28, color: "#722ed1" }} />
+            <div>
+              <Title level={3} style={{ margin: 0 }}>
+                Módulo de Empaque
+              </Title>
+              <Text type="secondary">
+                Empacado final de pergamino/verde, pesaje y almacenamiento.
+              </Text>
+            </div>
+          </Space>
+        </Col>
+        <Col>
+          <Space>
+            <Button icon={<ReloadOutlined />} onClick={fetchData} loading={loading}>
+              Refrescar
+            </Button>
+            <Button
+              type="primary"
+              icon={<PlusOutlined />}
+              onClick={() => setIsCreateOpen(true)}
+              style={{ background: "#722ed1", borderColor: "#722ed1" }}
+            >
+              Nuevo Empaque
+            </Button>
+          </Space>
+        </Col>
+      </Row>
 
-      {/* Tarjetas de Estadísticas */}
+      {/* KPI Cards */}
       <Row gutter={[16, 16]} style={{ marginBottom: 24 }}>
         <Col xs={24} sm={12} md={6}>
-          <Card size="small" style={{ borderRadius: 8 }}>
-            <Statistic title="Total Procesos" value={stats.totalRegistros} prefix={<InboxOutlined />} />
+          <Card size="small">
+            <Statistic title="Total Registros" value={stats.totalRegistros} prefix={<InboxOutlined />} />
           </Card>
         </Col>
         <Col xs={24} sm={12} md={6}>
-          <Card size="small" style={{ borderRadius: 8 }}>
-            <Statistic title="Total Kilos Ingresados" value={stats.totalIngresados} precision={1} suffix="kg" />
+          <Card size="small">
+            <Statistic title="Ingresado (Kg)" value={stats.totalIngresados} precision={1} suffix="kg" />
           </Card>
         </Col>
         <Col xs={24} sm={12} md={6}>
-          <Card size="small" style={{ borderRadius: 8 }}>
-            <Statistic title="Total Kilos Empacados" value={stats.totalResultantes} precision={1} suffix="kg" valueStyle={{ color: token.colorPrimary }} />
-          </Card>
-        </Col>
-        <Col xs={24} sm={12} md={6}>
-          <Card size="small" style={{ borderRadius: 8 }}>
+          <Card size="small">
             <Statistic
-              title="Merma Total Acumulada"
+              title="Empacado Final (Kg)"
+              value={stats.totalResultantes}
+              precision={1}
+              suffix="kg"
+              valueStyle={{ color: "#3f8600" }}
+            />
+          </Card>
+        </Col>
+        <Col xs={24} sm={12} md={6}>
+          <Card size="small">
+            <Statistic
+              title="Merma de Empaque"
               value={stats.totalMerma}
               precision={1}
               suffix={`kg (${stats.porcentajeMermaPromedio.toFixed(1)}%)`}
@@ -289,7 +336,7 @@ export default function EmpaquePage() {
 
       {/* Barra de Filtros y Tabla */}
       <Card style={{ borderRadius: 8 }}>
-        <Row justify="space-between" align="middle" style={{ marginBottom: 16 }}>
+        <Row gutter={[12, 12]} align="middle" style={{ marginBottom: 16 }}>
           <Col xs={24} sm={12} md={8}>
             <Input
               placeholder="Buscar por código de lote u observaciones..."
@@ -297,7 +344,35 @@ export default function EmpaquePage() {
               value={searchText}
               onChange={(e) => setSearchText(e.target.value)}
               allowClear
+              style={{ width: "100%" }}
             />
+          </Col>
+          <Col xs={24} sm={12} md={7}>
+            <DatePicker.RangePicker
+              value={filtroFecha}
+              onChange={(val) => setFiltroFecha(val as [Dayjs, Dayjs] | null)}
+              format="DD/MM/YYYY"
+              placeholder={["Fecha inicio", "Fecha fin"]}
+              style={{ width: "100%" }}
+            />
+          </Col>
+          <Col xs={24} sm={12} md={5}>
+            <Select
+              placeholder="Estado"
+              value={filtroEstado}
+              onChange={setFiltroEstado}
+              allowClear
+              style={{ width: "100%" }}
+              options={[
+                { value: "EN_PROCESO", label: "En Proceso" },
+                { value: "EN_ALMACEN", label: "En Almacén" },
+              ]}
+            />
+          </Col>
+          <Col xs={24} sm={12} md={4}>
+            <Button icon={<ClearOutlined />} onClick={handleLimpiarFiltros} block>
+              Limpiar
+            </Button>
           </Col>
         </Row>
 
@@ -308,6 +383,7 @@ export default function EmpaquePage() {
           loading={loading}
           pagination={{ pageSize: 10, showSizeChanger: true }}
           locale={{ emptyText: "No hay procesos de empaque registrados" }}
+          scroll={{ x: "max-content" }}
         />
       </Card>
 

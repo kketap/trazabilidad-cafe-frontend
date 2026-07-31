@@ -309,6 +309,7 @@ export default function ReportesPage() {
                                             dataSource={dataFiltrada}
                                             rowKey="id"
                                             pagination={{ pageSize: 10 }}
+                                            scroll={{ x: "max-content" }}
                                             locale={{
                                                 emptyText: "No hay cosechas registradas en este mes",
                                             }}

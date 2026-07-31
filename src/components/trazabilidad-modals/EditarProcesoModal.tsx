@@ -63,7 +63,7 @@ export default function EditarProcesoModal({
 
     const cosechaOptions = (cosechas || []).map((cosecha) => ({
         value: cosecha.id,
-        label: `${cosecha.lotes} - ${cosecha.fecha ? cosecha.fecha.slice(0, 10) : ""} - ${(cosecha.kilosCosechados ?? 0).toLocaleString("es-CL")} kg`,
+        label: `COS-${String(cosecha.id).padStart(3, "0")} | Lote: ${cosecha.lotes || "N/A"} | ${cosecha.fecha ? cosecha.fecha.slice(0, 10) : ""} | ${(cosecha.kilosCosechados ?? 0).toLocaleString("es-CL")} kg`,
     }));
 
     return (

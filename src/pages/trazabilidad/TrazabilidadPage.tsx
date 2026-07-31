@@ -17,7 +17,7 @@ import {
     Descriptions,
     Modal,
 } from "antd";
-import { DeleteOutlined, EditOutlined, EyeOutlined, PlusOutlined, ClearOutlined } from "@ant-design/icons";
+import { DeleteOutlined, EditOutlined, EyeOutlined, PlusOutlined, ClearOutlined, ClockCircleOutlined } from "@ant-design/icons";
 import type { ColumnsType } from "antd/es/table";
 import type { Dayjs } from "dayjs";
 import CrearProcesoModal, {
@@ -256,7 +256,36 @@ export default function TrazabilidadPage() {
         setFiltroFecha(null);
     }
 
+    function calcularDuracionProceso(fechaInicio?: string, fechaFin?: string) {
+        if (!fechaInicio || !fechaFin) return "-";
+        const inicio = dayjs(fechaInicio);
+        const fin = dayjs(fechaFin);
+        const diffMinutos = fin.diff(inicio, "minute");
+        if (diffMinutos <= 0) return "0 min";
+        const horas = Math.floor(diffMinutos / 60);
+        const mins = diffMinutos % 60;
+        if (horas >= 24) {
+            const dias = Math.floor(horas / 24);
+            const horasRestantes = horas % 24;
+            return `${dias}d ${horasRestantes}h`;
+        }
+        if (horas > 0) {
+            return mins > 0 ? `${horas}h ${mins}m` : `${horas} hrs`;
+        }
+        return `${mins} min`;
+    }
+
     const columns: ColumnsType<ProcesoTrazabilidad> = [
+        {
+            title: "Código Proceso",
+            dataIndex: "id",
+            key: "codigo",
+            render: (id: number) => (
+                <Tag color="purple" style={{ fontWeight: "bold", fontSize: 13 }}>
+                    PRO-{String(id).padStart(3, "0")}
+                </Tag>
+            ),
+        },
         {
             title: "Fecha",
             dataIndex: "fecha",
@@ -269,19 +298,32 @@ export default function TrazabilidadPage() {
             render: (_, record) =>
                 record.lote
                     ? (record.lote.nombre ? `${record.lote.codigo} - ${record.lote.nombre}` : record.lote.codigo)
-                    : record.cosecha?.lotes ?? (record.cosechaId ? `Cosecha #${record.cosechaId}` : "-"),
+                    : record.cosecha?.lotes ?? (record.cosechaId ? `COS-${String(record.cosechaId).padStart(3, "0")}` : "-"),
         },
         {
-            title: "Etapa",
-            dataIndex: "etapa",
-            key: "etapa",
+            title: "Tipo de Proceso",
+            dataIndex: "tipoProceso",
+            key: "tipoProceso",
+            render: (tipo: string) => tipo ? <Tag color="blue">{tipo.replace("_", " ")}</Tag> : "-",
+        },
+        {
+            title: "Duración",
+            key: "duracion",
+            render: (_, record) => {
+                const duracion = calcularDuracionProceso(record.fechaInicio, record.fechaFin);
+                return (
+                    <Tag icon={<ClockCircleOutlined />} color={duracion !== "-" ? "cyan" : "default"}>
+                        {duracion}
+                    </Tag>
+                );
+            },
         },
         {
             title: "Kilos Ingresados",
             dataIndex: "kilosIngresados",
             key: "kilosIngresados",
             render: (kilosIngresados: number) =>
-                kilosIngresados.toLocaleString("es-CL"),
+                kilosIngresados ? `${kilosIngresados.toLocaleString("es-CL")} kg` : "0 kg",
         },
         {
             title: "Acciones",
@@ -292,11 +334,13 @@ export default function TrazabilidadPage() {
                         type="link"
                         icon={<EyeOutlined />}
                         onClick={() => handleView(record)}
+                        title="Ver detalle"
                     />
                     <Button
                         type="link"
                         icon={<EditOutlined />}
                         onClick={() => handleEdit(record)}
+                        title="Editar proceso"
                     />
                     <Popconfirm
                         title="Eliminar proceso"
@@ -310,6 +354,7 @@ export default function TrazabilidadPage() {
                             type="link"
                             danger
                             icon={<DeleteOutlined />}
+                            title="Eliminar"
                         />
                     </Popconfirm>
                 </Space>
@@ -414,6 +459,7 @@ export default function TrazabilidadPage() {
                     bordered
                     loading={loading}
                     pagination={false}
+                    scroll={{ x: "max-content" }}
                 />
             </Space>
 
@@ -436,7 +482,7 @@ export default function TrazabilidadPage() {
                 onSubmit={handleEditSubmit}
             />
             <Modal
-                title="Detalle del Proceso"
+                title={`Detalle del Proceso - PRO-${String(selectedProceso?.id ?? 0).padStart(3, "0")}`}
                 open={isDetailModalOpen}
                 onCancel={handleCloseDetailModal}
                 footer={[
@@ -457,18 +503,26 @@ export default function TrazabilidadPage() {
                         }}
                         size="middle"
                     >
+                        <Descriptions.Item label="Código de Proceso">
+                            <Tag color="purple" style={{ fontWeight: "bold", fontSize: 13 }}>
+                                PRO-{String(selectedProceso.id).padStart(3, "0")}
+                            </Tag>
+                        </Descriptions.Item>
+
                         <Descriptions.Item label="Fecha">
                             {dayjs(selectedProceso.fecha).format("DD/MM/YYYY")}
                         </Descriptions.Item>
 
-                        <Descriptions.Item label="Etapa">
-                            <Tag color="blue">{selectedProceso.etapa}</Tag>
+                        <Descriptions.Item label="Duración">
+                            <Tag icon={<ClockCircleOutlined />} color="cyan">
+                                {calcularDuracionProceso(selectedProceso.fechaInicio, selectedProceso.fechaFin)}
+                            </Tag>
                         </Descriptions.Item>
 
                         <Descriptions.Item label="Lote Origen">
                             {selectedProceso.lote
                                 ? (selectedProceso.lote.nombre ? `${selectedProceso.lote.codigo} - ${selectedProceso.lote.nombre}` : selectedProceso.lote.codigo)
-                                : selectedProceso.cosecha?.lotes ?? (selectedProceso.cosechaId ? `Cosecha #${selectedProceso.cosechaId}` : "-")}
+                                : selectedProceso.cosecha?.lotes ?? (selectedProceso.cosechaId ? `COS-${String(selectedProceso.cosechaId).padStart(3, "0")}` : "-")}
                         </Descriptions.Item>
 
                         <Descriptions.Item label="Tipo de Cosecha">

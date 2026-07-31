@@ -10,7 +10,7 @@ export type Cosecha = {
   lotes: string;
   totalHectareas: number;
   tipoCosecha: string;
-  varietal?: string | null;
+  varietal?: string | string[] | null;
   trabajadorId?: number | null;
   trabajador?: Trabajador | null;
   tipo_cosecha?: string | null;
@@ -18,6 +18,8 @@ export type Cosecha = {
   kilos_quincena?: number | null;
   kilos_mensuales?: number | null;
   cosechaLotes?: any[];
+  observacion?: string | null;
+  observaciones?: string | null;
   createdAt?: string;
   updatedAt?: string;
 };
@@ -25,14 +27,16 @@ export type Cosecha = {
 export type CreateCosechaDTO = {
   fecha: string;
   kilosCosechados: number;
-  cantidadCosechadores: number;
+  cantidadCosechadores?: number;
   totalHectareas: number;
   lotes?: string;
   trabajadorId: number;
   tipo_cosecha?: string;
+  varietal?: string[] | string;
   kilos_diarios?: number;
   kilos_quincena?: number;
   kilos_mensuales?: number;
+  observacion?: string;
   loteIds?: number[];
 };
 

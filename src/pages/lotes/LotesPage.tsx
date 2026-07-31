@@ -1,9 +1,10 @@
 // src/pages/lotes/LotesPage.tsx
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import {
   Button,
   Card,
   Col,
+  DatePicker,
   Form,
   Input,
   InputNumber,
@@ -28,22 +29,28 @@ import {
   ClockCircleOutlined,
   ExperimentOutlined,
   SafetyCertificateOutlined,
-  BranchesOutlined,
+  ClearOutlined,
 } from "@ant-design/icons";
+import dayjs, { type Dayjs } from "dayjs";
 import type { Lote } from "../../api/lotes";
 import {
   getLotesApi,
   createLoteApi,
   updateLoteApi,
   deleteLoteApi,
-  getSiguienteCorrelativoApi,
 } from "../../api/lotes";
+import { formatEstadoEnum } from "../../utils/enumFormatters";
 
 export default function LotesPage() {
   const { token } = theme.useToken();
   const [lotes, setLotes] = useState<Lote[]>([]);
   const [loading, setLoading] = useState(false);
+
+  // Filtros superiores
   const [searchText, setSearchText] = useState("");
+  const [filtroFecha, setFiltroFecha] = useState<[Dayjs, Dayjs] | null>(null);
+  const [filtroTipoCafe, setFiltroTipoCafe] = useState<string | undefined>(undefined);
+  const [filtroEstado, setFiltroEstado] = useState<string | undefined>(undefined);
 
   // Estado Modal CRUD
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -51,7 +58,7 @@ export default function LotesPage() {
   const [submitting, setSubmitting] = useState(false);
   const [form] = Form.useForm();
 
-  // Escuchar el tipo de café seleccionado para renderizado condicional de horas
+  // Escuchar el tipo de café seleccionado para autogenerar el código de previsualización
   const tipoCafeWatch = Form.useWatch("tipo_cafe", form);
 
   const fetchLotes = async () => {
@@ -70,11 +77,44 @@ export default function LotesPage() {
     fetchLotes();
   }, []);
 
+  // Función para calcular el siguiente correlativo (ESC-00X o CONV-00X)
+  const generarCodigoPreview = (tipo: string, listaLotes: Lote[]) => {
+    const prefix = tipo === "especial" ? "ESC" : "CONV";
+    const codigosExistentes = listaLotes
+      .map((l) => l.codigo)
+      .filter((c) => c && c.startsWith(`${prefix}-`));
+
+    let maxNum = 0;
+    codigosExistentes.forEach((codigo) => {
+      const parts = codigo.split("-");
+      if (parts.length >= 2) {
+        const num = parseInt(parts[1], 10);
+        if (!isNaN(num) && num > maxNum) {
+          maxNum = num;
+        }
+      }
+    });
+
+    const nextNum = maxNum + 1;
+    return `${prefix}-${String(nextNum).padStart(3, "0")}`;
+  };
+
+  // Autogenerar código cuando cambia el tipo de café en el formulario (solo en creación)
+  useEffect(() => {
+    if (isModalOpen && !editingLote && tipoCafeWatch) {
+      const nuevoCodigo = generarCodigoPreview(tipoCafeWatch, lotes);
+      form.setFieldValue("codigo", nuevoCodigo);
+    }
+  }, [tipoCafeWatch, isModalOpen, editingLote, lotes, form]);
+
   const handleOpenCreateModal = () => {
     setEditingLote(null);
     form.resetFields();
+    const tipoInicial = "comercial";
+    const codigoInicial = generarCodigoPreview(tipoInicial, lotes);
     form.setFieldsValue({
-      tipo_cafe: "comercial",
+      tipo_cafe: tipoInicial,
+      codigo: codigoInicial,
       activo: true,
     });
     setIsModalOpen(true);
@@ -94,22 +134,6 @@ export default function LotesPage() {
       horas_fermentacion: record.horas_fermentacion,
     });
     setIsModalOpen(true);
-  };
-
-  const handleGenerarCorrelativo = async () => {
-    const codigoActual = form.getFieldValue("codigo");
-    if (!codigoActual) {
-      message.warning("Ingrese un código base de lote (ej: ESC-001)");
-      return;
-    }
-
-    try {
-      const nuevoCorrelativo = await getSiguienteCorrelativoApi(codigoActual.trim());
-      form.setFieldValue("codigo", nuevoCorrelativo);
-      message.success(`Correlativo generado: ${nuevoCorrelativo}`);
-    } catch (error) {
-      message.error("Error al generar correlativo de lote");
-    }
   };
 
   const handleDelete = async (id: number) => {
@@ -147,12 +171,51 @@ export default function LotesPage() {
     }
   };
 
-  const filteredData = lotes.filter(
-    (l) =>
-      l.codigo.toLowerCase().includes(searchText.toLowerCase()) ||
-      (l.nombre && l.nombre.toLowerCase().includes(searchText.toLowerCase())) ||
-      (l.ubicacion && l.ubicacion.toLowerCase().includes(searchText.toLowerCase()))
-  );
+  const handleLimpiarFiltros = () => {
+    setSearchText("");
+    setFiltroFecha(null);
+    setFiltroTipoCafe(undefined);
+    setFiltroEstado(undefined);
+  };
+
+  const filteredData = useMemo(() => {
+    return lotes.filter((l) => {
+      // Texto libre
+      if (searchText) {
+        const term = searchText.toLowerCase();
+        const matchesCodigo = l.codigo.toLowerCase().includes(term);
+        const matchesNombre = l.nombre && l.nombre.toLowerCase().includes(term);
+        const matchesUbicacion = l.ubicacion && l.ubicacion.toLowerCase().includes(term);
+        if (!matchesCodigo && !matchesNombre && !matchesUbicacion) {
+          return false;
+        }
+      }
+
+      // Fecha de creación/registro del lote
+      if (filtroFecha && (l as any).createdAt) {
+        const fechaLote = dayjs((l as any).createdAt);
+        if (
+          fechaLote.isBefore(filtroFecha[0], "day") ||
+          fechaLote.isAfter(filtroFecha[1], "day")
+        ) {
+          return false;
+        }
+      }
+
+      // Tipo de café
+      if (filtroTipoCafe) {
+        const tipo = l.tipo_cafe || "comercial";
+        if (tipo !== filtroTipoCafe) return false;
+      }
+
+      // Estado / Etapa
+      if (filtroEstado) {
+        if (l.estado !== filtroEstado) return false;
+      }
+
+      return true;
+    });
+  }, [lotes, searchText, filtroFecha, filtroTipoCafe, filtroEstado]);
 
   const columns = [
     {
@@ -217,7 +280,7 @@ export default function LotesPage() {
       render: (text: string | null) => text || "-",
     },
     {
-      title: "Etapa",
+      title: "Etapa / Estado",
       dataIndex: "estado",
       key: "estado",
       render: (estado: string) => {
@@ -230,11 +293,12 @@ export default function LotesPage() {
           CERRADO: "default",
           INACTIVO: "error",
         };
-        return <Tag color={colores[estado] || "default"}>{estado ? estado.replace('_', ' ') : 'EN PROCESO'}</Tag>;
+        const estadoFormateado = formatEstadoEnum(estado || "EN_PROCESO");
+        return <Tag color={colores[estado] || "default"}>{estadoFormateado}</Tag>;
       },
     },
     {
-      title: "Estado",
+      title: "Estado Activo",
       dataIndex: "activo",
       key: "activo",
       render: (activo: boolean) =>
@@ -250,6 +314,7 @@ export default function LotesPage() {
             type="text"
             icon={<EditOutlined style={{ color: token.colorPrimary }} />}
             onClick={() => handleOpenEditModal(record)}
+            title="Editar lote"
           />
           <Popconfirm
             title="Eliminar lote"
@@ -259,7 +324,7 @@ export default function LotesPage() {
             cancelText="Cancelar"
             okButtonProps={{ danger: true }}
           >
-            <Button type="text" danger icon={<DeleteOutlined />} />
+            <Button type="text" danger icon={<DeleteOutlined />} title="Eliminar" />
           </Popconfirm>
         </Space>
       ),
@@ -279,10 +344,10 @@ export default function LotesPage() {
       >
         <div>
           <Typography.Title level={2} style={{ margin: 0 }}>
-            Gestión de Lotes
+            Módulo de Lotes
           </Typography.Title>
           <Typography.Text type="secondary">
-            Administración de terrenos agrícolas, control de saldos y cafés de especialidad.
+            Administración de terrenos, áreas de cultivo y perfiles de fermentación.
           </Typography.Text>
         </div>
         <Button
@@ -302,15 +367,62 @@ export default function LotesPage() {
           boxShadow: "0 4px 20px rgba(0,0,0,0.06)",
         }}
       >
-        <div style={{ marginBottom: 16, maxWidth: 360 }}>
-          <Input
-            placeholder="Buscar por código, nombre o ubicación..."
-            prefix={<SearchOutlined style={{ color: token.colorTextSecondary }} />}
-            value={searchText}
-            onChange={(e) => setSearchText(e.target.value)}
-            allowClear
-          />
-        </div>
+        {/* Barra superior de filtros */}
+        <Row gutter={[12, 12]} align="middle" style={{ marginBottom: 16 }}>
+          <Col xs={24} sm={12} md={6}>
+            <Input
+              placeholder="Buscar por código, nombre o ubicación..."
+              prefix={<SearchOutlined style={{ color: token.colorTextSecondary }} />}
+              value={searchText}
+              onChange={(e) => setSearchText(e.target.value)}
+              allowClear
+              style={{ width: "100%" }}
+            />
+          </Col>
+          <Col xs={24} sm={12} md={6}>
+            <DatePicker.RangePicker
+              value={filtroFecha}
+              onChange={(val) => setFiltroFecha(val as [Dayjs, Dayjs] | null)}
+              format="DD/MM/YYYY"
+              placeholder={["Fecha inicio", "Fecha fin"]}
+              style={{ width: "100%" }}
+            />
+          </Col>
+          <Col xs={24} sm={12} md={4}>
+            <Select
+              placeholder="Tipo de Café"
+              value={filtroTipoCafe}
+              onChange={setFiltroTipoCafe}
+              allowClear
+              style={{ width: "100%" }}
+              options={[
+                { value: "comercial", label: "Comercial" },
+                { value: "especial", label: "Especialidad" },
+              ]}
+            />
+          </Col>
+          <Col xs={24} sm={12} md={5}>
+            <Select
+              placeholder="Etapa / Estado"
+              value={filtroEstado}
+              onChange={setFiltroEstado}
+              allowClear
+              style={{ width: "100%" }}
+              options={[
+                { value: "EN_PROCESO", label: "En Proceso" },
+                { value: "EN_SECADO", label: "En Secado" },
+                { value: "EN_ALMACEN", label: "En Almacén" },
+                { value: "TRILLADO", label: "Trillado" },
+                { value: "VENDIDO", label: "Vendido" },
+              ]}
+            />
+          </Col>
+          <Col xs={24} sm={12} md={3}>
+            <Button icon={<ClearOutlined />} onClick={handleLimpiarFiltros} block>
+              Limpiar
+            </Button>
+          </Col>
+        </Row>
 
         <Table
           columns={columns}
@@ -318,120 +430,115 @@ export default function LotesPage() {
           rowKey="id"
           loading={loading}
           pagination={{ pageSize: 8, showSizeChanger: true }}
-          scroll={{ x: 800 }}
+          scroll={{ x: "max-content" }}
         />
       </Card>
 
       <Modal
-        title={editingLote ? "Editar Lote" : "Nuevo Lote"}
+        title={editingLote ? "Editar Lote" : "Nuevo Registro de Lote"}
         open={isModalOpen}
         onOk={handleSubmit}
         onCancel={() => setIsModalOpen(false)}
         confirmLoading={submitting}
         okText={editingLote ? "Guardar Cambios" : "Crear Lote"}
         cancelText="Cancelar"
+        width="min(700px, 95vw)"
         destroyOnClose
       >
         <Form form={form} layout="vertical" style={{ marginTop: 16 }}>
-          <Row gutter={16} align="middle">
-            <Col xs={16}>
+          <Row gutter={16}>
+            <Col xs={24} sm={12}>
+              <Form.Item
+                name="tipo_cafe"
+                label="Tipo de Café / Destino"
+                rules={[{ required: true, message: "Seleccione el tipo" }]}
+              >
+                <Radio.Group buttonStyle="solid" style={{ width: "100%" }}>
+                  <Radio.Button value="comercial" style={{ width: "50%", textAlign: "center" }}>
+                    Comercial
+                  </Radio.Button>
+                  <Radio.Button value="especial" style={{ width: "50%", textAlign: "center" }}>
+                    Especialidad
+                  </Radio.Button>
+                </Radio.Group>
+              </Form.Item>
+            </Col>
+
+            <Col xs={24} sm={12}>
               <Form.Item
                 name="codigo"
                 label="Código del Lote"
-                rules={[{ required: true, message: "Ingrese el código único del lote" }]}
+                tooltip="Autogenerado en base al tipo seleccionado"
+                rules={[{ required: true, message: "Ingrese el código del lote" }]}
               >
-                <Input prefix={<AppstoreOutlined />} placeholder="Ej: ESC-001 o ESC-001-1" />
+                <Input placeholder="Ej: ESC-001 o CONV-001" style={{ fontWeight: "bold" }} />
               </Form.Item>
-            </Col>
-            <Col xs={8}>
-              <Button
-                type="dashed"
-                icon={<BranchesOutlined />}
-                onClick={handleGenerarCorrelativo}
-                style={{ marginTop: 6, width: "100%" }}
-                title="Generar correlativo de saldo"
-              >
-                Sublote
-              </Button>
             </Col>
           </Row>
 
           <Row gutter={16}>
             <Col xs={24} sm={12}>
-              <Form.Item name="nombre" label="Nombre del Lote (Opcional)">
-                <Input placeholder="Ej: Lote Geisha Finca Alta" />
+              <Form.Item
+                name="nombre"
+                label="Nombre del Lote"
+                rules={[{ required: true, message: "Ingrese un nombre identificador" }]}
+              >
+                <Input placeholder="Ej: Lote El Roble 1" />
               </Form.Item>
             </Col>
             <Col xs={24} sm={12}>
-              <Form.Item name="hectareas" label="Hectáreas totales">
-                <InputNumber style={{ width: "100%" }} min={0} addonAfter="ha" placeholder="Ej: 3.5" />
+              <Form.Item name="hectareas" label="Área (Hectáreas)">
+                <InputNumber style={{ width: "100%" }} min={0.1} addonAfter="ha" placeholder="Ej: 3.5" />
               </Form.Item>
             </Col>
           </Row>
 
-          <Form.Item name="tipo_cafe" label="Tipo de Café">
-            <Radio.Group buttonStyle="solid" style={{ width: "100%" }}>
-              <Radio.Button value="comercial" style={{ width: "50%", textAlign: "center" }}>
-                Café Comercial
-              </Radio.Button>
-              <Radio.Button value="especial" style={{ width: "50%", textAlign: "center" }}>
-                Café Especial / Especialidad
-              </Radio.Button>
-            </Radio.Group>
-          </Form.Item>
-
-          {/* Lógica Condicional: Si tipo_cafe es "especial", mostrar horas de proceso */}
           {tipoCafeWatch === "especial" && (
             <Card
               size="small"
+              title="Perfil de Proceso Especial (Tiempos Requeridos)"
               style={{
-                background: token.colorBgLayout,
                 marginBottom: 16,
-                borderColor: token.colorBorderSecondary,
-                borderRadius: 8,
+                background: token.colorBgLayout,
+                borderColor: token.colorPrimaryBorder,
               }}
             >
-              <Typography.Text strong style={{ display: "block", marginBottom: 12, color: token.colorPrimary }}>
-                <SafetyCertificateOutlined /> Parámetros del Proceso de Especialidad
-              </Typography.Text>
               <Row gutter={16}>
                 <Col xs={24} sm={12}>
-                  <Form.Item name="horas_oxidacion" label="Horas de Oxidación">
-                    <InputNumber
-                      style={{ width: "100%" }}
-                      min={0}
-                      addonAfter="hrs"
-                      placeholder="Ej: 12"
-                    />
+                  <Form.Item
+                    name="horas_oxidacion"
+                    label="Horas de Oxidación (Pre-fermentación)"
+                    rules={[{ required: true, message: "Ingrese las horas de oxidación" }]}
+                  >
+                    <InputNumber style={{ width: "100%" }} min={0} addonAfter="hrs" placeholder="Ej: 12" />
                   </Form.Item>
                 </Col>
                 <Col xs={24} sm={12}>
-                  <Form.Item name="horas_fermentacion" label="Horas de Fermentación">
-                    <InputNumber
-                      style={{ width: "100%" }}
-                      min={0}
-                      addonAfter="hrs"
-                      placeholder="Ej: 36"
-                    />
+                  <Form.Item
+                    name="horas_fermentacion"
+                    label="Horas de Fermentación (Anaeróbica/Aeróbica)"
+                    rules={[{ required: true, message: "Ingrese las horas de fermentación" }]}
+                  >
+                    <InputNumber style={{ width: "100%" }} min={0} addonAfter="hrs" placeholder="Ej: 48" />
                   </Form.Item>
                 </Col>
               </Row>
             </Card>
           )}
 
-          <Form.Item name="ubicacion" label="Ubicación / Sector">
-            <Input placeholder="Ej: Sector Norte - Altura 1,600 msnm" />
+          <Form.Item name="ubicacion" label="Ubicación o Sector dentro de la Finca">
+            <Input placeholder="Ej: Sector Norte - Parcela A" />
           </Form.Item>
 
-          <Form.Item name="observacion" label="Observaciones">
-            <Input.TextArea placeholder="Notas sobre el suelo, variedad u origen" rows={2} />
+          <Form.Item name="observacion" label="Observaciones o Notas Adicionales">
+            <Input.TextArea rows={2} placeholder="Ej: Suelo rico en materia orgánica, variedad Caturra" />
           </Form.Item>
 
           <Form.Item name="activo" label="Estado del Lote" valuePropName="checked">
-            <Select>
-              <Select.Option value={true}>Activo</Select.Option>
-              <Select.Option value={false}>Inactivo</Select.Option>
-            </Select>
+            <Radio.Group>
+              <Radio value={true}>Activo / En producción</Radio>
+              <Radio value={false}>Inactivo / En descanso</Radio>
+            </Radio.Group>
           </Form.Item>
         </Form>
       </Modal>
