@@ -28,11 +28,11 @@ export type Cosecha = {
   id: number;
   fecha: string;
   kilosCosechados: number;
-  cantidadCosechadores: number;
+  cantidadCosechadores?: number;
   lotes: string;
   totalHectareas: number;
   tipoCosecha: string;
-
+  varietal?: string;
   cosechaLotes?: CosechaLote[];
   cosechaTrabajadores?: CosechaTrabajador[];
 
@@ -49,11 +49,12 @@ export type CreateCosechaDTO = {
   fecha: string;
   kilosCosechados: number;
   cantidadCosechadores?: number;
+  lotes?: string;
+  loteIds?: number[];
   totalHectareas: number;
   lotes?: string;
   tipoCosecha: string;
-  loteIds?: number[];
-  trabajadores?: CosechaTrabajadorPayload[];
+  varietal?: string;
 };
 
 export type UpdateCosechaDTO = Partial<CreateCosechaDTO>;

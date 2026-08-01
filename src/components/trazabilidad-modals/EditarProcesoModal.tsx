@@ -3,6 +3,7 @@ import { useEffect, useState, useMemo } from "react";
 import { Button, DatePicker, Form, InputNumber, Modal, Row, Col, Space, Select, Descriptions, Alert } from "antd";
 import dayjs from "dayjs";
 import type { Cosecha } from "../../pages/cosechas/cosechas.api";
+import type { Lote } from "../../pages/lotes/lotes.api";
 import type { ProcesoTrazabilidad } from "../../pages/trazabilidad/trazabilidad.api";
 import type { ProcesoFormValues } from "./CrearProcesoModal";
 
@@ -17,9 +18,6 @@ type EditarProcesoModalProps = {
     open: boolean;
     proceso: ProcesoTrazabilidad | null;
     cosechas: Cosecha[];
-    /**
-     * Lista real de lotes productivos.
-     */
     lotes: Lote[];
     saving?: boolean;
     onClose: () => void;
@@ -29,6 +27,7 @@ type EditarProcesoModalProps = {
 export default function EditarProcesoModal({ open,
     proceso,
     cosechas,
+    lotes,
     saving = false,
     onClose,
     onSubmit,
@@ -157,19 +156,13 @@ export default function EditarProcesoModal({ open,
         if (open && proceso) {
             form.setFieldsValue({
                 fecha: dayjs(proceso.fecha),
-
-                fechaInicio: proceso.fechaInicio
-                    ? dayjs(proceso.fechaInicio)
-                    : dayjs(proceso.fecha),
-
-                duracionHoras:
-                    proceso.duracionHoras ?? undefined,
-
-                loteId: proceso.loteId ?? undefined,
+                loteId: proceso.loteId,
+                cosechaId: proceso.cosechaId,
                 etapa: proceso.etapa,
+                tipoProceso: proceso.tipoProceso,
                 kilosIngresados: proceso.kilosIngresados,
-                kilosResultantes: proceso.kilosResultantes,
-                porcentajeMerma: proceso.porcentajeMerma,
+                fechaInicio: proceso.fechaInicio ? dayjs(proceso.fechaInicio) : undefined,
+                fechaFin: proceso.fechaFin ? dayjs(proceso.fechaFin) : undefined,
             });
 
             setFechaSeleccionada(dayjs(proceso.fecha));
@@ -178,46 +171,6 @@ export default function EditarProcesoModal({ open,
             );
         }
     }, [open, proceso, form]);
-
-    const handleValuesChange = (
-        changedValues: Partial<ProcesoFormValues>,
-    ) => {
-        if (
-            "kilosIngresados" in changedValues ||
-            "kilosResultantes" in changedValues
-        ) {
-            const kilosIngresados =
-                form.getFieldValue("kilosIngresados") ?? 0;
-
-            const kilosResultantes =
-                form.getFieldValue("kilosResultantes") ?? 0;
-
-            const porcentajeMerma =
-                kilosIngresados > 0 &&
-                    kilosResultantes >= 0 &&
-                    kilosResultantes <= kilosIngresados
-                    ? (
-                        (
-                            kilosIngresados -
-                            kilosResultantes
-                        ) /
-                        kilosIngresados
-                    ) * 100
-                    : 0;
-
-            form.setFieldsValue({
-                porcentajeMerma: Number(
-                    porcentajeMerma.toFixed(2),
-                ),
-            });
-
-            if ("kilosIngresados" in changedValues) {
-                void form.validateFields([
-                    "kilosResultantes",
-                ]);
-            }
-        }
-    };
 
     const handleFinish = async (values: ProcesoFormValues) => {
         if (proceso) {
@@ -232,9 +185,19 @@ export default function EditarProcesoModal({ open,
         onClose();
     };
 
+    const loteOptions = (lotes || []).map((lote) => ({
+        value: lote.id,
+        label: lote.nombre ? `${lote.codigo} - ${lote.nombre}` : lote.codigo,
+    }));
+
+    const cosechaOptions = (cosechas || []).map((cosecha) => ({
+        value: cosecha.id,
+        label: `${cosecha.lotes} - ${cosecha.fecha ? cosecha.fecha.slice(0, 10) : ""} - ${(cosecha.kilosCosechados ?? 0).toLocaleString("es-CL")} kg`,
+    }));
+
     return (
         <Modal
-            title="Editar Proceso"
+            title="Editar Proceso Húmedo"
             open={open}
             onCancel={handleCancel}
             footer={null}
@@ -253,13 +216,12 @@ export default function EditarProcesoModal({ open,
                 form={form}
                 layout="vertical"
                 onFinish={handleFinish}
-                onValuesChange={handleValuesChange}
                 autoComplete="off"
             >
                 <Row gutter={[16, 0]}>
                     <Col xs={24} md={12}>
                         <Form.Item
-                            label="Fecha"
+                            label="Fecha de Registro"
                             name="fecha"
                             rules={[{ required: true, message: "La fecha es obligatoria" }]}
                         >
@@ -316,137 +278,77 @@ export default function EditarProcesoModal({ open,
 
                     <Col xs={24} md={12}>
                         <Form.Item
+                            label="Lote Origen"
                             name="loteId"
-                            label="Lote productivo"
-                            rules={[
-                                {
-                                    required: true,
-                                    message: "Seleccione el lote asociado al proceso",
-                                },
-                            ]}
+                            rules={[{ required: true, message: "El lote origen es obligatorio" }]}
                         >
                             <Select
+                                placeholder="Seleccione un lote"
+                                options={loteOptions}
                                 showSearch
                                 optionFilterProp="label"
-                                placeholder={
-                                    fechaSeleccionada
-                                        ? "Seleccione un lote..."
-                                        : "Primero seleccione una fecha"
-                                }
-                                disabled={!fechaSeleccionada}
-                                onChange={handleLoteChange}
-                                options={lotesDisponibles.map((lote) => {
-                                    const kilosDisponibles =
-                                        lote.kilosActuales ??
-                                        lote.kilosIniciales ??
-                                        0;
-
-                                    return {
-                                        value: lote.id,
-                                        label:
-                                            `${lote.codigo}` +
-                                            `${lote.nombre ? ` - ${lote.nombre}` : ""}` +
-                                            ` - ${kilosDisponibles.toLocaleString("es-CL")} kg` +
-                                            `${!lote.activo ? " - Inactivo" : ""}`,
-                                    };
-                                })}
                             />
                         </Form.Item>
                     </Col>
 
-                    {loteSeleccionado && (
-                        <Col xs={24}>
-                            <Descriptions
-                                bordered
-                                size="small"
-                                column={{
-                                    xs: 1,
-                                    sm: 2,
-                                    md: 3,
-                                }}
-                                style={{ marginBottom: 16 }}
-                            >
-                                <Descriptions.Item label="Código del lote">
-                                    {loteSeleccionado.codigo}
-                                </Descriptions.Item>
-
-                                <Descriptions.Item label="Tipo de cosecha">
-                                    {cosechaSeleccionada?.tipoCosecha ??
-                                        "-"}
-                                </Descriptions.Item>
-
-                                <Descriptions.Item label="Kilos cosechados">
-                                    {cosechaSeleccionada
-                                        ? `${cosechaSeleccionada.kilosCosechados.toLocaleString(
-                                            "es-CL",
-                                        )} kg`
-                                        : "-"}
-                                </Descriptions.Item>
-
-                                <Descriptions.Item label="Kilos iniciales">
-                                    {loteSeleccionado.kilosIniciales != null
-                                        ? `${loteSeleccionado.kilosIniciales.toLocaleString(
-                                            "es-CL",
-                                        )} kg`
-                                        : "-"}
-                                </Descriptions.Item>
-
-                                <Descriptions.Item label="Kilos actuales">
-                                    {loteSeleccionado.kilosActuales != null
-                                        ? `${loteSeleccionado.kilosActuales.toLocaleString(
-                                            "es-CL",
-                                        )} kg`
-                                        : "-"}
-                                </Descriptions.Item>
-
-                                <Descriptions.Item label="Estado">
-                                    {loteSeleccionado.estado}
-                                </Descriptions.Item>
-                            </Descriptions>
-                        </Col>
-                    )}
-
-                    <Col xs={24}>
-                        {fechaSeleccionada ? (
-                            <Alert
-                                type={
-                                    cosechasFecha.length > 0
-                                        ? "info"
-                                        : "warning"
-                                }
-                                showIcon
-                                message={
-                                    cosechasFecha.length > 0
-                                        ? "Producción registrada en la fecha"
-                                        : "Sin cosechas registradas"
-                                }
-                                description={
-                                    cosechasFecha.length > 0
-                                        ? `${kilosTotalesFecha.toLocaleString(
-                                            "es-CL",
-                                        )} kg cosechados en ${cosechasFecha.length} registro(s).`
-                                        : "No existen cosechas registradas para la fecha seleccionada."
-                                }
-                                style={{ marginBottom: 16 }}
+                    <Col xs={24} md={12}>
+                        <Form.Item
+                            label="Cosecha (Opcional)"
+                            name="cosechaId"
+                        >
+                            <Select
+                                placeholder="Seleccione una cosecha (opcional)"
+                                options={cosechaOptions}
+                                showSearch
+                                optionFilterProp="label"
+                                allowClear
                             />
-                        ) : null}
+                        </Form.Item>
                     </Col>
 
                     <Col xs={24} md={12}>
                         <Form.Item
-                            label="Etapa"
-                            name="etapa"
-                            rules={[{ required: true, message: "La etapa es obligatoria" }]}
+                            label="Tipo de Proceso"
+                            name="tipoProceso"
                         >
                             <Select
-                                placeholder="Seleccione una etapa"
+                                placeholder="Seleccione un tipo de proceso"
                                 options={[
-                                    { value: "Despulpado", label: "Despulpado" },
-                                    { value: "Lavado", label: "Lavado" },
-                                    { value: "Secado", label: "Secado" },
-                                    { value: "Trilla", label: "Trilla" },
-                                    { value: "Clasificación", label: "Clasificación" },
+                                    { value: "OXIDACION_CEREZA", label: "Oxidación en cereza" },
+                                    { value: "OXIDACION_MUCILAGO", label: "Oxidación en mucílago" },
+                                    { value: "ANAEROBICO_CEREZA", label: "Anaeróbico en cereza" },
+                                    { value: "ANAEROBICO_MUCILAGO", label: "Anaeróbico en mucílago" },
                                 ]}
+                            />
+                        </Form.Item>
+                    </Col>
+
+                    <Col xs={24} md={12}>
+                        <Form.Item
+                            label="Fecha/Hora de Inicio"
+                            name="fechaInicio"
+                        >
+                            <DatePicker
+                                style={{ width: "100%" }}
+                                locale={esES}
+                                showTime
+                                format="DD/MM/YYYY HH:mm"
+                                placeholder="Inicio del proceso"
+                            />
+                        </Form.Item>
+                    </Col>
+
+                    <Col xs={24} md={12}>
+                        <Form.Item
+                            label="Fecha/Hora de Fin"
+                            name="fechaFin"
+                        >
+                            <DatePicker
+                                style={{ width: "100%" }}
+                                locale={esES}
+                                showTime
+                                format="DD/MM/YYYY HH:mm"
+                                placeholder="Fin del proceso"
                             />
                         </Form.Item>
                     </Col>
@@ -455,87 +357,9 @@ export default function EditarProcesoModal({ open,
                         <Form.Item
                             label="Kilos Ingresados"
                             name="kilosIngresados"
-                            rules={[
-                                {
-                                    required: true,
-                                    message: "Los kilos ingresados son obligatorios",
-                                },
-                                {
-                                    validator: async (_, value) => {
-                                        const kilosDisponibles =
-                                            loteSeleccionado?.kilosActuales ??
-                                            loteSeleccionado?.kilosIniciales;
-
-                                        if (
-                                            kilosDisponibles != null &&
-                                            Number(value) > kilosDisponibles
-                                        ) {
-                                            throw new Error(
-                                                `El lote solamente tiene ${kilosDisponibles.toLocaleString(
-                                                    "es-CL",
-                                                )} kg disponibles`,
-                                            );
-                                        }
-                                    },
-                                },
-                            ]}
+                            rules={[{ required: true, message: "Los kilos ingresados son obligatorios" }]}
                         >
-                            <InputNumber
-                                style={{ width: "100%" }}
-                                min={0.01}
-                                max={
-                                    loteSeleccionado?.kilosActuales ??
-                                    loteSeleccionado?.kilosIniciales ??
-                                    undefined
-                                }
-                                precision={2}
-                                addonAfter="kg"
-                                placeholder="Ej: 180"
-                            />
-                        </Form.Item>
-                    </Col>
-
-                    <Col xs={24} md={12}>
-                        <Form.Item
-                            label="Kilos Resultantes"
-                            name="kilosResultantes"
-                            rules={[
-                                {
-                                    required: true,
-                                    message: "Los kilos resultantes son obligatorios",
-                                },
-                                {
-                                    validator: async (_, value) => {
-                                        const kilosIngresados =
-                                            Number(
-                                                form.getFieldValue("kilosIngresados"),
-                                            ) || 0;
-
-                                        if (
-                                            value !== undefined &&
-                                            Number(value) > kilosIngresados
-                                        ) {
-                                            throw new Error(
-                                                "Los kilos resultantes no pueden superar los ingresados",
-                                            );
-                                        }
-                                    },
-                                },
-                            ]}
-                        >
-                            <InputNumber
-                                style={{ width: "100%" }}
-                                min={0}
-                                precision={2}
-                                addonAfter="kg"
-                                placeholder="Ej: 145"
-                            />
-                        </Form.Item>
-                    </Col>
-
-                    <Col xs={24} md={12}>
-                        <Form.Item label="% Merma" name="porcentajeMerma">
-                            <InputNumber style={{ width: "100%" }} readOnly placeholder="Merma calculada" />
+                            <InputNumber style={{ width: "100%" }} min={0} placeholder="Ej: 180" />
                         </Form.Item>
                     </Col>
                 </Row>

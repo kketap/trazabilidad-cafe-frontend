@@ -163,10 +163,7 @@ export default function CosechasPage() {
     form.resetFields();
     form.setFieldsValue({
       fecha: dayjs(),
-      tipoCosecha: "plena",
-      trabajadorIds: [],
-      loteIds: [],
-      cantidadCosechadores: 0,
+      tipo_cosecha: "plena",
       totalHectareas: 1.0,
     });
     setIsModalOpen(true);
@@ -187,14 +184,14 @@ export default function CosechasPage() {
     form.setFieldsValue({
       fecha: dayjs(record.fecha),
       kilosCosechados: record.kilosCosechados,
-      cantidadCosechadores: record.cantidadCosechadores,
       totalHectareas: record.totalHectareas,
       lotes: record.lotes,
-      tipoCosecha: record.tipoCosecha || "plena",
-      trabajadorIds:
-        record.cosechaTrabajadores?.map((item) => item.trabajadorId) ?? [],
-      loteIds:
-        record.cosechaLotes?.map((item) => item.loteId) ?? [],
+      trabajadorId: record.trabajadorId || record.trabajador?.id,
+      tipo_cosecha: record.tipo_cosecha || record.tipoCosecha || "plena",
+      kilos_diarios: record.kilos_diarios,
+      kilos_quincena: record.kilos_quincena,
+      kilos_mensuales: record.kilos_mensuales,
+      varietal: record.varietal,
     });
     setIsModalOpen(true);
   };
@@ -432,11 +429,6 @@ export default function CosechasPage() {
       key: "kilosCosechados",
       render: (val: number) => `${val.toLocaleString()} kg`,
       sorter: (a: Cosecha, b: Cosecha) => a.kilosCosechados - b.kilosCosechados,
-    },
-    {
-      title: "Cosechadores",
-      dataIndex: "cantidadCosechadores",
-      key: "cantidadCosechadores",
     },
     {
       title: "Hectáreas",
@@ -695,6 +687,23 @@ export default function CosechasPage() {
             </Col>
             <Col xs={24} sm={12}>
               <Form.Item
+                name="varietal"
+                label="Varietal"
+              >
+                <Select mode="tags" placeholder="Ej: Geisha, Caturra...">
+                  <Select.Option value="Geisha">Geisha</Select.Option>
+                  <Select.Option value="Java">Java</Select.Option>
+                  <Select.Option value="Caturra">Caturra</Select.Option>
+                  <Select.Option value="Catimor">Catimor</Select.Option>
+                  <Select.Option value="Cabernet">Cabernet</Select.Option>
+                </Select>
+              </Form.Item>
+            </Col>
+          </Row>
+
+          <Row gutter={16}>
+            <Col xs={24} sm={12}>
+              <Form.Item
                 name="kilosCosechados"
                 label="Kilos Cosechados (Totales)"
                 rules={[{ required: true, message: "Ingrese los kilos cosechados" }]}
@@ -704,22 +713,6 @@ export default function CosechasPage() {
                   min={0.1}
                   addonAfter="kg"
                   placeholder="Ej: 450"
-                />
-              </Form.Item>
-            </Col>
-          </Row>
-
-          <Row gutter={16}>
-            <Col xs={24} sm={12}>
-              <Form.Item
-                name="cantidadCosechadores"
-                label="N° Cosechadores en Campo"
-                rules={[{ required: true, message: "Seleccione al menos un trabajador" }]}
-              >
-                <InputNumber
-                  style={{ width: "100%" }}
-                  min={0}
-                  placeholder="Se calcula automáticamente"
                 />
               </Form.Item>
             </Col>
