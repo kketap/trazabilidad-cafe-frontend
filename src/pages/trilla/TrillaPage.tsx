@@ -33,17 +33,17 @@ import {
 import type { ColumnsType } from "antd/es/table";
 import dayjs, { type Dayjs } from "dayjs";
 
-import type { OrdenTrilla, CreateOrdenTrillaDTO, UpdateOrdenTrillaDTO } from "../../api/trilla.api";
+import type { OrdenTrilla, CreateOrdenTrillaDTO, UpdateOrdenTrillaDTO } from "./trilla.api";
 import {
   getOrdenesTrilaApi,
   createOrdenTrillaApi,
   updateOrdenTrillaApi,
   deleteOrdenTrillaApi,
-} from "../../api/trilla.api";
+} from "./trilla.api";
 
 
-import type { Lote } from "../../api/lotes";
-import { getLotesApi } from "../../api/lotes";
+import type { Lote } from "../lotes/lotes.api";
+import { getLotesApi } from "../lotes/lotes.api";
 
 import EnviarATrillaModal from "../../components/trilla-modals/EnviarATrillaModal";
 import RecepcionTrillaModal from "../../components/trilla-modals/RecepcionTrillaModal";

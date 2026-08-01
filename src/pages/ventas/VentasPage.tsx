@@ -34,19 +34,19 @@ import type { ColumnsType } from "antd/es/table";
 import dayjs, { type Dayjs } from "dayjs";
 
 
-import type { Venta, CreateVentaDTO, UpdateVentaDTO } from "../../api/ventas.api";
+import type { Venta, CreateVentaDTO, UpdateVentaDTO } from "./ventas.api";
 import {
   getVentasApi,
   createVentaApi,
   updateVentaApi,
   deleteVentaApi,
-} from "../../api/ventas.api";
+} from "./ventas.api";
 
-import type { Cliente } from "../../api/clientes";
-import { getClientesApi } from "../../api/clientes";
+import type { Cliente } from "../../pages/clientes/clientes.api";
+import { getClientesApi } from "../../pages/clientes/clientes.api";
 
-import type { OrdenTrilla } from "../../api/trilla.api";
-import { getOrdenesTrilaApi } from "../../api/trilla.api";
+import type { OrdenTrilla } from "../trilla/trilla.api";
+import { getOrdenesTrilaApi } from "../trilla/trilla.api";
 
 import RegistrarVentaModal from "../../components/ventas-modals/RegistrarVentaModal";
 

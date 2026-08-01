@@ -29,16 +29,16 @@ import {
 import type { ColumnsType } from "antd/es/table";
 import dayjs, { type Dayjs } from "dayjs";
 
-import type { Secado, CreateSecadoDTO, UpdateSecadoDTO } from "../../api/secado.api";
+import type { Secado, CreateSecadoDTO, UpdateSecadoDTO } from "./secado.api";
 import {
   getSecadosApi,
   createSecadoApi,
   updateSecadoApi,
   deleteSecadoApi,
-} from "../../api/secado.api";
+} from "./secado.api";
 
-import type { Lote } from "../../api/lotes";
-import { getLotesApi } from "../../api/lotes";
+import type { Lote } from "../lotes/lotes.api";
+import { getLotesApi } from "../lotes/lotes.api";
 
 import CrearSecadoModal from "../../components/secado-modals/CrearSecadoModal";
 import EditarSecadoModal from "../../components/secado-modals/EditarSecadoModal";

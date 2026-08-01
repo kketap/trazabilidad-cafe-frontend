@@ -14,8 +14,8 @@ import {
 } from "antd";
 import { SendOutlined, ShopOutlined } from "@ant-design/icons";
 import dayjs from "dayjs";
-import type { Lote } from "../../api/lotes";
-import type { CreateOrdenTrillaDTO } from "../../api/trilla.api";
+import type { Lote } from "../../pages/lotes/lotes.api";
+import type { CreateOrdenTrillaDTO } from "../../pages/trilla/trilla.api";
 
 const { Text } = Typography;
 

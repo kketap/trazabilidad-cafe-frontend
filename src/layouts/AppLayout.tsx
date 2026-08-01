@@ -30,6 +30,8 @@ const { useBreakpoint } = Grid;
 // Acentos de la paleta corporativa para sidebar (oscuro) y topbar (claro).
 const SIDEBAR_DARK_BG = "#2a2118";
 
+const HEADER_LIGHT_BG = "linear-gradient(180deg, #fff9ef 0%, #f1dfc7 100%)";
+
 type ThemeMode = "light" | "dark" | "system";
 type TextSize = "small" | "normal" | "large" | "xlarge";
 
@@ -67,126 +69,6 @@ export default function AppLayout({ themeMode, isDarkMode, onThemeModeChange, te
         removeToken();
         navigate("/login", { replace: true });
     };
-
-    const menuItems = [
-        {
-            key: "/inicio",
-            icon: <HomeOutlined />,
-            label: "Inicio",
-        },
-        {
-            type: "group" as const,
-            label: sidebarCollapsed ? "" : "Producción",
-            children: [
-                {
-                    key: "/cosechas",
-                    icon: <ShopOutlined />,
-                    label: "Cosechas",
-                },
-                {
-                    key: "/lotes",
-                    icon: <AppstoreOutlined />,
-                    label: "Lotes",
-                },
-                {
-                    key: "/trazabilidad",
-                    icon: <PartitionOutlined />,
-                    label: "Proceso Trazabilidad",
-                },
-            ],
-        },
-        {
-            type: "group" as const,
-            label: sidebarCollapsed ? "" : "Análisis y gestión",
-            children: [
-                {
-                    key: "/reportes",
-                    icon: <FileExcelOutlined />,
-                    label: "Reportes",
-                },
-                {
-                    key: "/facturacion",
-                    icon: <FileTextOutlined />,
-                    label: "Facturación",
-                },
-            ],
-        },
-        {
-            type: "group" as const,
-            label: sidebarCollapsed ? "" : "Personas",
-            children: [
-                {
-                    key: "/clientes",
-                    icon: <TeamOutlined />,
-                    label: "Clientes",
-                },
-                {
-                    key: "/trabajadores",
-                    icon: <SolutionOutlined />,
-                    label: "Trabajadores",
-                },
-            ],
-        },
-        {
-            type: "group" as const,
-            label: sidebarCollapsed ? "" : "Sistema",
-            children: [
-                {
-                    key: "/configuracion",
-                    icon: <SettingOutlined />,
-                    label: "Configuración",
-                },
-            ],
-        },
-    ];
-
-    const mobileMenuItems = [
-        {
-            key: "/inicio",
-            icon: <HomeOutlined />,
-            label: "Inicio",
-        },
-        {
-            key: "/lotes",
-            icon: <AppstoreOutlined />,
-            label: "Lotes",
-        },
-        {
-            key: "/cosechas",
-            icon: <ShopOutlined />,
-            label: "Cosechas",
-        },
-        {
-            key: "/trazabilidad",
-            icon: <PartitionOutlined />,
-            label: "Proceso Trazabilidad",
-        },
-        {
-            key: "/reportes",
-            icon: <FileExcelOutlined />,
-            label: "Reportes",
-        },
-        {
-            key: "/facturacion",
-            icon: <FileTextOutlined />,
-            label: "Facturación",
-        },
-        {
-            key: "/clientes",
-            icon: <TeamOutlined />,
-            label: "Clientes",
-        },
-        {
-            key: "/trabajadores",
-            icon: <SolutionOutlined />,
-            label: "Trabajadores",
-        },
-        {
-            key: "/configuracion",
-            icon: <SettingOutlined />,
-            label: "Configuración",
-        },
-    ];
 
     return (
         <Layout

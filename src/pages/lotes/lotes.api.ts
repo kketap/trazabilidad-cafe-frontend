@@ -22,18 +22,33 @@ export type Lote = {
     id: number;
     codigo: string;
     nombre?: string | null;
+
     tipoCodigo: TipoCodigoLote;
     estado: EstadoLote;
+
     kilosIniciales?: number | null;
     kilosActuales?: number | null;
     saldoTemporal?: number | null;
 
-    // Campos antiguos mantenidos como opcionales por compatibilidad.
     hectareas?: number | null;
     ubicacion?: string | null;
-
     observacion?: string | null;
+
     activo: boolean;
+
+    cosechaLotes?: {
+        id: number;
+        cosechaId: number;
+        loteId: number;
+        cosecha: {
+            id: number;
+            fecha: string;
+            kilosCosechados: number;
+            tipoCosecha: string;
+            lotes: string;
+        };
+    }[];
+
     createdAt?: string;
     updatedAt?: string;
 };
@@ -64,11 +79,6 @@ export async function getLotesApi(): Promise<Lote[]> {
     return response.data.data ?? [];
 }
 
-/**
- * Genera código principal:
- * COMERCIAL -> CONV-001
- * ESPECIAL -> ESC-001
- */
 export async function getSiguienteCodigoLoteApi(
     tipoCodigo: Exclude<TipoCodigoLote, "PERSONALIZADO">,
 ): Promise<string> {
@@ -79,10 +89,6 @@ export async function getSiguienteCodigoLoteApi(
     return response.data.data.codigo;
 }
 
-/**
- * Genera sublote:
- * ESC-001 -> ESC-001-1
- */
 export async function getSiguienteCorrelativoApi(
     codigoBase: string,
 ): Promise<string> {

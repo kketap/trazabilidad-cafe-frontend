@@ -29,16 +29,16 @@ import {
 import type { ColumnsType } from "antd/es/table";
 import dayjs, { type Dayjs } from "dayjs";
 
-import type { Empaque, CreateEmpaqueDTO, UpdateEmpaqueDTO } from "../../api/empaque.api";
+import type { Empaque, CreateEmpaqueDTO, UpdateEmpaqueDTO } from "./empaque.api";
 import {
   getEmpaquesApi,
   createEmpaqueApi,
   updateEmpaqueApi,
   deleteEmpaqueApi,
-} from "../../api/empaque.api";
+} from "./empaque.api";
 
-import type { Lote } from "../../api/lotes";
-import { getLotesApi } from "../../api/lotes";
+import type { Lote } from "../lotes/lotes.api";
+import { getLotesApi } from "../lotes/lotes.api";
 
 import CrearEmpaqueModal from "../../components/empaque-modals/CrearEmpaqueModal";
 import EditarEmpaqueModal from "../../components/empaque-modals/EditarEmpaqueModal";

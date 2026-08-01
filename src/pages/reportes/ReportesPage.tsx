@@ -11,7 +11,6 @@ import {
     Space,
     Table,
     Tabs,
-    Tag,
     Typography,
     theme,
     Statistic,
@@ -34,10 +33,6 @@ import {
     getCosechasReporteApi,
     type CosechasReporte,
     type ReportePorDia,
-    type ReportePorLote,
-    type ReportePorQuincena,
-    type ReportePorTipoCosecha,
-    type ReportePorTrabajador,
 } from "./reportes.api";
 
 dayjs.locale("es");
@@ -54,29 +49,8 @@ function formatMonth(mes: string): string {
     return dayjs(`${mes}-01`).format("MMMM YYYY");
 }
 
-function formatQuincena(quincena: string): string {
-    const [anio, mes, q] = quincena.split("-");
-    const textoMes = dayjs(`${anio}-${mes}-01`).format("MMMM YYYY");
-
-    return q === "Q1"
-        ? `1ª quincena ${textoMes}`
-        : `2ª quincena ${textoMes}`;
-}
-
 function formatNumber(value: number): string {
     return value.toLocaleString("es-CL");
-}
-
-function getTipoCosechaColor(tipo?: string | null) {
-    switch (tipo?.toLowerCase()) {
-        case "selectiva":
-            return "gold";
-        case "rebusca":
-            return "purple";
-        case "plena":
-        default:
-            return "green";
-    }
 }
 
 const emptyReporte: CosechasReporte = {
@@ -127,18 +101,6 @@ export default function ReportesPage() {
         });
     }, [reporte.porDia, mesSeleccionado]);
 
-    const porQuincenaFiltrado = useMemo(() => {
-        if (!mesSeleccionado) {
-            return reporte.porQuincena;
-        }
-
-        const prefix = mesSeleccionado.format("YYYY-MM");
-
-        return reporte.porQuincena.filter((item) =>
-            item.quincena.startsWith(prefix),
-        );
-    }, [reporte.porQuincena, mesSeleccionado]);
-
     const lineData = useMemo(() => {
         return [...porDiaFiltrado]
             .sort((a, b) => dayjs(a.fecha).valueOf() - dayjs(b.fecha).valueOf())
@@ -154,13 +116,6 @@ export default function ReportesPage() {
             kilos: item.kilos,
         }));
     }, [reporte.porMes]);
-
-    const barDataTipo = useMemo(() => {
-        return reporte.porTipoCosecha.map((item) => ({
-            tipoCosecha: item.tipoCosecha,
-            kilos: item.kilos,
-        }));
-    }, [reporte.porTipoCosecha]);
 
     const kpisGenerales = useMemo(() => {
         const totalKilos = porDiaFiltrado.reduce(
@@ -204,106 +159,6 @@ export default function ReportesPage() {
         },
         {
             title: "Kilos cosechados",
-            dataIndex: "kilos",
-            key: "kilos",
-            align: "right",
-            render: (value: number) => `${formatNumber(value)} kg`,
-            sorter: (a, b) => a.kilos - b.kilos,
-        },
-    ];
-
-    const columnsQuincena: ColumnsType<ReportePorQuincena> = [
-        {
-            title: "Quincena",
-            dataIndex: "quincena",
-            key: "quincena",
-            render: (value: string) => formatQuincena(value),
-        },
-        {
-            title: "Kilos",
-            dataIndex: "kilos",
-            key: "kilos",
-            align: "right",
-            render: (value: number) => `${formatNumber(value)} kg`,
-            sorter: (a, b) => a.kilos - b.kilos,
-        },
-    ];
-
-    const columnsTipo: ColumnsType<ReportePorTipoCosecha> = [
-        {
-            title: "Tipo de cosecha",
-            dataIndex: "tipoCosecha",
-            key: "tipoCosecha",
-            render: (value: string) => (
-                <Tag color={getTipoCosechaColor(value)}>
-                    {value.toUpperCase()}
-                </Tag>
-            ),
-        },
-        {
-            title: "Kilos",
-            dataIndex: "kilos",
-            key: "kilos",
-            align: "right",
-            render: (value: number) => `${formatNumber(value)} kg`,
-            sorter: (a, b) => a.kilos - b.kilos,
-        },
-    ];
-
-    const columnsTrabajador: ColumnsType<ReportePorTrabajador> = [
-        {
-            title: "Trabajador",
-            dataIndex: "nombre",
-            key: "nombre",
-            render: (value: string, record) => (
-                <Space orientation="vertical" size={0}>
-                    <Typography.Text strong>{value}</Typography.Text>
-                    <Typography.Text type="secondary">
-                        DNI: {record.dni}
-                    </Typography.Text>
-                </Space>
-            ),
-        },
-        {
-            title: "Cosechas",
-            dataIndex: "cosechas",
-            key: "cosechas",
-            align: "right",
-            sorter: (a, b) => a.cosechas - b.cosechas,
-        },
-        {
-            title: "Kilos asignados",
-            dataIndex: "kilos",
-            key: "kilos",
-            align: "right",
-            render: (value: number) => `${formatNumber(value)} kg`,
-            sorter: (a, b) => a.kilos - b.kilos,
-        },
-    ];
-
-    const columnsLote: ColumnsType<ReportePorLote> = [
-        {
-            title: "Código lote",
-            dataIndex: "codigo",
-            key: "codigo",
-            render: (value: string, record) => (
-                <Space orientation="vertical" size={0}>
-                    <Tag color="gold">{value}</Tag>
-                    <Typography.Text type="secondary">
-                        {record.nombre || "Sin nombre"}
-                    </Typography.Text>
-                </Space>
-            ),
-        },
-        {
-            title: "Cosechas",
-            dataIndex: "cosechas",
-            key: "cosechas",
-            align: "right",
-            sorter: (a, b) => a.cosechas - b.cosechas,
-        },
-        {
-            title: "Kilos asociados",
             dataIndex: "kilos",
             key: "kilos",
             align: "right",
@@ -609,7 +464,11 @@ export default function ReportesPage() {
                                 </Row>
 
                                 <Card
-                                    title={`Detalle de cosechas - ${mesSeleccionado.format("MMMM YYYY")}`}
+                                    title={
+                                        mesSeleccionado
+                                            ? `Detalle de cosechas - ${mesSeleccionado.format("MMMM YYYY")}`
+                                            : "Detalle de cosechas - Todos los meses"
+                                    }
                                     variant="borderless"
                                     style={{ borderRadius: 14 }}
                                 >
@@ -617,13 +476,15 @@ export default function ReportesPage() {
                                         <Skeleton active paragraph={{ rows: 6 }} />
                                     ) : (
                                         <Table
-                                            columns={columns}
-                                            dataSource={dataFiltrada}
-                                            rowKey="id"
+                                            columns={columnsDia}
+                                            dataSource={porDiaFiltrado}
+                                            rowKey="fecha"
                                             pagination={{ pageSize: 10 }}
                                             scroll={{ x: "max-content" }}
                                             locale={{
-                                                emptyText: "No hay cosechas registradas en este mes",
+                                                emptyText: mesSeleccionado
+                                                    ? "No hay cosechas registradas en este mes"
+                                                    : "No hay cosechas registradas",
                                             }}
                                         />
                                     )}

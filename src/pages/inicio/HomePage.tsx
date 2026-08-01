@@ -25,6 +25,8 @@ import {
     SafetyCertificateOutlined,
     ShopOutlined,
     TrophyOutlined,
+    UserOutlined,
+    TeamOutlined
 } from "@ant-design/icons";
 import { useNavigate } from "react-router-dom";
 

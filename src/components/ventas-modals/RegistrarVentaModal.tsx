@@ -19,9 +19,9 @@ import {
   ShopOutlined,
 } from "@ant-design/icons";
 import dayjs from "dayjs";
-import type { Cliente } from "../../api/clientes";
-import type { OrdenTrilla } from "../../api/trilla.api";
-import type { CreateVentaDTO, UpdateVentaDTO, Venta } from "../../api/ventas.api";
+import type { Cliente } from "../../pages/clientes/clientes.api";
+import type { OrdenTrilla } from "../../pages/trilla/trilla.api";
+import type { CreateVentaDTO, UpdateVentaDTO, Venta } from "../../pages/ventas/ventas.api";
 
 const { Text } = Typography;
 
@@ -239,7 +239,7 @@ export default function RegistrarVentaModal({
             }
             options={clientes.map((c) => ({
               value: c.id,
-              label: `${c.nombre} (${c.dni_rut})`,
+              label: `${c.nombre} (${c.dniRut})`,
             }))}
             notFoundContent={
               <Text type="secondary">No hay clientes registrados</Text>

@@ -2,8 +2,8 @@
 import { Form, Input, InputNumber, Modal, Select, DatePicker, Row, Col, Space, Typography, Tag } from "antd";
 import { useEffect } from "react";
 import dayjs from "dayjs";
-import type { Lote } from "../../api/lotes";
-import type { Secado, UpdateSecadoDTO } from "../../api/secado.api";
+import type { Lote } from "../../pages/lotes/lotes.api";
+import type { Secado, UpdateSecadoDTO } from "../../pages/secado/secado.api";
 
 type Props = {
   open: boolean;

@@ -15,7 +15,7 @@ import {
 } from "antd";
 import { CheckCircleOutlined, EditOutlined } from "@ant-design/icons";
 import dayjs from "dayjs";
-import type { OrdenTrilla, UpdateOrdenTrillaDTO } from "../../api/trilla.api";
+import type { OrdenTrilla, UpdateOrdenTrillaDTO } from "../../pages/trilla/trilla.api";
 
 const CALIDAD_OPTIONS = [
   { value: "Especial", label: "Especial" },

@@ -1,11 +1,9 @@
 // src/components/trazabilidad-modals/CrearProcesoModal.tsx
 import { useMemo, useState } from "react";
 import {
-    Alert,
     Button,
     Col,
     DatePicker,
-    Descriptions,
     Form,
     InputNumber,
     Modal,
@@ -21,15 +19,16 @@ import esES from "antd/es/date-picker/locale/es_ES";
 
 export type ProcesoFormValues = {
     fecha: Dayjs;
-    loteId?: number | null;
+    fechaInicio: Dayjs;
+    duracionHoras: number;
+
+    loteId: number | null;
     cosechaId?: number | null;
-    etapa?: string;
-    tipoProceso?: string;
+
+    etapa: string;
+
     kilosIngresados: number;
-    kilosResultantes?: number;
-    porcentajeMerma?: number;
-    fechaInicio?: Dayjs;
-    fechaFin?: Dayjs;
+    kilosResultantes: number;
 };
 
 type CrearProcesoModalProps = {
@@ -38,14 +37,17 @@ type CrearProcesoModalProps = {
     lotes: Lote[];
     loading?: boolean;
     saving?: boolean;
-    /**
-     * Lista real de lotes productivos.
-     * Se usa para asociar el proceso directamente a un lote.
-     */
-    lotes: Lote[];
     onClose: () => void;
     onSubmit: (values: ProcesoFormValues) => Promise<void> | void;
 };
+
+const ETAPA_OPTIONS = [
+    { value: "Despulpado", label: "Despulpado" },
+    { value: "Lavado", label: "Lavado" },
+    { value: "Secado", label: "Secado" },
+    { value: "Trilla", label: "Trilla" },
+    { value: "Clasificación", label: "Clasificación" },
+];
 
 export default function CrearProcesoModal({
     open,
@@ -55,36 +57,72 @@ export default function CrearProcesoModal({
     saving = false,
     onClose,
     onSubmit,
-    lotes
 }: CrearProcesoModalProps) {
     const [form] = Form.useForm<ProcesoFormValues>();
 
-    const handleFinish = async (
-        values: ProcesoFormValues,
-    ) => {
+    const [loteSeleccionadoId, setLoteSeleccionadoId] =
+        useState<number | null>(null);
+
+    const lotesDisponibles = useMemo(() => {
+        return (lotes ?? []).filter((lote) => lote.activo);
+    }, [lotes]);
+
+    const loteSeleccionado = useMemo(() => {
+        return (
+            lotesDisponibles.find((lote) => lote.id === loteSeleccionadoId) ??
+            null
+        );
+    }, [lotesDisponibles, loteSeleccionadoId]);
+
+    const loteOptions = useMemo(() => {
+        return lotesDisponibles.map((lote) => ({
+            value: lote.id,
+            label: `${lote.codigo}${lote.nombre ? ` - ${lote.nombre}` : ""}`,
+        }));
+    }, [lotesDisponibles]);
+
+    const cosechaOptions = useMemo(() => {
+        return (cosechas ?? []).map((cosecha) => ({
+            value: cosecha.id,
+            label: `COS-${String(cosecha.id).padStart(3, "0")} | Lote: ${cosecha.lotes || "N/A"
+                } | ${cosecha.fecha ? String(cosecha.fecha).slice(0, 10) : ""
+                } | ${(cosecha.kilosCosechados ?? 0).toLocaleString("es-CL")} kg`,
+        }));
+    }, [cosechas]);
+
+    function handleFechaChange(_value: Dayjs | null) {
+
+        form.resetFields([
+            "loteId",
+            "cosechaId",
+            "kilosIngresados",
+            "kilosResultantes",
+        ]);
+
+        setLoteSeleccionadoId(null);
+    }
+
+    function handleLoteChange(value: number | null) {
+        setLoteSeleccionadoId(value);
+
+        form.resetFields(["kilosIngresados", "kilosResultantes"]);
+    }
+
+    const handleFinish = async (values: ProcesoFormValues) => {
         await onSubmit(values);
 
         form.resetFields();
-        setFechaSeleccionada(null);
         setLoteSeleccionadoId(null);
     };
 
     const handleCancel = () => {
         form.resetFields();
-        setFechaSeleccionada(null);
         setLoteSeleccionadoId(null);
         onClose();
     };
 
-    const loteOptions = (lotes || []).map((lote) => ({
-        value: lote.id,
-        label: lote.nombre ? `${lote.codigo} - ${lote.nombre}` : lote.codigo,
-    }));
-
-    const cosechaOptions = (cosechas || []).map((cosecha) => ({
-        value: cosecha.id,
-        label: `COS-${String(cosecha.id).padStart(3, "0")} | Lote: ${cosecha.lotes || "N/A"} | ${cosecha.fecha ? cosecha.fecha.slice(0, 10) : ""} | ${(cosecha.kilosCosechados ?? 0).toLocaleString("es-CL")} kg`,
-    }));
+    const kilosDisponibles =
+        loteSeleccionado?.kilosActuales ?? loteSeleccionado?.kilosIniciales;
 
     return (
         <Modal
@@ -94,7 +132,7 @@ export default function CrearProcesoModal({
             footer={null}
             destroyOnHidden
             centered
-            width="min(1020px, 96vw)"
+            width="min(860px, 96vw)"
             styles={{
                 body: {
                     maxHeight: "70vh",
@@ -112,7 +150,7 @@ export default function CrearProcesoModal({
                 <Row gutter={[16, 0]}>
                     <Col xs={24} md={12}>
                         <Form.Item
-                            label="Fecha de Registro"
+                            label="Fecha del proceso"
                             name="fecha"
                             rules={[
                                 {
@@ -133,7 +171,56 @@ export default function CrearProcesoModal({
 
                     <Col xs={24} md={12}>
                         <Form.Item
-                            label="Lote Origen"
+                            label="Inicio del proceso"
+                            name="fechaInicio"
+                            rules={[
+                                {
+                                    required: true,
+                                    message:
+                                        "Seleccione la fecha y hora de inicio",
+                                },
+                            ]}
+                        >
+                            <DatePicker
+                                style={{ width: "100%" }}
+                                locale={esES}
+                                showTime={{ format: "HH:mm" }}
+                                format="DD/MM/YYYY HH:mm"
+                                placeholder="Inicio del proceso"
+                            />
+                        </Form.Item>
+                    </Col>
+
+                    <Col xs={24} md={12}>
+                        <Form.Item
+                            label="Duración del proceso"
+                            name="duracionHoras"
+                            rules={[
+                                {
+                                    required: true,
+                                    message: "Ingrese la duración del proceso",
+                                },
+                                {
+                                    type: "number",
+                                    min: 0.01,
+                                    message:
+                                        "La duración debe ser mayor que cero",
+                                },
+                            ]}
+                        >
+                            <InputNumber
+                                style={{ width: "100%" }}
+                                min={0.01}
+                                precision={2}
+                                addonAfter="horas"
+                                placeholder="Ej: 12"
+                            />
+                        </Form.Item>
+                    </Col>
+
+                    <Col xs={24} md={12}>
+                        <Form.Item
+                            label="Lote origen"
                             name="loteId"
                             rules={[
                                 {
@@ -149,78 +236,52 @@ export default function CrearProcesoModal({
                                 showSearch
                                 optionFilterProp="label"
                                 loading={loading}
-                                disabled={loading || (lotes || []).length === 0}
+                                disabled={
+                                    loading || lotesDisponibles.length === 0
+                                }
+                                onChange={handleLoteChange}
                             />
                         </Form.Item>
                     </Col>
 
                     <Col xs={24} md={12}>
                         <Form.Item
-                            label="Cosecha (Opcional)"
+                            label="Cosecha relacionada"
                             name="cosechaId"
                         >
                             <Select
-                                placeholder="Seleccione una cosecha (opcional)"
+                                placeholder="Seleccione una cosecha opcional"
                                 options={cosechaOptions}
                                 showSearch
                                 optionFilterProp="label"
                                 allowClear
                                 loading={loading}
-                                disabled={loading || (cosechas || []).length === 0}
+                                disabled={loading || cosechas.length === 0}
                             />
                         </Form.Item>
                     </Col>
 
                     <Col xs={24} md={12}>
                         <Form.Item
-                            label="Tipo de Proceso"
-                            name="tipoProceso"
+                            label="Etapa"
+                            name="etapa"
+                            rules={[
+                                {
+                                    required: true,
+                                    message: "Seleccione la etapa",
+                                },
+                            ]}
                         >
                             <Select
-                                placeholder="Seleccione un tipo de proceso"
-                                options={[
-                                    { value: "OXIDACION_CEREZA", label: "Oxidación en cereza" },
-                                    { value: "OXIDACION_MUCILAGO", label: "Oxidación en mucílago" },
-                                    { value: "ANAEROBICO_CEREZA", label: "Anaeróbico en cereza" },
-                                    { value: "ANAEROBICO_MUCILAGO", label: "Anaeróbico en mucílago" },
-                                ]}
-                            />
-                        </Form.Item>
-                    </Col>
-                    
-                    <Col xs={24} md={12}>
-                        <Form.Item
-                            label="Fecha/Hora de Inicio"
-                            name="fechaInicio"
-                        >
-                            <DatePicker
-                                style={{ width: "100%" }}
-                                locale={esES}
-                                showTime
-                                format="DD/MM/YYYY HH:mm"
-                                placeholder="Inicio del proceso"
+                                placeholder="Seleccione una etapa"
+                                options={ETAPA_OPTIONS}
                             />
                         </Form.Item>
                     </Col>
 
                     <Col xs={24} md={12}>
                         <Form.Item
-                            label="Fecha/Hora de Fin"
-                            name="fechaFin"
-                        >
-                            <DatePicker
-                                style={{ width: "100%" }}
-                                locale={esES}
-                                showTime
-                                format="DD/MM/YYYY HH:mm"
-                                placeholder="Fin del proceso"
-                            />
-                        </Form.Item>
-                    </Col>
-
-                    <Col xs={24} md={12}>
-                        <Form.Item
-                            label="Kilos Ingresados"
+                            label="Kilos ingresados"
                             name="kilosIngresados"
                             rules={[
                                 {
@@ -230,10 +291,6 @@ export default function CrearProcesoModal({
                                 },
                                 {
                                     validator: async (_, value) => {
-                                        const kilosDisponibles =
-                                            loteSeleccionado?.kilosActuales ??
-                                            loteSeleccionado?.kilosIniciales;
-
                                         if (
                                             kilosDisponibles != null &&
                                             Number(value) > kilosDisponibles
@@ -251,33 +308,61 @@ export default function CrearProcesoModal({
                             <InputNumber
                                 style={{ width: "100%" }}
                                 min={0.01}
-                                max={
-                                    loteSeleccionado?.kilosActuales ??
-                                    loteSeleccionado?.kilosIniciales ??
-                                    undefined
-                                }
+                                max={kilosDisponibles ?? undefined}
                                 precision={2}
                                 addonAfter="kg"
                                 placeholder="Ej: 180"
                             />
                         </Form.Item>
                     </Col>
+
+                    <Col xs={24} md={12}>
+                        <Form.Item
+                            label="Kilos resultantes"
+                            name="kilosResultantes"
+                            rules={[
+                                {
+                                    required: true,
+                                    message:
+                                        "Los kilos resultantes son obligatorios",
+                                },
+                                {
+                                    validator: async (_, value) => {
+                                        const kilosIngresados =
+                                            form.getFieldValue(
+                                                "kilosIngresados",
+                                            );
+
+                                        if (
+                                            kilosIngresados != null &&
+                                            Number(value) > Number(kilosIngresados)
+                                        ) {
+                                            throw new Error(
+                                                "Los kilos resultantes no pueden superar los kilos ingresados",
+                                            );
+                                        }
+                                    },
+                                },
+                            ]}
+                        >
+                            <InputNumber
+                                style={{ width: "100%" }}
+                                min={0}
+                                precision={2}
+                                addonAfter="kg"
+                                placeholder="Ej: 150"
+                            />
+                        </Form.Item>
+                    </Col>
                 </Row>
 
-                <Form.Item
-                    style={{
-                        marginBottom: 0,
-                        paddingTop: 8,
-                    }}
-                >
+                <Form.Item style={{ marginBottom: 0, paddingTop: 8 }}>
                     <Space>
                         <Button type="primary" htmlType="submit" loading={saving}>
                             Guardar
                         </Button>
 
-                        <Button onClick={handleCancel}>
-                            Cancelar
-                        </Button>
+                        <Button onClick={handleCancel}>Cancelar</Button>
                     </Space>
                 </Form.Item>
             </Form>
