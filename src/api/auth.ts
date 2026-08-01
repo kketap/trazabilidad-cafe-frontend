@@ -36,6 +36,16 @@ export function removeToken() {
   localStorage.removeItem(USER_NAME_KEY);
 }
 
+/**
+ * Limpia completamente la sesión del usuario:
+ * elimina el token y el nombre del almacenamiento local.
+ * Usar esta función como punto único de limpieza de sesión.
+ */
+export function clearSession() {
+  localStorage.removeItem(TOKEN_KEY);
+  localStorage.removeItem(USER_NAME_KEY);
+}
+
 export function saveUserName(nombre: string) {
   localStorage.setItem(USER_NAME_KEY, nombre);
 }
