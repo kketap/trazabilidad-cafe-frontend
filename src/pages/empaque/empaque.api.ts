@@ -1,6 +1,6 @@
 // src/api/empaque.api.ts
-import { apiClient } from "./apiClient";
-import type { Lote } from "./lotes";
+import { apiClient } from "../../api/apiClient";
+import type { Lote } from "../lotes/lotes.api";
 
 export type Empaque = {
   id: number;

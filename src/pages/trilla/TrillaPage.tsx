@@ -4,10 +4,12 @@ import {
   Button,
   Card,
   Col,
+  DatePicker,
   Input,
   message,
   Popconfirm,
   Row,
+  Select,
   Space,
   Statistic,
   Table,
@@ -26,20 +28,22 @@ import {
   SendOutlined,
   CheckCircleOutlined,
   ClockCircleOutlined,
+  ClearOutlined,
 } from "@ant-design/icons";
 import type { ColumnsType } from "antd/es/table";
-import dayjs from "dayjs";
+import dayjs, { type Dayjs } from "dayjs";
 
-import type { OrdenTrilla, CreateOrdenTrillaDTO, UpdateOrdenTrillaDTO } from "../../api/trilla.api";
+import type { OrdenTrilla, CreateOrdenTrillaDTO, UpdateOrdenTrillaDTO } from "./trilla.api";
 import {
   getOrdenesTrilaApi,
   createOrdenTrillaApi,
   updateOrdenTrillaApi,
   deleteOrdenTrillaApi,
-} from "../../api/trilla.api";
+} from "./trilla.api";
 
-import type { Lote } from "../../api/lotes";
-import { getLotesApi } from "../../api/lotes";
+
+import type { Lote } from "../lotes/lotes.api";
+import { getLotesApi } from "../lotes/lotes.api";
 
 import EnviarATrillaModal from "../../components/trilla-modals/EnviarATrillaModal";
 import RecepcionTrillaModal from "../../components/trilla-modals/RecepcionTrillaModal";
@@ -156,18 +160,44 @@ export default function TrillaPage() {
     return { total, temporales, recibidas, kilosEnviados, kilosNetos, rendimiento };
   }, [ordenes]);
 
+  const [filtroFecha, setFiltroFecha] = useState<[Dayjs, Dayjs] | null>(null);
+  const [filtroEstado, setFiltroEstado] = useState<string | undefined>(undefined);
+
+  const handleLimpiarFiltros = () => {
+    setSearchText("");
+    setFiltroFecha(null);
+    setFiltroEstado(undefined);
+  };
+
   // Filtrado
   const filteredOrdenes = useMemo(() => {
-    if (!searchText) return ordenes;
-    const term = searchText.toLowerCase();
-    return ordenes.filter(
-      (o) =>
-        o.codigoTrilla?.toLowerCase().includes(term) ||
-        o.calidad?.toLowerCase().includes(term) ||
-        o.tipoSaco?.toLowerCase().includes(term) ||
-        (o.lotes && o.lotes.some((l: any) => l.codigo?.toLowerCase().includes(term)))
-    );
-  }, [ordenes, searchText]);
+    return ordenes.filter((o) => {
+      if (searchText) {
+        const term = searchText.toLowerCase();
+        const matchesCodigo = o.codigoTrilla?.toLowerCase().includes(term);
+        const matchesCalidad = o.calidad?.toLowerCase().includes(term);
+        const matchesSaco = o.tipoSaco?.toLowerCase().includes(term);
+        const matchesLotes = o.lotes && o.lotes.some((l: any) => l.codigo?.toLowerCase().includes(term));
+        if (!matchesCodigo && !matchesCalidad && !matchesSaco && !matchesLotes) return false;
+      }
+
+      if (filtroFecha && o.fechaDespacho) {
+        const f = dayjs(o.fechaDespacho);
+        if (f.isBefore(filtroFecha[0], "day") || f.isAfter(filtroFecha[1], "day")) {
+          return false;
+        }
+      }
+
+      if (filtroEstado) {
+        let estadoReal = "DESPACHADO";
+        if (o.kilosNetos != null) estadoReal = "RECIBIDO";
+        else if (o.fechaIngreso) estadoReal = "EN_TRILLA";
+        if (estadoReal !== filtroEstado) return false;
+      }
+
+      return true;
+    });
+  }, [ordenes, searchText, filtroFecha, filtroEstado]);
 
   // Columnas de la tabla
   const columns: ColumnsType<OrdenTrilla> = [
@@ -415,9 +445,9 @@ export default function TrillaPage() {
         </Col>
       </Row>
 
-      {/* Tabla */}
+      {/* Tabla y Filtros */}
       <Card style={{ borderRadius: 8 }}>
-        <Row justify="space-between" align="middle" style={{ marginBottom: 16 }}>
+        <Row gutter={[12, 12]} align="middle" style={{ marginBottom: 16 }}>
           <Col xs={24} sm={12} md={8}>
             <Input
               placeholder="Buscar por código, calidad, tipo de saco o lote..."
@@ -425,7 +455,36 @@ export default function TrillaPage() {
               value={searchText}
               onChange={(e) => setSearchText(e.target.value)}
               allowClear
+              style={{ width: "100%" }}
             />
+          </Col>
+          <Col xs={24} sm={12} md={7}>
+            <DatePicker.RangePicker
+              value={filtroFecha}
+              onChange={(val) => setFiltroFecha(val as [Dayjs, Dayjs] | null)}
+              format="DD/MM/YYYY"
+              placeholder={["Fecha inicio", "Fecha fin"]}
+              style={{ width: "100%" }}
+            />
+          </Col>
+          <Col xs={24} sm={12} md={5}>
+            <Select
+              placeholder="Estado"
+              value={filtroEstado}
+              onChange={setFiltroEstado}
+              allowClear
+              style={{ width: "100%" }}
+              options={[
+                { value: "DESPACHADO", label: "Despachado" },
+                { value: "EN_TRILLA", label: "En Trilla" },
+                { value: "RECIBIDO", label: "Recibido" },
+              ]}
+            />
+          </Col>
+          <Col xs={24} sm={12} md={4}>
+            <Button icon={<ClearOutlined />} onClick={handleLimpiarFiltros} block>
+              Limpiar
+            </Button>
           </Col>
         </Row>
 
@@ -436,7 +495,7 @@ export default function TrillaPage() {
           loading={loading}
           pagination={{ pageSize: 10, showSizeChanger: true }}
           locale={{ emptyText: "No hay órdenes de trilla registradas" }}
-          scroll={{ x: 1100 }}
+          scroll={{ x: "max-content" }}
           rowClassName={(record) =>
             record.codigoTrilla?.startsWith("TEMP-") ? "row-temporal" : ""
           }

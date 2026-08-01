@@ -1,67 +1,112 @@
 // src/pages/trazabilidad/trazabilidad.api.ts
-import { apiClient } from "./../../api/apiClient";
-import type { Cosecha } from "./../cosechas/cosechas.api";
+import { apiClient } from "../../api/apiClient";
+import type { Cosecha } from "../cosechas/cosechas.api";
 import type { Lote } from "../lotes/lotes.api";
+
+type ApiResponse<T> = {
+    ok: boolean;
+    data: T;
+    message?: string;
+};
+
+export type TipoProceso =
+    | "OXIDACION_CEREZA"
+    | "OXIDACION_MUCILAGO"
+    | "ANAEROBICO_CEREZA"
+    | "ANAEROBICO_MUCILAGO";
 
 export type ProcesoTrazabilidad = {
     id: number;
-    codigo?: string | null;
+    codigo: string;
 
     fecha: string;
-    etapa?: string;
-    tipoProceso?: string;
+    fechaInicio?: string | null;
+    fechaFin?: string | null;
+    duracionHoras?: number | null;
+
+    etapa?: string | null;
+    tipoProceso?: TipoProceso | string | null;
+
     kilosIngresados: number;
-    kilosResultantes?: number;
-    porcentajeMerma?: number;
+
+    /**
+     * Estos campos pueden venir undefined/null porque actualmente
+     * no existen en tu schema Prisma de ProcesoTrazabilidad.
+     */
+    kilosResultantes?: number | null;
+    porcentajeMerma?: number | null;
+
     loteId?: number | null;
-    lote?: Lote;
+
+    /**
+     * El backend actual puede devolver la relación como "Lote"
+     * porque en tu schema Prisma está definida con mayúscula:
+     * Lote Lote? @relation(...)
+     */
+    Lote?: Lote | null;
+
+    /**
+     * Lo dejamos también como "lote" para compatibilidad con el front,
+     * porque TrazabilidadPage normaliza Lote -> lote.
+     */
+    lote?: Lote | null;
+
     cosechaId?: number | null;
-    cosecha?: Cosecha;
-    duracionHoras?: number;
-    fechaInicio?: string;
-    fechaFin?: string;
+    cosecha?: Cosecha | null;
+
     createdAt?: string;
     updatedAt?: string;
 };
 
 export type CreateProcesoTrazabilidadDto = {
     fecha: string;
+
+    fechaInicio?: string | null;
+    fechaFin?: string | null;
+    duracionHoras?: number | null;
+
     loteId?: number | null;
     cosechaId?: number | null;
-    etapa?: string;
-    tipoProceso?: string;
+
+    etapa?: string | null;
+    tipoProceso?: TipoProceso | string | null;
+
     kilosIngresados: number;
-    kilosResultantes?: number;
-    fechaInicio?: string;
-    fechaFin?: string;
+
+    /**
+     * El formulario puede enviarlo, pero el backend actual
+     * no lo guarda si el schema no tiene kilosResultantes.
+     */
+    kilosResultantes?: number | null;
 };
 
 export type TrazabilidadResumen = {
     totalProcesos: number;
     totalIngresado: number;
-    totalResultante?: number;
-    mermaPromedio?: number;
+    totalResultante: number;
+    mermaPromedio: number;
 };
 
-/**
- * Lista procesos de trazabilidad.
- * Soporta respuesta directa o respuesta envuelta en { ok, data }.
- */
+function unwrapResponse<T>(responseData: ApiResponse<T> | T): T {
+    if (
+        responseData &&
+        typeof responseData === "object" &&
+        "data" in responseData
+    ) {
+        return (responseData as ApiResponse<T>).data;
+    }
+
+    return responseData as T;
+}
+
 export async function getProcesosTrazabilidad(): Promise<ProcesoTrazabilidad[]> {
     const response = await apiClient.get<
         ApiResponse<ProcesoTrazabilidad[]> | ProcesoTrazabilidad[]
     >("/trazabilidad");
 
-    if (Array.isArray(response.data)) {
-        return response.data;
-    }
-
-    return response.data.data ?? [];
+    return unwrapResponse(response.data) ?? [];
 }
 
-/**
- * Crea un proceso de trazabilidad asociado a loteId.
- */
 export async function createProcesoTrazabilidad(
     data: CreateProcesoTrazabilidadDto,
 ): Promise<ProcesoTrazabilidad> {
@@ -69,27 +114,17 @@ export async function createProcesoTrazabilidad(
         ApiResponse<ProcesoTrazabilidad> | ProcesoTrazabilidad
     >("/trazabilidad", data);
 
-    if ("data" in response.data) {
-        return response.data.data;
-    }
-
-    return response.data;
+    return unwrapResponse(response.data);
 }
 
-/**
- * Obtiene resumen para métricas de trazabilidad.
- */
 export async function getTrazabilidadResumen(): Promise<TrazabilidadResumen> {
-    const response = await apiClient.get<TrazabilidadResumen>(
-        "/trazabilidad/resumen",
-    );
+    const response = await apiClient.get<
+        ApiResponse<TrazabilidadResumen> | TrazabilidadResumen
+    >("/trazabilidad/resumen");
 
-    return response.data;
+    return unwrapResponse(response.data);
 }
 
-/**
- * Actualiza proceso de trazabilidad.
- */
 export async function updateProcesoTrazabilidad(
     id: number,
     data: Partial<CreateProcesoTrazabilidadDto>,
@@ -98,16 +133,9 @@ export async function updateProcesoTrazabilidad(
         ApiResponse<ProcesoTrazabilidad> | ProcesoTrazabilidad
     >(`/trazabilidad/${id}`, data);
 
-    if ("data" in response.data) {
-        return response.data.data;
-    }
-
-    return response.data;
+    return unwrapResponse(response.data);
 }
 
-/**
- * Elimina proceso de trazabilidad.
- */
 export async function deleteProcesoTrazabilidad(id: number) {
     const response = await apiClient.delete(`/trazabilidad/${id}`);
     return response.data;

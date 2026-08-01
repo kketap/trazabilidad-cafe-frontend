@@ -30,6 +30,8 @@ const { useBreakpoint } = Grid;
 // Acentos de la paleta corporativa para sidebar (oscuro) y topbar (claro).
 const SIDEBAR_DARK_BG = "#2a2118";
 
+const HEADER_LIGHT_BG = "linear-gradient(180deg, #fff9ef 0%, #f1dfc7 100%)";
+
 type ThemeMode = "light" | "dark" | "system";
 type TextSize = "small" | "normal" | "large" | "xlarge";
 
@@ -67,126 +69,6 @@ export default function AppLayout({ themeMode, isDarkMode, onThemeModeChange, te
         removeToken();
         navigate("/login", { replace: true });
     };
-
-    const menuItems = [
-        {
-            key: "/inicio",
-            icon: <HomeOutlined />,
-            label: "Inicio",
-        },
-        {
-            type: "group" as const,
-            label: sidebarCollapsed ? "" : "Producción",
-            children: [
-                {
-                    key: "/cosechas",
-                    icon: <ShopOutlined />,
-                    label: "Cosechas",
-                },
-                {
-                    key: "/lotes",
-                    icon: <AppstoreOutlined />,
-                    label: "Lotes",
-                },
-                {
-                    key: "/trazabilidad",
-                    icon: <PartitionOutlined />,
-                    label: "Proceso Trazabilidad",
-                },
-            ],
-        },
-        {
-            type: "group" as const,
-            label: sidebarCollapsed ? "" : "Análisis y gestión",
-            children: [
-                {
-                    key: "/reportes",
-                    icon: <FileExcelOutlined />,
-                    label: "Reportes",
-                },
-                {
-                    key: "/facturacion",
-                    icon: <FileTextOutlined />,
-                    label: "Facturación",
-                },
-            ],
-        },
-        {
-            type: "group" as const,
-            label: sidebarCollapsed ? "" : "Personas",
-            children: [
-                {
-                    key: "/clientes",
-                    icon: <TeamOutlined />,
-                    label: "Clientes",
-                },
-                {
-                    key: "/trabajadores",
-                    icon: <SolutionOutlined />,
-                    label: "Trabajadores",
-                },
-            ],
-        },
-        {
-            type: "group" as const,
-            label: sidebarCollapsed ? "" : "Sistema",
-            children: [
-                {
-                    key: "/configuracion",
-                    icon: <SettingOutlined />,
-                    label: "Configuración",
-                },
-            ],
-        },
-    ];
-
-    const mobileMenuItems = [
-        {
-            key: "/inicio",
-            icon: <HomeOutlined />,
-            label: "Inicio",
-        },
-        {
-            key: "/lotes",
-            icon: <AppstoreOutlined />,
-            label: "Lotes",
-        },
-        {
-            key: "/cosechas",
-            icon: <ShopOutlined />,
-            label: "Cosechas",
-        },
-        {
-            key: "/trazabilidad",
-            icon: <PartitionOutlined />,
-            label: "Proceso Trazabilidad",
-        },
-        {
-            key: "/reportes",
-            icon: <FileExcelOutlined />,
-            label: "Reportes",
-        },
-        {
-            key: "/facturacion",
-            icon: <FileTextOutlined />,
-            label: "Facturación",
-        },
-        {
-            key: "/clientes",
-            icon: <TeamOutlined />,
-            label: "Clientes",
-        },
-        {
-            key: "/trabajadores",
-            icon: <SolutionOutlined />,
-            label: "Trabajadores",
-        },
-        {
-            key: "/configuracion",
-            icon: <SettingOutlined />,
-            label: "Configuración",
-        },
-    ];
 
     return (
         <Layout
@@ -322,10 +204,10 @@ export default function AppLayout({ themeMode, isDarkMode, onThemeModeChange, te
                         selectedKeys={[location.pathname]}
                         onClick={handleMenuClick}
                         style={{
-                            // Fondo del menú igual al sidebar para mantener continuidad y contraste.
-                            background: isDarkMode ? SIDEBAR_DARK_BG : "transparent",
+                            background: isDarkMode ? SIDEBAR_DARK_BG : HEADER_LIGHT_BG,
                             borderRight: "none",
-                            padding: "16px 8px",
+                            padding: "8px 4px",
+                            fontSize: 13,
                         }}
                         items={[
                             {
@@ -334,64 +216,34 @@ export default function AppLayout({ themeMode, isDarkMode, onThemeModeChange, te
                                 label: "Inicio",
                             },
                             {
-                                key: "/cosechas",
-                                icon: <ShopOutlined />,
-                                label: "Cosechas",
+                                type: "group",
+                                label: sidebarCollapsed ? null : "Campo & Producción",
+                                children: [
+                                    { key: "/cosechas", icon: <ShopOutlined />, label: "Cosechas" },
+                                    { key: "/lotes", icon: <AppstoreOutlined />, label: "Lotes" },
+                                    { key: "/trazabilidad", icon: <PartitionOutlined />, label: "Proceso Húmedo" },
+                                    { key: "/secado", icon: <FireOutlined />, label: "Secado" },
+                                    { key: "/empaque", icon: <InboxOutlined />, label: "Empaque" },
+                                    { key: "/trilla", icon: <ExperimentOutlined />, label: "Trilla" },
+                                ],
                             },
                             {
-                                key: "/lotes",
-                                icon: <AppstoreOutlined />,
-                                label: "Lotes",
+                                type: "group",
+                                label: sidebarCollapsed ? null : "Comercial & Gestión",
+                                children: [
+                                    { key: "/ventas", icon: <DollarOutlined />, label: "Ventas" },
+                                    { key: "/facturacion", icon: <FileTextOutlined />, label: "Facturación" },
+                                    { key: "/clientes", icon: <TeamOutlined />, label: "Clientes" },
+                                    { key: "/reportes", icon: <FileExcelOutlined />, label: "Reportes" },
+                                ],
                             },
                             {
-                                key: "/trazabilidad",
-                                icon: <PartitionOutlined />,
-                                label: "Proceso Húmedo",
-                            },
-                            {
-                                key: "/secado",
-                                icon: <FireOutlined />,
-                                label: "Secado",
-                            },
-                            {
-                                key: "/empaque",
-                                icon: <InboxOutlined />,
-                                label: "Empaque",
-                            },
-                            {
-                                key: "/trilla",
-                                icon: <ExperimentOutlined />,
-                                label: "Trilla",
-                            },
-                            {
-                                key: "/ventas",
-                                icon: <DollarOutlined />,
-                                label: "Ventas",
-                            },
-                            {
-                                key: "/reportes",
-                                icon: <FileExcelOutlined />,
-                                label: "Reportes",
-                            },
-                            {
-                                key: "/facturacion",
-                                icon: <FileTextOutlined />,
-                                label: "Facturación",
-                            },
-                            {
-                                key: "/clientes",
-                                icon: <TeamOutlined />,
-                                label: "Clientes",
-                            },
-                            {
-                                key: "/trabajadores",
-                                icon: <SolutionOutlined />,
-                                label: "Trabajadores",
-                            },
-                            {
-                                key: "/configuracion",
-                                icon: <SettingOutlined />,
-                                label: "Configuración",
+                                type: "group",
+                                label: sidebarCollapsed ? null : "Administración",
+                                children: [
+                                    { key: "/trabajadores", icon: <SolutionOutlined />, label: "Trabajadores" },
+                                    { key: "/configuracion", icon: <SettingOutlined />, label: "Configuración" },
+                                ],
                             },
                         ]}
                     />

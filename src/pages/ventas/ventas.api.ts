@@ -1,7 +1,7 @@
 // src/api/ventas.api.ts
-import { apiClient } from "./apiClient";
-import type { Cliente } from "./clientes";
-import type { OrdenTrilla } from "./trilla.api";
+import { apiClient } from "../../api/apiClient";
+import type { Cliente } from "../clientes/clientes.api";
+import type { OrdenTrilla } from "../trilla/trilla.api";
 
 export type Venta = {
   id: string;

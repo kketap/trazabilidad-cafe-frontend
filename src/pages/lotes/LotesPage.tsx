@@ -4,11 +4,13 @@ import {
   Button,
   Card,
   Col,
+  DatePicker,
   Form,
   Input,
   InputNumber,
   Modal,
   Popconfirm,
+  Radio,
   Row,
   Select,
   Space,
@@ -18,107 +20,93 @@ import {
   message,
   theme,
 } from "antd";
+import type { ColumnsType } from "antd/es/table";
 import {
+  BarcodeOutlined,
+  ClearOutlined,
   DeleteOutlined,
   EditOutlined,
   PlusOutlined,
-  SearchOutlined,
-  AppstoreOutlined,
-  BranchesOutlined,
   SafetyCertificateOutlined,
-  BarcodeOutlined,
+  SearchOutlined,
 } from "@ant-design/icons";
-import type { Lote, EstadoLote, TipoCodigoLote } from "./lotes.api";
+import dayjs, { type Dayjs } from "dayjs";
+
+import type { Lote, TipoCodigoLote, EstadoLote } from "./lotes.api";
 import {
-  getLotesApi,
   createLoteApi,
-  updateLoteApi,
   deleteLoteApi,
-  getSiguienteCorrelativoApi,
-  getSiguienteCodigoLoteApi,
+  getLotesApi,
+  updateLoteApi,
 } from "./lotes.api";
 
-type SortField = "codigo" | "nombre" | "kilosActuales" | "createdAt";
-type SortOrder = "asc" | "desc";
+import { formatEstadoEnum } from "../../utils/enumFormatters";
 
-const tipoCodigoOptions: { value: TipoCodigoLote; label: string }[] = [
-  { value: "COMERCIAL", label: "Comercial (CONV)" },
-  { value: "ESPECIAL", label: "Especial (ESC)" },
-  { value: "PERSONALIZADO", label: "Personalizado" },
-];
+type TipoCafeUi = "comercial" | "especial";
 
-const estadoLoteOptions: { value: EstadoLote; label: string }[] = [
-  { value: "EN_PROCESO", label: "En proceso" },
-  { value: "EN_SECADO", label: "En secado" },
-  { value: "EN_ALMACEN", label: "En almacén" },
-  { value: "TRILLADO", label: "Trillado" },
-  { value: "VENDIDO", label: "Vendido" },
-  { value: "CERRADO", label: "Cerrado" },
-  { value: "INACTIVO", label: "Inactivo" },
-];
-
-function getTipoCodigoColor(tipoCodigo?: TipoCodigoLote) {
+function getTipoCodigoColor(tipoCodigo?: TipoCodigoLote | null) {
   switch (tipoCodigo) {
     case "ESPECIAL":
-      return "purple";
+      return "gold";
     case "PERSONALIZADO":
-      return "cyan";
+      return "purple";
     case "COMERCIAL":
     default:
-      return "blue";
-  }
-}
-
-function getEstadoLoteColor(estado?: EstadoLote) {
-  switch (estado) {
-    case "EN_PROCESO":
-      return "processing";
-    case "EN_SECADO":
-      return "orange";
-    case "EN_ALMACEN":
-      return "gold";
-    case "TRILLADO":
-      return "purple";
-    case "VENDIDO":
       return "green";
-    case "CERRADO":
-      return "default";
-    case "INACTIVO":
-      return "red";
-    default:
-      return "default";
   }
-}
-
-function getEstadoLoteLabel(estado?: EstadoLote) {
-  return estadoLoteOptions.find((option) => option.value === estado)?.label ?? estado ?? "-";
 }
 
 function formatKg(value?: number | null) {
-  if (value === null || value === undefined) {
+  if (value === null || value === undefined || Number.isNaN(Number(value))) {
     return "-";
   }
 
-  return `${value.toLocaleString("es-CL")} kg`;
+  return `${Number(value).toLocaleString("es-CL", {
+    maximumFractionDigits: 2,
+  })} kg`;
 }
 
-/**
- * Calcula el saldo del lote según sus kilos iniciales y actuales.
- * Si no existen datos suficientes, retorna null para mostrar "-".
- */
 function calcularSaldo(
   kilosIniciales?: number | null,
   kilosActuales?: number | null,
 ) {
-  if (kilosIniciales === null || kilosIniciales === undefined) {
-    return null;
-  }
-
-  if (kilosActuales === null || kilosActuales === undefined) {
-    return null;
-  }
+  if (kilosIniciales === null || kilosIniciales === undefined) return null;
+  if (kilosActuales === null || kilosActuales === undefined) return null;
 
   return Math.max(Number(kilosIniciales) - Number(kilosActuales), 0);
+}
+
+function mapTipoCafeToTipoCodigo(tipoCafe?: TipoCafeUi): TipoCodigoLote {
+  if (tipoCafe === "especial") return "ESPECIAL";
+  return "COMERCIAL";
+}
+
+function mapTipoCodigoToTipoCafe(tipoCodigo?: TipoCodigoLote | null): TipoCafeUi {
+  if (tipoCodigo === "ESPECIAL") return "especial";
+  return "comercial";
+}
+
+function generarCodigoPreview(tipo: TipoCafeUi, listaLotes: Lote[]) {
+  const prefix = tipo === "especial" ? "ESC" : "CONV";
+
+  const codigosExistentes = listaLotes
+    .map((lote) => lote.codigo)
+    .filter((codigo) => codigo && codigo.startsWith(`${prefix}-`));
+
+  let maxNum = 0;
+
+  codigosExistentes.forEach((codigo) => {
+    const parts = codigo.split("-");
+    if (parts.length >= 2) {
+      const num = parseInt(parts[1], 10);
+      if (!Number.isNaN(num) && num > maxNum) {
+        maxNum = num;
+      }
+    }
+  });
+
+  const nextNum = maxNum + 1;
+  return `${prefix}-${String(nextNum).padStart(3, "0")}`;
 }
 
 export default function LotesPage() {
@@ -126,110 +114,85 @@ export default function LotesPage() {
 
   const [lotes, setLotes] = useState<Lote[]>([]);
   const [loading, setLoading] = useState(false);
+
   const [searchText, setSearchText] = useState("");
+  const [filtroFecha, setFiltroFecha] = useState<[Dayjs, Dayjs] | null>(null);
+  const [filtroTipoCafe, setFiltroTipoCafe] = useState<TipoCafeUi | undefined>(
+    undefined,
+  );
+  const [filtroEstado, setFiltroEstado] = useState<EstadoLote | undefined>(
+    undefined,
+  );
 
-  const [filtroTipoCodigo, setFiltroTipoCodigo] = useState<TipoCodigoLote | null>(null);
-  const [filtroEstado, setFiltroEstado] = useState<EstadoLote | null>(null);
-  const [filtroKilosMin, setFiltroKilosMin] = useState<number | null>(null);
-  const [filtroKilosMax, setFiltroKilosMax] = useState<number | null>(null);
-
-  const [ordenCampo, setOrdenCampo] = useState<SortField>("codigo");
-  const [ordenDireccion, setOrdenDireccion] = useState<SortOrder>("asc");
-
-  // Estado del modal de creación/edición.
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingLote, setEditingLote] = useState<Lote | null>(null);
   const [submitting, setSubmitting] = useState(false);
+
   const [form] = Form.useForm();
 
-  // Permite reaccionar al tipo de código seleccionado.
-  const tipoCodigoWatch = Form.useWatch("tipoCodigo", form) as TipoCodigoLote | undefined;
+  const tipoCafeWatch = Form.useWatch("tipoCafe", form);
 
-  const fetchLotes = async () => {
+  async function fetchLotes() {
     setLoading(true);
 
     try {
       const data = await getLotesApi();
       setLotes(data);
     } catch (error: any) {
-      message.error(error?.response?.data?.message || "Error al cargar la lista de lotes");
+      message.error(
+        error?.response?.data?.message || "Error al cargar la lista de lotes",
+      );
     } finally {
       setLoading(false);
     }
-  };
+  }
 
   useEffect(() => {
     fetchLotes();
   }, []);
 
-  const handleOpenCreateModal = () => {
+  useEffect(() => {
+    if (isModalOpen && !editingLote && tipoCafeWatch) {
+      const nuevoCodigo = generarCodigoPreview(tipoCafeWatch, lotes);
+      form.setFieldValue("codigo", nuevoCodigo);
+    }
+  }, [tipoCafeWatch, isModalOpen, editingLote, lotes, form]);
+
+  function handleOpenCreateModal() {
+    const tipoInicial: TipoCafeUi = "comercial";
+    const codigoInicial = generarCodigoPreview(tipoInicial, lotes);
+
     setEditingLote(null);
     form.resetFields();
 
-    // Valores por defecto para crear un lote productivo.
     form.setFieldsValue({
-      tipoCodigo: "COMERCIAL",
+      tipoCafe: tipoInicial,
+      codigo: codigoInicial,
       estado: "EN_PROCESO",
       activo: true,
     });
 
     setIsModalOpen(true);
-  };
+  }
 
-  const handleOpenEditModal = (record: Lote) => {
+  function handleOpenEditModal(record: Lote) {
     setEditingLote(record);
 
-    // Carga valores existentes al formulario.
     form.setFieldsValue({
+      tipoCafe: mapTipoCodigoToTipoCafe(record.tipoCodigo),
       codigo: record.codigo,
       nombre: record.nombre || "",
-      tipoCodigo: record.tipoCodigo || "COMERCIAL",
       estado: record.estado || "EN_PROCESO",
       kilosIniciales: record.kilosIniciales ?? null,
       kilosActuales: record.kilosActuales ?? null,
-      saldoTemporal: record.saldoTemporal ?? null,
       observacion: record.observacion || "",
       activo: record.activo,
     });
 
     setIsModalOpen(true);
-  };
+  }
 
-  const handleGenerarCodigoPrincipal = async () => {
-    const tipoCodigo = form.getFieldValue("tipoCodigo") as TipoCodigoLote | undefined;
-
-    if (!tipoCodigo || tipoCodigo === "PERSONALIZADO") {
-      message.warning("Seleccione Comercial o Especial para generar un código automático");
-      return;
-    }
-
-    try {
-      const nuevoCodigo = await getSiguienteCodigoLoteApi(tipoCodigo);
-      form.setFieldValue("codigo", nuevoCodigo);
-      message.success(`Código generado: ${nuevoCodigo}`);
-    } catch (error) {
-      message.error("Error al generar código de lote");
-    }
-  };
-
-  const handleGenerarCorrelativo = async () => {
-    const codigoActual = form.getFieldValue("codigo");
-
-    if (!codigoActual) {
-      message.warning("Ingrese o genere un código base de lote. Ej: ESC-001");
-      return;
-    }
-
-    try {
-      const nuevoCorrelativo = await getSiguienteCorrelativoApi(codigoActual.trim());
-      form.setFieldValue("codigo", nuevoCorrelativo);
-      message.success(`Sublote generado: ${nuevoCorrelativo}`);
-    } catch (error) {
-      message.error("Error al generar sublote");
-    }
-  };
-
-  const handleDelete = async (id: number) => {
+  async function handleDelete(id: number) {
     try {
       await deleteLoteApi(id);
       message.success("Lote eliminado o desactivado correctamente");
@@ -237,30 +200,35 @@ export default function LotesPage() {
     } catch (error: any) {
       message.error(error?.response?.data?.message || "Error al eliminar lote");
     }
-  };
+  }
 
-  const handleSubmit = async () => {
+  async function handleSubmit() {
     try {
       const values = await form.validateFields();
       setSubmitting(true);
 
-      /**
-       * Si el usuario no ingresa kilos actuales,
-       * se asume que el lote sigue completo.
-       */
+      const tipoCodigo = mapTipoCafeToTipoCodigo(values.tipoCafe);
+
       const kilosActuales =
         values.kilosActuales !== undefined && values.kilosActuales !== null
           ? values.kilosActuales
           : values.kilosIniciales;
 
-      /**
-       * No enviamos saldoTemporal porque el saldo se calcula automáticamente:
-       * saldo = kilosIniciales - kilosActuales.
-       */
       const payload = {
-        ...values,
-        kilosActuales,
-        saldoTemporal: undefined,
+        codigo: values.codigo,
+        nombre: values.nombre?.trim() || null,
+        tipoCodigo,
+        estado: values.estado ?? "EN_PROCESO",
+        kilosIniciales:
+          values.kilosIniciales !== undefined && values.kilosIniciales !== null
+            ? Number(values.kilosIniciales)
+            : null,
+        kilosActuales:
+          kilosActuales !== undefined && kilosActuales !== null
+            ? Number(kilosActuales)
+            : null,
+        observacion: values.observacion?.trim() || null,
+        activo: values.activo ?? true,
       };
 
       if (editingLote) {
@@ -272,6 +240,7 @@ export default function LotesPage() {
       }
 
       setIsModalOpen(false);
+      setEditingLote(null);
       form.resetFields();
       fetchLotes();
     } catch (error: any) {
@@ -281,97 +250,67 @@ export default function LotesPage() {
     } finally {
       setSubmitting(false);
     }
-  };
+  }
 
-  const limpiarFiltros = () => {
+  function handleCloseModal() {
+    setIsModalOpen(false);
+    setEditingLote(null);
+    form.resetFields();
+  }
+
+  function handleLimpiarFiltros() {
     setSearchText("");
-    setFiltroTipoCodigo(null);
-    setFiltroEstado(null);
-    setFiltroKilosMin(null);
-    setFiltroKilosMax(null);
-    setOrdenCampo("codigo");
-    setOrdenDireccion("asc");
-  };
+    setFiltroFecha(null);
+    setFiltroTipoCafe(undefined);
+    setFiltroEstado(undefined);
+  }
 
   const filteredData = useMemo(() => {
-    const search = searchText.trim().toLowerCase();
+    return lotes.filter((lote) => {
+      if (searchText) {
+        const term = searchText.toLowerCase();
 
-    const filtrados = lotes.filter((lote) => {
-      const kilosActuales = Number(lote.kilosActuales ?? 0);
+        const matchesCodigo = lote.codigo.toLowerCase().includes(term);
+        const matchesNombre =
+          lote.nombre?.toLowerCase().includes(term) ?? false;
+        const matchesObservacion =
+          lote.observacion?.toLowerCase().includes(term) ?? false;
 
-      const cumpleBusqueda =
-        !search ||
-        lote.codigo.toLowerCase().includes(search) ||
-        (lote.nombre?.toLowerCase().includes(search) ?? false) ||
-        (lote.observacion?.toLowerCase().includes(search) ?? false) ||
-        lote.tipoCodigo.toLowerCase().includes(search) ||
-        lote.estado.toLowerCase().includes(search);
-
-      const cumpleTipoCodigo =
-        filtroTipoCodigo === null ? true : lote.tipoCodigo === filtroTipoCodigo;
-
-      const cumpleEstado =
-        filtroEstado === null ? true : lote.estado === filtroEstado;
-
-      const cumpleKilosMin =
-        filtroKilosMin === null ? true : kilosActuales >= filtroKilosMin;
-
-      const cumpleKilosMax =
-        filtroKilosMax === null ? true : kilosActuales <= filtroKilosMax;
-
-      return (
-        cumpleBusqueda &&
-        cumpleTipoCodigo &&
-        cumpleEstado &&
-        cumpleKilosMin &&
-        cumpleKilosMax
-      );
-    });
-
-    return [...filtrados].sort((a, b) => {
-      let valorA: string | number;
-      let valorB: string | number;
-
-      if (ordenCampo === "codigo") {
-        valorA = a.codigo.toLowerCase();
-        valorB = b.codigo.toLowerCase();
-      } else if (ordenCampo === "nombre") {
-        valorA = (a.nombre ?? "").toLowerCase();
-        valorB = (b.nombre ?? "").toLowerCase();
-      } else if (ordenCampo === "kilosActuales") {
-        valorA = Number(a.kilosActuales ?? 0);
-        valorB = Number(b.kilosActuales ?? 0);
-      } else {
-        valorA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
-        valorB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+        if (!matchesCodigo && !matchesNombre && !matchesObservacion) {
+          return false;
+        }
       }
 
-      if (typeof valorA === "string" && typeof valorB === "string") {
-        return ordenDireccion === "asc"
-          ? valorA.localeCompare(valorB)
-          : valorB.localeCompare(valorA);
+      if (filtroFecha && lote.createdAt) {
+        const fechaLote = dayjs(lote.createdAt);
+
+        if (
+          fechaLote.isBefore(filtroFecha[0], "day") ||
+          fechaLote.isAfter(filtroFecha[1], "day")
+        ) {
+          return false;
+        }
       }
 
-      return ordenDireccion === "asc"
-        ? Number(valorA) - Number(valorB)
-        : Number(valorB) - Number(valorA);
-    });
-  }, [
-    lotes,
-    searchText,
-    filtroTipoCodigo,
-    filtroEstado,
-    filtroKilosMin,
-    filtroKilosMax,
-    ordenCampo,
-    ordenDireccion,
-  ]);
+      if (filtroTipoCafe) {
+        const tipoLote = mapTipoCodigoToTipoCafe(lote.tipoCodigo);
+        if (tipoLote !== filtroTipoCafe) return false;
+      }
 
-  const columns = [
+      if (filtroEstado && lote.estado !== filtroEstado) {
+        return false;
+      }
+
+      return true;
+    });
+  }, [lotes, searchText, filtroFecha, filtroTipoCafe, filtroEstado]);
+
+  const columns: ColumnsType<Lote> = [
     {
       title: "Código",
       dataIndex: "codigo",
       key: "codigo",
+      width: 150,
       render: (text: string) => (
         <Tag
           icon={<BarcodeOutlined />}
@@ -381,24 +320,34 @@ export default function LotesPage() {
           {text}
         </Tag>
       ),
-      sorter: (a: Lote, b: Lote) => a.codigo.localeCompare(b.codigo),
+      sorter: (a, b) => a.codigo.localeCompare(b.codigo),
     },
     {
       title: "Nombre",
       dataIndex: "nombre",
       key: "nombre",
+      width: 220,
       render: (text: string | null) => text || "Sin nombre",
     },
     {
       title: "Tipo",
       dataIndex: "tipoCodigo",
       key: "tipoCodigo",
+      width: 150,
       render: (tipoCodigo: TipoCodigoLote) => (
         <Tag
           color={getTipoCodigoColor(tipoCodigo)}
-          icon={tipoCodigo === "ESPECIAL" ? <SafetyCertificateOutlined /> : undefined}
+          icon={
+            tipoCodigo === "ESPECIAL" ? (
+              <SafetyCertificateOutlined />
+            ) : undefined
+          }
         >
-          {tipoCodigo}
+          {tipoCodigo === "COMERCIAL"
+            ? "Comercial"
+            : tipoCodigo === "ESPECIAL"
+              ? "Especial"
+              : "Personalizado"}
         </Tag>
       ),
     },
@@ -406,40 +355,44 @@ export default function LotesPage() {
       title: "Kg iniciales",
       dataIndex: "kilosIniciales",
       key: "kilosIniciales",
-      align: "right" as const,
+      align: "right",
+      width: 140,
       render: (value: number | null) => formatKg(value),
+      sorter: (a, b) =>
+        Number(a.kilosIniciales ?? 0) - Number(b.kilosIniciales ?? 0),
     },
     {
       title: "Kg actuales",
       dataIndex: "kilosActuales",
       key: "kilosActuales",
-      align: "right" as const,
+      align: "right",
+      width: 140,
       render: (value: number | null) => formatKg(value),
-      sorter: (a: Lote, b: Lote) =>
+      sorter: (a, b) =>
         Number(a.kilosActuales ?? 0) - Number(b.kilosActuales ?? 0),
     },
     {
       title: "Saldo calculado",
       key: "saldoCalculado",
-      align: "right" as const,
+      align: "right",
+      width: 150,
       render: (_: unknown, record: Lote) => {
         const saldo = calcularSaldo(record.kilosIniciales, record.kilosActuales);
 
         return saldo !== null ? (
-          <Tag color={saldo > 0 ? "orange" : "green"}>
-            {formatKg(saldo)}
-          </Tag>
+          <Tag color={saldo > 0 ? "orange" : "green"}>{formatKg(saldo)}</Tag>
         ) : (
           "-"
         );
       },
     },
     {
-      title: "Etapa",
+      title: "Etapa / Estado",
       dataIndex: "estado",
       key: "estado",
-      render: (estado: string) => {
-        const colores: Record<string, string> = {
+      width: 170,
+      render: (estado: EstadoLote) => {
+        const colores: Record<EstadoLote, string> = {
           EN_PROCESO: "blue",
           EN_SECADO: "orange",
           EN_ALMACEN: "purple",
@@ -448,36 +401,38 @@ export default function LotesPage() {
           CERRADO: "default",
           INACTIVO: "error",
         };
-        return <Tag color={colores[estado] || "default"}>{estado ? estado.replace('_', ' ') : 'EN PROCESO'}</Tag>;
+
+        return (
+          <Tag color={colores[estado] || "default"}>
+            {formatEstadoEnum(estado || "EN_PROCESO")}
+          </Tag>
+        );
       },
-    },
-    {
-      title: "Estado",
-      dataIndex: "estado",
-      key: "estado",
-      render: (estado: EstadoLote) => (
-        <Tag color={getEstadoLoteColor(estado)}>
-          {getEstadoLoteLabel(estado)}
-        </Tag>
-      ),
     },
     {
       title: "Activo",
       dataIndex: "activo",
       key: "activo",
+      width: 110,
       render: (activo: boolean) =>
-        activo ? <Tag color="success">Activo</Tag> : <Tag color="default">Inactivo</Tag>,
+        activo ? (
+          <Tag color="success">Activo</Tag>
+        ) : (
+          <Tag color="default">Inactivo</Tag>
+        ),
     },
     {
       title: "Acciones",
       key: "acciones",
       width: 120,
+      fixed: "right",
       render: (_: unknown, record: Lote) => (
         <Space size="small">
           <Button
             type="text"
             icon={<EditOutlined style={{ color: token.colorPrimary }} />}
             onClick={() => handleOpenEditModal(record)}
+            title="Editar lote"
           />
 
           <Popconfirm
@@ -488,7 +443,12 @@ export default function LotesPage() {
             cancelText="Cancelar"
             okButtonProps={{ danger: true }}
           >
-            <Button type="text" danger icon={<DeleteOutlined />} />
+            <Button
+              type="text"
+              danger
+              icon={<DeleteOutlined />}
+              title="Eliminar"
+            />
           </Popconfirm>
         </Space>
       ),
@@ -496,7 +456,7 @@ export default function LotesPage() {
   ];
 
   return (
-    <Space orientation="vertical" size="large" style={{ width: "100%" }}>
+    <Space direction="vertical" size="large" style={{ width: "100%" }}>
       <div
         style={{
           display: "flex",
@@ -508,11 +468,11 @@ export default function LotesPage() {
       >
         <div>
           <Typography.Title level={2} style={{ margin: 0 }}>
-            Gestión de Lotes
+            Módulo de Lotes
           </Typography.Title>
 
           <Typography.Text type="secondary">
-            Administración de lotes productivos de café con códigos CONV, ESC o personalizados.
+            Administración de lotes productivos de café.
           </Typography.Text>
         </div>
 
@@ -533,97 +493,75 @@ export default function LotesPage() {
           boxShadow: "0 4px 20px rgba(0,0,0,0.06)",
         }}
       >
-        <Row gutter={[12, 12]} style={{ marginBottom: 16 }}>
-          <Col xs={24} sm={12} md={6}>
+        <Row gutter={[12, 12]} align="middle" style={{ marginBottom: 16 }}>
+          <Col xs={24} sm={12} md={7}>
             <Input
-              placeholder="Buscar por código, nombre, tipo, estado u observación..."
-              prefix={<SearchOutlined style={{ color: token.colorTextSecondary }} />}
+              placeholder="Buscar por código, nombre u observación..."
+              prefix={
+                <SearchOutlined style={{ color: token.colorTextSecondary }} />
+              }
               value={searchText}
-              onChange={(e) => setSearchText(e.target.value)}
+              onChange={(event) => setSearchText(event.target.value)}
               allowClear
-            />
-          </Col>
-
-          <Col xs={24} sm={12} md={5}>
-            <Select
-              allowClear
-              placeholder="Tipo de código"
-              value={filtroTipoCodigo}
-              onChange={(value) => setFiltroTipoCodigo(value ?? null)}
-              style={{ width: "100%" }}
-              options={tipoCodigoOptions}
-            />
-          </Col>
-
-          <Col xs={24} sm={12} md={5}>
-            <Select
-              allowClear
-              placeholder="Estado productivo"
-              value={filtroEstado}
-              onChange={(value) => setFiltroEstado(value ?? null)}
-              style={{ width: "100%" }}
-              options={estadoLoteOptions}
-            />
-          </Col>
-
-          <Col xs={24} sm={12} md={4}>
-            <InputNumber
-              min={0}
-              value={filtroKilosMin}
-              onChange={(value) => setFiltroKilosMin(value ?? null)}
-              placeholder="Kg mín."
-              addonAfter="kg"
-              style={{ width: "100%" }}
-            />
-          </Col>
-
-          <Col xs={24} sm={12} md={4}>
-            <InputNumber
-              min={0}
-              value={filtroKilosMax}
-              onChange={(value) => setFiltroKilosMax(value ?? null)}
-              placeholder="Kg máx."
-              addonAfter="kg"
               style={{ width: "100%" }}
             />
           </Col>
 
           <Col xs={24} sm={12} md={6}>
+            <DatePicker.RangePicker
+              value={filtroFecha}
+              onChange={(value) =>
+                setFiltroFecha(value as [Dayjs, Dayjs] | null)
+              }
+              format="DD/MM/YYYY"
+              placeholder={["Fecha inicio", "Fecha fin"]}
+              style={{ width: "100%" }}
+            />
+          </Col>
+
+          <Col xs={24} sm={12} md={4}>
             <Select
-              value={ordenCampo}
-              onChange={setOrdenCampo}
+              placeholder="Tipo"
+              value={filtroTipoCafe}
+              onChange={setFiltroTipoCafe}
+              allowClear
               style={{ width: "100%" }}
               options={[
-                { value: "codigo", label: "Ordenar por código" },
-                { value: "nombre", label: "Ordenar por nombre" },
-                { value: "kilosActuales", label: "Ordenar por kg actuales" },
-                { value: "createdAt", label: "Ordenar por creación" },
+                { value: "comercial", label: "Comercial" },
+                { value: "especial", label: "Especial" },
               ]}
             />
           </Col>
 
           <Col xs={24} sm={12} md={5}>
             <Select
-              value={ordenDireccion}
-              onChange={setOrdenDireccion}
+              placeholder="Etapa / Estado"
+              value={filtroEstado}
+              onChange={setFiltroEstado}
+              allowClear
               style={{ width: "100%" }}
               options={[
-                { value: "asc", label: "Ascendente" },
-                { value: "desc", label: "Descendente" },
+                { value: "EN_PROCESO", label: "En proceso" },
+                { value: "EN_SECADO", label: "En secado" },
+                { value: "EN_ALMACEN", label: "En almacén" },
+                { value: "TRILLADO", label: "Trillado" },
+                { value: "VENDIDO", label: "Vendido" },
+                { value: "CERRADO", label: "Cerrado" },
+                { value: "INACTIVO", label: "Inactivo" },
               ]}
             />
           </Col>
 
-          <Col xs={24} sm={12} md={4}>
-            <Button onClick={limpiarFiltros} block>
+          <Col xs={24} sm={12} md={2}>
+            <Button
+              icon={<ClearOutlined />}
+              onClick={handleLimpiarFiltros}
+              block
+            >
               Limpiar
             </Button>
           </Col>
         </Row>
-
-        <Typography.Text type="secondary" style={{ display: "block", marginBottom: 12 }}>
-          Mostrando {filteredData.length} de {lotes.length} lotes registrados.
-        </Typography.Text>
 
         <Table
           columns={columns}
@@ -631,169 +569,140 @@ export default function LotesPage() {
           rowKey="id"
           loading={loading}
           pagination={{ pageSize: 8, showSizeChanger: true }}
-          scroll={{ x: 1100 }}
+          scroll={{ x: "max-content" }}
         />
       </Card>
 
       <Modal
-        title={editingLote ? "Editar Lote" : "Nuevo Lote"}
+        title={editingLote ? "Editar Lote" : "Nuevo Registro de Lote"}
         open={isModalOpen}
         onOk={handleSubmit}
-        onCancel={() => setIsModalOpen(false)}
+        onCancel={handleCloseModal}
         confirmLoading={submitting}
         okText={editingLote ? "Guardar Cambios" : "Crear Lote"}
         cancelText="Cancelar"
-        destroyOnClose
         width={720}
+        destroyOnClose
       >
         <Form form={form} layout="vertical" style={{ marginTop: 16 }}>
           <Row gutter={16}>
             <Col xs={24} sm={12}>
               <Form.Item
-                name="tipoCodigo"
-                label="Tipo de código"
-                rules={[{ required: true, message: "Seleccione el tipo de código" }]}
+                name="tipoCafe"
+                label="Tipo de café / destino"
+                rules={[{ required: true, message: "Seleccione el tipo" }]}
               >
-                <Select
-                  options={tipoCodigoOptions}
-                  placeholder="Seleccione tipo de código"
-                />
+                <Radio.Group
+                  buttonStyle="solid"
+                  style={{ width: "100%" }}
+                  onChange={(event) => {
+                    const tipo = event.target.value as TipoCafeUi;
+                    const codigo = generarCodigoPreview(tipo, lotes);
+                    form.setFieldValue("codigo", codigo);
+                  }}
+                >
+                  <Radio.Button
+                    value="comercial"
+                    style={{ width: "50%", textAlign: "center" }}
+                  >
+                    Comercial
+                  </Radio.Button>
+
+                  <Radio.Button
+                    value="especial"
+                    style={{ width: "50%", textAlign: "center" }}
+                  >
+                    Especial
+                  </Radio.Button>
+                </Radio.Group>
               </Form.Item>
             </Col>
 
             <Col xs={24} sm={12}>
               <Form.Item
-                name="estado"
-                label="Estado productivo"
-                rules={[{ required: true, message: "Seleccione el estado del lote" }]}
-              >
-                <Select
-                  options={estadoLoteOptions}
-                  placeholder="Seleccione estado"
-                />
-              </Form.Item>
-            </Col>
-          </Row>
-
-          <Row gutter={16} align="middle">
-            <Col xs={24} sm={14}>
-              <Form.Item
                 name="codigo"
                 label="Código del lote"
+                tooltip="Autogenerado en base al tipo seleccionado, pero editable"
                 rules={[
-                  {
-                    required: tipoCodigoWatch === "PERSONALIZADO",
-                    message: "Ingrese el código personalizado del lote",
-                  },
+                  { required: true, message: "Ingrese el código del lote" },
                 ]}
               >
                 <Input
-                  prefix={<AppstoreOutlined />}
-                  placeholder={
-                    tipoCodigoWatch === "PERSONALIZADO"
-                      ? "Ej: GEISHA-ALTURA-001"
-                      : "Puede generarse automáticamente"
-                  }
+                  placeholder="Ej: ESC-001 o CONV-001"
+                  style={{ fontWeight: "bold" }}
                 />
               </Form.Item>
-            </Col>
-
-            <Col xs={12} sm={5}>
-              <Button
-                type="dashed"
-                onClick={handleGenerarCodigoPrincipal}
-                style={{ marginTop: 6, width: "100%" }}
-                disabled={tipoCodigoWatch === "PERSONALIZADO"}
-              >
-                Generar
-              </Button>
-            </Col>
-
-            <Col xs={12} sm={5}>
-              <Button
-                type="dashed"
-                icon={<BranchesOutlined />}
-                onClick={handleGenerarCorrelativo}
-                style={{ marginTop: 6, width: "100%" }}
-                title="Generar sublote o saldo"
-              >
-                Sublote
-              </Button>
             </Col>
           </Row>
 
-          <Form.Item name="nombre" label="Nombre del lote">
-            <Input placeholder="Ej: Geisha Finca Alta / Café comercial julio" />
+          <Form.Item
+            name="nombre"
+            label="Nombre del lote"
+            rules={[
+              { required: true, message: "Ingrese un nombre identificador" },
+            ]}
+          >
+            <Input placeholder="Ej: Café comercial julio / Geisha Finca Alta" />
           </Form.Item>
 
           <Row gutter={16}>
-            <Col xs={24} sm={8}>
-              <Form.Item name="kilosIniciales" label="Kg iniciales">
+            <Col xs={24} sm={12}>
+              <Form.Item
+                name="kilosIniciales"
+                label="Kg iniciales"
+                rules={[
+                  { required: true, message: "Ingrese los kilos iniciales" },
+                ]}
+              >
                 <InputNumber
                   style={{ width: "100%" }}
                   min={0}
+                  precision={2}
                   addonAfter="kg"
-                  placeholder="Ej: 300"
+                  placeholder="Ej: 250"
                 />
               </Form.Item>
             </Col>
 
-            <Col xs={24} sm={8}>
+            <Col xs={24} sm={12}>
               <Form.Item name="kilosActuales" label="Kg actuales">
                 <InputNumber
                   style={{ width: "100%" }}
                   min={0}
+                  precision={2}
                   addonAfter="kg"
-                  placeholder="Si queda vacío, usa kg iniciales"
+                  placeholder="Si lo deja vacío, se usará el inicial"
                 />
               </Form.Item>
             </Col>
           </Row>
 
-          <Form.Item shouldUpdate>
-            {() => {
-              const kilosIniciales = form.getFieldValue("kilosIniciales");
-              const kilosActuales = form.getFieldValue("kilosActuales");
-
-              const saldo = calcularSaldo(kilosIniciales, kilosActuales);
-
-              return (
-                <Card
-                  size="small"
-                  style={{
-                    borderRadius: 12,
-                    marginBottom: 16,
-                  }}
-                >
-                  <Space direction="vertical" size={2}>
-                    <Typography.Text type="secondary">
-                      Saldo calculado
-                    </Typography.Text>
-
-                    <Typography.Title level={4} style={{ margin: 0 }}>
-                      {saldo !== null ? `${saldo.toLocaleString("es-CL")} kg` : "-"}
-                    </Typography.Title>
-
-                  </Space>
-                </Card>
-              );
-            }}
+          <Form.Item name="estado" label="Etapa / Estado">
+            <Select
+              options={[
+                { value: "EN_PROCESO", label: "En proceso" },
+                { value: "EN_SECADO", label: "En secado" },
+                { value: "EN_ALMACEN", label: "En almacén" },
+                { value: "TRILLADO", label: "Trillado" },
+                { value: "VENDIDO", label: "Vendido" },
+                { value: "CERRADO", label: "Cerrado" },
+                { value: "INACTIVO", label: "Inactivo" },
+              ]}
+            />
           </Form.Item>
 
           <Form.Item name="observacion" label="Observaciones">
             <Input.TextArea
-              placeholder="Notas del lote, origen, saldo, proceso o clasificación"
               rows={3}
+              placeholder="Ej: Lote para proceso húmedo, variedad, notas internas, etc."
             />
           </Form.Item>
 
-          <Form.Item name="activo" label="Estado administrativo">
-            <Select
-              options={[
-                { value: true, label: "Activo" },
-                { value: false, label: "Inactivo" },
-              ]}
-            />
+          <Form.Item name="activo" label="Estado del lote">
+            <Radio.Group>
+              <Radio value={true}>Activo / En producción</Radio>
+              <Radio value={false}>Inactivo</Radio>
+            </Radio.Group>
           </Form.Item>
         </Form>
       </Modal>

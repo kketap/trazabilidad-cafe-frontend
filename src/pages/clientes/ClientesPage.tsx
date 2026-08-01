@@ -301,7 +301,7 @@ export default function ClientesPage() {
           rowKey="id"
           loading={loading}
           pagination={{ pageSize: 8, showSizeChanger: true }}
-          scroll={{ x: 950 }}
+          scroll={{ x: "max-content" }}
         />
       </Card>
 

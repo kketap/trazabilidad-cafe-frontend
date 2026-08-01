@@ -231,11 +231,20 @@ export async function getHomeResumen(): Promise<HomeResumen> {
         trazabilidadMesResponse,
         cosechasReporteResponse,
     ] = await Promise.all([
-        apiClient.get("/cosechas/resumen"),
-        apiClient.get("/trazabilidad/resumen"),
-        apiClient.get("/cosechas/resumen?periodo=mes-actual"),
-        apiClient.get(
+        apiClient.get<ApiResponse<CosechasResumenResponse> | CosechasResumenResponse>(
+            "/cosechas/resumen",
+        ),
+        apiClient.get<ApiResponse<TrazabilidadResumenResponse> | TrazabilidadResumenResponse>(
+            "/trazabilidad/resumen",
+        ),
+        apiClient.get<ApiResponse<CosechasResumenResponse> | CosechasResumenResponse>(
+            "/cosechas/resumen?periodo=mes-actual",
+        ),
+        apiClient.get<ApiResponse<TrazabilidadResumenResponse> | TrazabilidadResumenResponse>(
             "/trazabilidad/resumen?periodo=mes-actual",
+        ),
+        apiClient.get<ApiResponse<CosechasReporteResponse> | CosechasReporteResponse>(
+            "/cosechas/reporte",
         ),
     ]);
 

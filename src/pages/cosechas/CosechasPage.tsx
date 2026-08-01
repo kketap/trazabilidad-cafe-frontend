@@ -1,10 +1,11 @@
 // src/pages/cosechas/CosechasPage.tsx
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   Button,
   Card,
   Col,
   DatePicker,
+  Descriptions,
   Form,
   Input,
   InputNumber,
@@ -19,184 +20,229 @@ import {
   message,
   theme,
 } from "antd";
+import type { ColumnsType } from "antd/es/table";
 import {
+  AppstoreOutlined,
+  ClearOutlined,
   DeleteOutlined,
   EditOutlined,
+  EyeOutlined,
   PlusOutlined,
   SearchOutlined,
   UserOutlined,
-  EyeOutlined,
-  AppstoreOutlined
 } from "@ant-design/icons";
-import dayjs from "dayjs";
-import type { Dayjs } from "dayjs";
-
-import isSameOrAfter from "dayjs/plugin/isSameOrAfter";
-import isSameOrBefore from "dayjs/plugin/isSameOrBefore";
-dayjs.extend(isSameOrAfter);
-dayjs.extend(isSameOrBefore);
+import dayjs, { type Dayjs } from "dayjs";
 
 import type { Cosecha } from "./cosechas.api";
 import {
-  getCosechasApi,
   createCosechaApi,
-  updateCosechaApi,
   deleteCosechaApi,
+  getCosechasApi,
+  updateCosechaApi,
 } from "./cosechas.api";
-import type { Trabajador } from "../trabajadores/trabajadores.api";
-import { getTrabajadoresApi } from "../trabajadores/trabajadores.api";
+
+import type { Trabajador } from "../../pages/trabajadores/trabajadores.api";
+import { getTrabajadoresApi } from "../../pages/trabajadores/trabajadores.api";
 
 import type { Lote } from "../lotes/lotes.api";
 import { getLotesApi } from "../lotes/lotes.api";
 
-type SortField = "fecha" | "kilosCosechados" | "totalHectareas";
-type SortOrder = "asc" | "desc";
+import { formatEstadoEnum } from "../../utils/enumFormatters";
+
+type CosechaTrabajadorRelacion = {
+  id: number;
+  cosechaId: number;
+  trabajadorId: number;
+  kilosAsignados?: number | null;
+  trabajador: {
+    id: number;
+    nombres: string;
+    apellidos?: string | null;
+    dni: string;
+  };
+};
+
+type CosechaLoteRelacion = {
+  id: number;
+  cosechaId: number;
+  loteId: number;
+  lote: {
+    id: number;
+    codigo: string;
+    nombre?: string | null;
+  };
+};
+
+type CosechaRow = Cosecha & {
+  observacion?: string | null;
+  observaciones?: string | null;
+  varietal?: string[] | string | null;
+
+  tipoCosecha?: string | null;
+  tipo_cosecha?: string | null;
+
+  trabajadorId?: number | null;
+  trabajador?: {
+    id: number;
+    nombres: string;
+    apellidos?: string | null;
+    dni?: string | null;
+  } | null;
+
+  cosechaTrabajadores?: CosechaTrabajadorRelacion[];
+  cosechaLotes?: CosechaLoteRelacion[];
+};
+
+function getTipoCosechaColor(tipo?: string | null) {
+  switch (tipo?.toLowerCase()) {
+    case "selectiva":
+      return "gold";
+    case "rebusca":
+      return "purple";
+    case "plena":
+    default:
+      return "green";
+  }
+}
+
+function getTipoCosecha(cosecha: CosechaRow) {
+  return cosecha.tipoCosecha || cosecha.tipo_cosecha || "plena";
+}
+
+function formatKg(value?: number | null) {
+  return `${Number(value ?? 0).toLocaleString("es-CL")} kg`;
+}
 
 export default function CosechasPage() {
   const { token } = theme.useToken();
-  const [cosechas, setCosechas] = useState<Cosecha[]>([]);
+
+  const [cosechas, setCosechas] = useState<CosechaRow[]>([]);
   const [trabajadores, setTrabajadores] = useState<Trabajador[]>([]);
-  const [lotes, setLotes] = useState<Lote[]>([]);
+  const [lotesList, setLotesList] = useState<Lote[]>([]);
   const [loading, setLoading] = useState(false);
+
   const [searchText, setSearchText] = useState("");
+  const [filtroFecha, setFiltroFecha] = useState<[Dayjs, Dayjs] | null>(null);
+  const [filtroTrabajador, setFiltroTrabajador] = useState<number | undefined>(
+    undefined,
+  );
+  const [filtroTipo, setFiltroTipo] = useState<string | undefined>(undefined);
 
-  const [filtroRangoFechas, setFiltroRangoFechas] =
-    useState<[Dayjs, Dayjs] | null>(() => [
-      dayjs().startOf("month"),
-      dayjs().endOf("month"),
-    ]);
-  const [filtroTipoCosecha, setFiltroTipoCosecha] = useState<string | null>(null);
-  const [filtroTrabajadorId, setFiltroTrabajadorId] = useState<number | null>(null);
-  const [filtroEstadoAsignacion, setFiltroEstadoAsignacion] = useState<string | null>(null);
-
-  const [ordenCampo, setOrdenCampo] = useState<SortField>("fecha");
-  const [ordenDireccion, setOrdenDireccion] = useState<SortOrder>("desc");
-
-  const rangosPredefinidos = [
-    {
-      label: "Hoy",
-      value: [dayjs().startOf("day"), dayjs().endOf("day")] as [Dayjs, Dayjs],
-    },
-    {
-      label: "Ayer",
-      value: [
-        dayjs().subtract(1, "day").startOf("day"),
-        dayjs().subtract(1, "day").endOf("day"),
-      ] as [Dayjs, Dayjs],
-    },
-    {
-      label: "Últimos 3 días",
-      value: [
-        dayjs().subtract(2, "day").startOf("day"),
-        dayjs().endOf("day"),
-      ] as [Dayjs, Dayjs],
-    },
-    {
-      label: "Últimos 7 días",
-      value: [
-        dayjs().subtract(6, "day").startOf("day"),
-        dayjs().endOf("day"),
-      ] as [Dayjs, Dayjs],
-    },
-    {
-      label: "Este mes",
-      value: [
-        dayjs().startOf("month"),
-        dayjs().endOf("month"),
-      ] as [Dayjs, Dayjs],
-    },
-    {
-      label: "Mes anterior",
-      value: [
-        dayjs().subtract(1, "month").startOf("month"),
-        dayjs().subtract(1, "month").endOf("month"),
-      ] as [Dayjs, Dayjs],
-    },
-  ];
-
-  // Estado Modal CRUD
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [editingCosecha, setEditingCosecha] = useState<Cosecha | null>(null);
-  const [selectedCosecha, setSelectedCosecha] = useState<Cosecha | null>(null);
-  const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
+  const [editingCosecha, setEditingCosecha] = useState<CosechaRow | null>(null);
   const [submitting, setSubmitting] = useState(false);
+
+  const [viewingCosecha, setViewingCosecha] = useState<CosechaRow | null>(null);
+  const [isViewModalOpen, setIsViewModalOpen] = useState(false);
+
   const [form] = Form.useForm();
 
-  const fetchCosechas = async () => {
+  async function fetchCosechas() {
     setLoading(true);
+
     try {
       const data = await getCosechasApi();
-      setCosechas(data);
+      setCosechas(data as CosechaRow[]);
     } catch (error: any) {
-      message.error(error?.response?.data?.message || "Error al cargar la lista de cosechas");
+      message.error(
+        error?.response?.data?.message ||
+        "Error al cargar la lista de cosechas",
+      );
     } finally {
       setLoading(false);
     }
-  };
+  }
 
-  const fetchTrabajadores = async () => {
+  async function fetchTrabajadoresYLotes() {
     try {
-      const data = await getTrabajadoresApi();
-      setTrabajadores(data);
-    } catch (error) {
-      console.error("Error al cargar trabajadores:", error);
-    }
-  };
+      const [trabData, lotesData] = await Promise.all([
+        getTrabajadoresApi(),
+        getLotesApi(),
+      ]);
 
-  const fetchLotes = async () => {
-    try {
-      const data = await getLotesApi();
-      setLotes(data);
+      setTrabajadores(trabData);
+      setLotesList(lotesData);
     } catch (error) {
-      console.error("Error al cargar lotes:", error);
+      console.error("Error al cargar trabajadores/lotes:", error);
+      message.error("No se pudieron cargar trabajadores o lotes.");
     }
-  };
+  }
 
   useEffect(() => {
     fetchCosechas();
-    fetchTrabajadores();
-    fetchLotes();
+    fetchTrabajadoresYLotes();
   }, []);
 
-  const handleOpenCreateModal = () => {
+  function handleOpenCreateModal() {
     setEditingCosecha(null);
     form.resetFields();
+
     form.setFieldsValue({
       fecha: dayjs(),
-      tipo_cosecha: "plena",
-      totalHectareas: 1.0,
+      tipoCosecha: "plena",
+      totalHectareas: 1,
+      trabajadorIds: [],
+      loteIds: [],
     });
+
     setIsModalOpen(true);
-  };
+  }
 
-  const handleView = (record: Cosecha) => {
-    setSelectedCosecha(record);
-    setIsDetailModalOpen(true);
-  };
-
-  const handleCloseDetailModal = () => {
-    setSelectedCosecha(null);
-    setIsDetailModalOpen(false);
-  };
-
-  const handleOpenEditModal = (record: Cosecha) => {
+  function handleOpenEditModal(record: CosechaRow) {
     setEditingCosecha(record);
+
+    const loteIdsRelacion = record.cosechaLotes?.map((item) => item.loteId) ?? [];
+
+    const loteIdsFallback =
+      loteIdsRelacion.length > 0
+        ? loteIdsRelacion
+        : lotesList
+          .filter((lote) =>
+            record.lotes
+              ?.split(",")
+              .map((item) => item.trim())
+              .includes(lote.codigo),
+          )
+          .map((lote) => lote.id);
+
+    const trabajadorIdsRelacion =
+      record.cosechaTrabajadores?.map((item) => item.trabajadorId) ?? [];
+
+    const trabajadorIdsFallback =
+      trabajadorIdsRelacion.length > 0
+        ? trabajadorIdsRelacion
+        : record.trabajadorId
+          ? [record.trabajadorId]
+          : record.trabajador?.id
+            ? [record.trabajador.id]
+            : [];
+
     form.setFieldsValue({
       fecha: dayjs(record.fecha),
       kilosCosechados: record.kilosCosechados,
       totalHectareas: record.totalHectareas,
-      lotes: record.lotes,
-      trabajadorId: record.trabajadorId || record.trabajador?.id,
-      tipo_cosecha: record.tipo_cosecha || record.tipoCosecha || "plena",
-      kilos_diarios: record.kilos_diarios,
-      kilos_quincena: record.kilos_quincena,
-      kilos_mensuales: record.kilos_mensuales,
+      loteIds: loteIdsFallback,
+      trabajadorIds: trabajadorIdsFallback,
+      observacion: record.observacion || record.observaciones || "",
+      tipoCosecha: getTipoCosecha(record),
       varietal: record.varietal,
     });
-    setIsModalOpen(true);
-  };
 
-  const handleDelete = async (id: number) => {
+    setIsModalOpen(true);
+  }
+
+  function handleOpenViewModal(record: CosechaRow) {
+    setViewingCosecha(record);
+    setIsViewModalOpen(true);
+  }
+
+  function handleCloseModal() {
+    setIsModalOpen(false);
+    setEditingCosecha(null);
+    form.resetFields();
+  }
+
+  async function handleDelete(id: number) {
     try {
       await deleteCosechaApi(id);
       message.success("Cosecha eliminada correctamente");
@@ -204,45 +250,53 @@ export default function CosechasPage() {
     } catch (error: any) {
       message.error(error?.response?.data?.message || "Error al eliminar cosecha");
     }
-  };
+  }
 
-  const handleSubmit = async () => {
+  async function handleSubmit() {
     try {
       const values = await form.validateFields();
       setSubmitting(true);
 
-      const trabajadorIds: number[] = values.trabajadorIds ?? [];
+      const trabajadorIds: number[] = Array.isArray(values.trabajadorIds)
+        ? values.trabajadorIds
+        : [];
 
-      const loteIds: number[] = values.loteIds ?? [];
+      const loteIds: number[] = Array.isArray(values.loteIds)
+        ? values.loteIds
+        : [];
 
-      const lotesSeleccionadosTexto = lotes
+      const lotesSeleccionadosTexto = lotesList
         .filter((lote) => loteIds.includes(lote.id))
         .map((lote) => lote.codigo)
         .join(", ");
 
       const payload = {
         fecha: values.fecha.format("YYYY-MM-DD"),
-        kilosCosechados: values.kilosCosechados,
+        kilosCosechados: Number(values.kilosCosechados),
         cantidadCosechadores: trabajadorIds.length,
-        loteIds,
-        lotes: values.lotes || lotesSeleccionadosTexto,
-        totalHectareas: values.totalHectareas,
+        totalHectareas: Number(values.totalHectareas),
         tipoCosecha: values.tipoCosecha,
+        lotes: lotesSeleccionadosTexto,
+
+        loteIds,
+
         trabajadores: trabajadorIds.map((trabajadorId) => ({
           trabajadorId,
         })),
+
+        observacion: values.observacion?.trim() || null,
+        varietal: values.varietal ?? null,
       };
 
       if (editingCosecha) {
-        await updateCosechaApi(editingCosecha.id, payload);
+        await updateCosechaApi(editingCosecha.id, payload as any);
         message.success("Cosecha actualizada con éxito");
       } else {
-        await createCosechaApi(payload);
+        await createCosechaApi(payload as any);
         message.success("Cosecha registrada con éxito");
       }
 
-      setIsModalOpen(false);
-      form.resetFields();
+      handleCloseModal();
       fetchCosechas();
     } catch (error: any) {
       if (error?.response?.data?.message) {
@@ -251,125 +305,109 @@ export default function CosechasPage() {
     } finally {
       setSubmitting(false);
     }
-  };
+  }
 
-  const limpiarFiltros = () => {
+  function handleLimpiarFiltros() {
     setSearchText("");
-    setFiltroRangoFechas(null);
-    setFiltroTipoCosecha(null);
-    setFiltroTrabajadorId(null);
-    setFiltroEstadoAsignacion(null);
-    setOrdenCampo("fecha");
-    setOrdenDireccion("desc");
-  };
+    setFiltroFecha(null);
+    setFiltroTrabajador(undefined);
+    setFiltroTipo(undefined);
+  }
 
   const filteredData = useMemo(() => {
-    const search = searchText.trim().toLowerCase();
+    return cosechas.filter((cosecha) => {
+      if (searchText) {
+        const term = searchText.toLowerCase();
+        const codigo = `COS-${String(cosecha.id).padStart(3, "0")}`.toLowerCase();
 
-    const filtradas = cosechas.filter((cosecha) => {
-      const fecha = dayjs(cosecha.fecha);
+        const matchesCodigo = codigo.includes(term);
 
-      const trabajadoresCosecha = cosecha.cosechaTrabajadores ?? [];
+        const matchesLotes =
+          cosecha.lotes?.toLowerCase().includes(term) ||
+          cosecha.cosechaLotes?.some((item) =>
+            item.lote.codigo.toLowerCase().includes(term),
+          );
 
-      const trabajadoresTexto = trabajadoresCosecha
-        .map((item) =>
-          `${item.trabajador.nombres} ${item.trabajador.apellidos ?? ""} ${item.trabajador.dni}`,
-        )
-        .join(" ")
-        .toLowerCase();
+        const matchesTrabajador =
+          cosecha.trabajador?.nombres?.toLowerCase().includes(term) ||
+          cosecha.cosechaTrabajadores?.some((item) =>
+            `${item.trabajador.nombres} ${item.trabajador.apellidos ?? ""}`
+              .toLowerCase()
+              .includes(term),
+          );
 
-      const cumpleBusqueda =
-        !search ||
-        cosecha.lotes?.toLowerCase().includes(search) ||
-        cosecha.tipoCosecha?.toLowerCase().includes(search) ||
-        trabajadoresTexto.includes(search);
+        const matchesTipo = getTipoCosecha(cosecha).toLowerCase().includes(term);
 
-      const cumpleRangoFechas = filtroRangoFechas
-        ? fecha.isSameOrAfter(filtroRangoFechas[0], "day") &&
-        fecha.isSameOrBefore(filtroRangoFechas[1], "day")
-        : true;
-
-      const cumpleTipo = filtroTipoCosecha
-        ? cosecha.tipoCosecha === filtroTipoCosecha
-        : true;
-
-      const cumpleTrabajador = filtroTrabajadorId
-        ? trabajadoresCosecha.some(
-          (item) => item.trabajadorId === filtroTrabajadorId,
-        )
-        : true;
-
-      const cumpleEstadoAsignacion =
-        filtroEstadoAsignacion === "CON_TRABAJADORES"
-          ? trabajadoresCosecha.length > 0
-          : filtroEstadoAsignacion === "SIN_TRABAJADORES"
-            ? trabajadoresCosecha.length === 0
-            : true;
-
-      return (
-        cumpleBusqueda &&
-        cumpleRangoFechas &&
-        cumpleTipo &&
-        cumpleTrabajador &&
-        cumpleEstadoAsignacion
-      );
-    });
-
-    return [...filtradas].sort((a, b) => {
-      let valorA: number;
-      let valorB: number;
-
-      if (ordenCampo === "fecha") {
-        valorA = dayjs(a.fecha).valueOf();
-        valorB = dayjs(b.fecha).valueOf();
-      } else {
-        valorA = Number(a[ordenCampo] ?? 0);
-        valorB = Number(b[ordenCampo] ?? 0);
+        if (!matchesCodigo && !matchesLotes && !matchesTrabajador && !matchesTipo) {
+          return false;
+        }
       }
 
-      return ordenDireccion === "asc" ? valorA - valorB : valorB - valorA;
+      if (filtroFecha) {
+        const fechaCosecha = dayjs(cosecha.fecha);
+
+        if (
+          fechaCosecha.isBefore(filtroFecha[0], "day") ||
+          fechaCosecha.isAfter(filtroFecha[1], "day")
+        ) {
+          return false;
+        }
+      }
+
+      if (filtroTrabajador !== undefined) {
+        const tieneTrabajadorRelacion = cosecha.cosechaTrabajadores?.some(
+          (item) => item.trabajadorId === filtroTrabajador,
+        );
+
+        const tieneTrabajadorLegacy =
+          cosecha.trabajadorId === filtroTrabajador ||
+          cosecha.trabajador?.id === filtroTrabajador;
+
+        if (!tieneTrabajadorRelacion && !tieneTrabajadorLegacy) {
+          return false;
+        }
+      }
+
+      if (filtroTipo) {
+        const tipo = getTipoCosecha(cosecha);
+        if (tipo.toLowerCase() !== filtroTipo.toLowerCase()) {
+          return false;
+        }
+      }
+
+      return true;
     });
-  }, [
-    cosechas,
-    searchText,
-    filtroRangoFechas,
-    filtroTipoCosecha,
-    filtroTrabajadorId,
-    filtroEstadoAsignacion,
-    ordenCampo,
-    ordenDireccion,
-  ]);
+  }, [cosechas, searchText, filtroFecha, filtroTrabajador, filtroTipo]);
 
-  const getTipoCosechaColor = (tipo?: string | null) => {
-    switch (tipo?.toLowerCase()) {
-      case "selectiva":
-        return "gold";
-      case "rebusca":
-        return "purple";
-      case "plena":
-      default:
-        return "green";
-    }
-  };
-
-  const columns = [
+  const columns: ColumnsType<CosechaRow> = [
     {
-      title: "ID",
+      title: "Código Cosecha",
       dataIndex: "id",
-      key: "id",
-      width: 60,
+      key: "codigo",
+      width: 150,
+      render: (id: number) => (
+        <Tag
+          color="blue"
+          style={{ fontSize: 13, fontWeight: "bold", padding: "2px 8px" }}
+        >
+          COS-{String(id).padStart(3, "0")}
+        </Tag>
+      ),
+      sorter: (a, b) => a.id - b.id,
     },
     {
       title: "Fecha",
       dataIndex: "fecha",
       key: "fecha",
+      width: 130,
       render: (text: string) => dayjs(text).format("DD/MM/YYYY"),
-      sorter: (a: Cosecha, b: Cosecha) => dayjs(a.fecha).unix() - dayjs(b.fecha).unix(),
+      sorter: (a, b) => dayjs(a.fecha).unix() - dayjs(b.fecha).unix(),
     },
     {
       title: "Lotes",
       key: "lotes",
-      render: (_: any, record: Cosecha) => {
+      width: 220,
+      render: (_: unknown, record) => {
         const lotesCosecha = record.cosechaLotes ?? [];
 
         if (lotesCosecha.length === 0) {
@@ -390,69 +428,90 @@ export default function CosechasPage() {
     {
       title: "Trabajadores",
       key: "trabajadores",
-      render: (_: any, record: Cosecha) => {
+      width: 260,
+      render: (_: unknown, record) => {
         const trabajadoresCosecha = record.cosechaTrabajadores ?? [];
 
-        if (trabajadoresCosecha.length === 0) {
-          return <Typography.Text type="secondary">Sin asignar</Typography.Text>;
+        if (trabajadoresCosecha.length > 0) {
+          return (
+            <Space wrap>
+              {trabajadoresCosecha.map((item) => (
+                <Tag key={item.id} icon={<UserOutlined />} color="blue">
+                  {item.trabajador.nombres}
+                  {item.trabajador.apellidos
+                    ? ` ${item.trabajador.apellidos}`
+                    : ""}
+                </Tag>
+              ))}
+            </Space>
+          );
         }
 
-        return (
-          <Space wrap>
-            {trabajadoresCosecha.slice(0, 3).map((item) => (
-              <Tag key={item.id} icon={<UserOutlined />} color="green">
-                {item.trabajador.nombres}
-                {item.trabajador.apellidos ? ` ${item.trabajador.apellidos}` : ""}
-              </Tag>
-            ))}
+        if (record.trabajador?.nombres) {
+          return (
+            <Tag icon={<UserOutlined />} color="blue">
+              {record.trabajador.nombres}
+              {record.trabajador.apellidos ? ` ${record.trabajador.apellidos}` : ""}
+            </Tag>
+          );
+        }
 
-            {trabajadoresCosecha.length > 3 && (
-              <Tag>+{trabajadoresCosecha.length - 3}</Tag>
-            )}
-          </Space>
-        );
+        return <Typography.Text type="secondary">Sin asignar</Typography.Text>;
       },
     },
     {
       title: "Tipo Cosecha",
-      dataIndex: "tipoCosecha",
       key: "tipoCosecha",
-      render: (text: string) => (
-        <Tag color={getTipoCosechaColor(text)}>
-          {(text || "plena").toUpperCase()}
-        </Tag>
-      ),
+      width: 150,
+      render: (_: unknown, record) => {
+        const tipo = getTipoCosecha(record);
+
+        return (
+          <Tag color={getTipoCosechaColor(tipo)}>
+            {formatEstadoEnum(tipo)}
+          </Tag>
+        );
+      },
     },
     {
       title: "Kilos Cosechados",
       dataIndex: "kilosCosechados",
       key: "kilosCosechados",
-      render: (val: number) => `${val.toLocaleString()} kg`,
-      sorter: (a: Cosecha, b: Cosecha) => a.kilosCosechados - b.kilosCosechados,
+      width: 160,
+      align: "right",
+      render: (value: number) => formatKg(value),
+      sorter: (a, b) => a.kilosCosechados - b.kilosCosechados,
     },
     {
       title: "Hectáreas",
       dataIndex: "totalHectareas",
       key: "totalHectareas",
-      render: (val: number) => `${val} ha`,
+      width: 120,
+      align: "right",
+      render: (value: number) => `${Number(value ?? 0).toLocaleString("es-CL")} ha`,
+      sorter: (a, b) => a.totalHectareas - b.totalHectareas,
     },
     {
       title: "Acciones",
       key: "acciones",
-      width: 120,
-      render: (_: any, record: Cosecha) => (
+      width: 140,
+      fixed: "right",
+      render: (_: unknown, record) => (
         <Space size="small">
           <Button
             type="text"
-            icon={<EyeOutlined />}
-            onClick={() => handleView(record)}
+            icon={<EyeOutlined style={{ color: token.colorInfo }} />}
+            onClick={() => handleOpenViewModal(record)}
+            title="Visualizar detalle"
           />
 
           <Button
             type="text"
             icon={<EditOutlined style={{ color: token.colorPrimary }} />}
             onClick={() => handleOpenEditModal(record)}
+            title="Editar cosecha"
           />
+
           <Popconfirm
             title="Eliminar cosecha"
             description="¿Deseas eliminar este registro de cosecha?"
@@ -461,7 +520,12 @@ export default function CosechasPage() {
             cancelText="Cancelar"
             okButtonProps={{ danger: true }}
           >
-            <Button type="text" danger icon={<DeleteOutlined />} />
+            <Button
+              type="text"
+              danger
+              icon={<DeleteOutlined />}
+              title="Eliminar"
+            />
           </Popconfirm>
         </Space>
       ),
@@ -469,7 +533,7 @@ export default function CosechasPage() {
   ];
 
   return (
-    <Space orientation="vertical" size="large" style={{ width: "100%" }}>
+    <Space direction="vertical" size="large" style={{ width: "100%" }}>
       <div
         style={{
           display: "flex",
@@ -483,10 +547,12 @@ export default function CosechasPage() {
           <Typography.Title level={2} style={{ margin: 0 }}>
             Gestión de Cosechas
           </Typography.Title>
+
           <Typography.Text type="secondary">
-            Registro diario de recolección de café, rendimiento y asignación de trabajadores.
+            Registro diario de recolección de café y asignación de trabajadores.
           </Typography.Text>
         </div>
+
         <Button
           type="primary"
           icon={<PlusOutlined />}
@@ -504,37 +570,55 @@ export default function CosechasPage() {
           boxShadow: "0 4px 20px rgba(0,0,0,0.06)",
         }}
       >
-        <Row gutter={[12, 12]} style={{ marginBottom: 16 }}>
+        <Row gutter={[12, 12]} align="middle" style={{ marginBottom: 16 }}>
           <Col xs={24} sm={12} md={6}>
             <Input
-              placeholder="Buscar por lote, trabajador o tipo..."
-              prefix={<SearchOutlined style={{ color: token.colorTextSecondary }} />}
+              placeholder="Buscar por código, lote o trabajador..."
+              prefix={
+                <SearchOutlined style={{ color: token.colorTextSecondary }} />
+              }
               value={searchText}
-              onChange={(e) => setSearchText(e.target.value)}
+              onChange={(event) => setSearchText(event.target.value)}
               allowClear
+              style={{ width: "100%" }}
             />
           </Col>
 
-          <Col xs={24} sm={12} md={8}>
+          <Col xs={24} sm={12} md={6}>
             <DatePicker.RangePicker
-              value={filtroRangoFechas}
-              onChange={(value) => {
-                setFiltroRangoFechas(value as [Dayjs, Dayjs] | null);
-              }}
-              presets={rangosPredefinidos}
+              value={filtroFecha}
+              onChange={(value) =>
+                setFiltroFecha(value as [Dayjs, Dayjs] | null)
+              }
               format="DD/MM/YYYY"
               placeholder={["Fecha inicio", "Fecha fin"]}
-              allowClear
               style={{ width: "100%" }}
             />
           </Col>
 
           <Col xs={24} sm={12} md={5}>
             <Select
+              placeholder="Filtrar por trabajador"
+              value={filtroTrabajador}
+              onChange={setFiltroTrabajador}
               allowClear
-              placeholder="Tipo de cosecha"
-              value={filtroTipoCosecha}
-              onChange={(value) => setFiltroTipoCosecha(value ?? null)}
+              showSearch
+              optionFilterProp="label"
+              style={{ width: "100%" }}
+              options={trabajadores.map((trabajador) => ({
+                value: trabajador.id,
+                label: `${trabajador.nombres}${trabajador.apellidos ? ` ${trabajador.apellidos}` : ""
+                  } (${trabajador.dni})`,
+              }))}
+            />
+          </Col>
+
+          <Col xs={24} sm={12} md={4}>
+            <Select
+              placeholder="Tipo Cosecha"
+              value={filtroTipo}
+              onChange={setFiltroTipo}
+              allowClear
               style={{ width: "100%" }}
               options={[
                 { value: "plena", label: "Plena" },
@@ -544,71 +628,16 @@ export default function CosechasPage() {
             />
           </Col>
 
-          <Col xs={24} sm={12} md={8}>
-            <Select
-              allowClear
-              showSearch
-              optionFilterProp="label"
-              placeholder="Trabajador"
-              value={filtroTrabajadorId}
-              onChange={(value) => setFiltroTrabajadorId(value ?? null)}
-              style={{ width: "100%" }}
-              options={trabajadores.map((trabajador) => ({
-                value: trabajador.id,
-                label: `${trabajador.nombres}${trabajador.apellidos ? ` ${trabajador.apellidos}` : ""} (${trabajador.dni})`,
-              }))}
-            />
-          </Col>
-
-          <Col xs={24} sm={12} md={6}>
-            <Select
-              allowClear
-              placeholder="Asignación"
-              value={filtroEstadoAsignacion}
-              onChange={(value) => setFiltroEstadoAsignacion(value ?? null)}
-              style={{ width: "100%" }}
-              options={[
-                { value: "CON_TRABAJADORES", label: "Con trabajadores" },
-                { value: "SIN_TRABAJADORES", label: "Sin trabajadores" },
-              ]}
-            />
-          </Col>
-
-          <Col xs={24} sm={12} md={6}>
-            <Select
-              value={ordenCampo}
-              onChange={setOrdenCampo}
-              style={{ width: "100%" }}
-              options={[
-                { value: "fecha", label: "Ordenar por fecha" },
-                { value: "kilosCosechados", label: "Ordenar por kg cosechados" },
-                { value: "totalHectareas", label: "Ordenar por hectáreas" },
-              ]}
-            />
-          </Col>
-
-          <Col xs={24} sm={12} md={5}>
-            <Select
-              value={ordenDireccion}
-              onChange={setOrdenDireccion}
-              style={{ width: "100%" }}
-              options={[
-                { value: "desc", label: "Descendente" },
-                { value: "asc", label: "Ascendente" },
-              ]}
-            />
-          </Col>
-
-          <Col xs={24} sm={12} md={4}>
-            <Button onClick={limpiarFiltros} block>
+          <Col xs={24} sm={12} md={3}>
+            <Button
+              icon={<ClearOutlined />}
+              onClick={handleLimpiarFiltros}
+              block
+            >
               Limpiar
             </Button>
           </Col>
         </Row>
-
-        <Typography.Text type="secondary" style={{ display: "block", marginBottom: 12 }}>
-          Mostrando {filteredData.length} de {cosechas.length} cosechas registradas.
-        </Typography.Text>
 
         <Table
           columns={columns}
@@ -616,19 +645,23 @@ export default function CosechasPage() {
           rowKey="id"
           loading={loading}
           pagination={{ pageSize: 8, showSizeChanger: true }}
-          scroll={{ x: 800 }}
+          scroll={{ x: "max-content" }}
         />
       </Card>
 
       <Modal
-        title={editingCosecha ? "Editar Registro de Cosecha" : "Nuevo Registro de Cosecha"}
+        title={
+          editingCosecha
+            ? "Editar Registro de Cosecha"
+            : "Nuevo Registro de Cosecha"
+        }
         open={isModalOpen}
         onOk={handleSubmit}
-        onCancel={() => setIsModalOpen(false)}
+        onCancel={handleCloseModal}
         confirmLoading={submitting}
         okText={editingCosecha ? "Guardar Cambios" : "Registrar Cosecha"}
         cancelText="Cancelar"
-        width={700}
+        width="min(760px, 95vw)"
         destroyOnClose
       >
         <Form form={form} layout="vertical" style={{ marginTop: 16 }}>
@@ -639,7 +672,6 @@ export default function CosechasPage() {
                 label="Fecha de Cosecha"
                 rules={[{ required: true, message: "Seleccione la fecha" }]}
               >
-                {/* formato DD/MM/YYYY*/}
                 <DatePicker
                   style={{ width: "100%" }}
                   format="DD/MM/YYYY"
@@ -647,6 +679,7 @@ export default function CosechasPage() {
                 />
               </Form.Item>
             </Col>
+
             <Col xs={24} sm={12}>
               <Form.Item
                 name="trabajadorIds"
@@ -657,14 +690,12 @@ export default function CosechasPage() {
                   placeholder="Seleccione trabajadores..."
                   showSearch
                   optionFilterProp="label"
-                  onChange={(selectedIds: number[]) => {
-                    form.setFieldValue("cantidadCosechadores", selectedIds.length);
-                  }}
                   options={trabajadores
-                    .filter((t) => t.activo)
-                    .map((t) => ({
-                      value: t.id,
-                      label: `${t.nombres}${t.apellidos ? ` ${t.apellidos}` : ""} (${t.dni})`,
+                    .filter((trabajador) => trabajador.activo)
+                    .map((trabajador) => ({
+                      value: trabajador.id,
+                      label: `${trabajador.nombres}${trabajador.apellidos ? ` ${trabajador.apellidos}` : ""
+                        } (${trabajador.dni})`,
                     }))}
                 />
               </Form.Item>
@@ -676,27 +707,33 @@ export default function CosechasPage() {
               <Form.Item
                 name="tipoCosecha"
                 label="Tipo de Cosecha"
-                rules={[{ required: true, message: "Seleccione el tipo de cosecha" }]}
+                rules={[
+                  { required: true, message: "Seleccione el tipo de cosecha" },
+                ]}
               >
-                <Select placeholder="Seleccionar tipo...">
-                  <Select.Option value="plena">Plena (Cosecha Principal)</Select.Option>
-                  <Select.Option value="rebusca">Rebusca (Cosecha Tardía)</Select.Option>
-                  <Select.Option value="selectiva">Selectiva (Alta Calidad)</Select.Option>
-                </Select>
+                <Select
+                  placeholder="Seleccionar tipo..."
+                  options={[
+                    { value: "plena", label: "Plena" },
+                    { value: "rebusca", label: "Rebusca" },
+                    { value: "selectiva", label: "Selectiva" },
+                  ]}
+                />
               </Form.Item>
             </Col>
+
             <Col xs={24} sm={12}>
-              <Form.Item
-                name="varietal"
-                label="Varietal"
-              >
-                <Select mode="tags" placeholder="Ej: Geisha, Caturra...">
-                  <Select.Option value="Geisha">Geisha</Select.Option>
-                  <Select.Option value="Java">Java</Select.Option>
-                  <Select.Option value="Caturra">Caturra</Select.Option>
-                  <Select.Option value="Catimor">Catimor</Select.Option>
-                  <Select.Option value="Cabernet">Cabernet</Select.Option>
-                </Select>
+              <Form.Item name="varietal" label="Varietal">
+                <Select
+                  mode="tags"
+                  placeholder="Ej: Geisha, Caturra..."
+                  options={[
+                    { value: "Geisha", label: "Geisha" },
+                    { value: "Java", label: "Java" },
+                    { value: "Caturra", label: "Caturra" },
+                    { value: "Catimor", label: "Catimor" },
+                  ]}
+                />
               </Form.Item>
             </Col>
           </Row>
@@ -705,8 +742,10 @@ export default function CosechasPage() {
             <Col xs={24} sm={12}>
               <Form.Item
                 name="kilosCosechados"
-                label="Kilos Cosechados (Totales)"
-                rules={[{ required: true, message: "Ingrese los kilos cosechados" }]}
+                label="Kilos Cosechados"
+                rules={[
+                  { required: true, message: "Ingrese los kilos cosechados" },
+                ]}
               >
                 <InputNumber
                   style={{ width: "100%" }}
@@ -716,140 +755,151 @@ export default function CosechasPage() {
                 />
               </Form.Item>
             </Col>
+
             <Col xs={24} sm={12}>
               <Form.Item
                 name="totalHectareas"
                 label="Total Hectáreas Recorridas"
-                rules={[{ required: true, message: "Ingrese total de hectáreas" }]}
+                rules={[
+                  { required: true, message: "Ingrese total de hectáreas" },
+                ]}
               >
-                <InputNumber style={{ width: "100%" }} min={0.1} addonAfter="ha" placeholder="Ej: 2.5" />
+                <InputNumber
+                  style={{ width: "100%" }}
+                  min={0.1}
+                  addonAfter="ha"
+                  placeholder="Ej: 2.5"
+                />
               </Form.Item>
             </Col>
           </Row>
 
           <Form.Item
             name="loteIds"
-            label="Lotes de origen"
+            label="Lotes de Origen"
             rules={[
               {
                 required: true,
-                message: "Seleccione al menos un lote",
+                message: "Seleccione al menos un lote de origen",
               },
             ]}
           >
             <Select
               mode="multiple"
-              placeholder="Seleccione uno o más lotes..."
+              placeholder="Seleccione los lotes de origen..."
               showSearch
               optionFilterProp="label"
-              options={lotes
+              options={lotesList
                 .filter((lote) => lote.activo)
                 .map((lote) => ({
                   value: lote.id,
-                  label: `${lote.codigo}${lote.nombre ? ` - ${lote.nombre}` : ""}`,
+                  label: `${lote.codigo}${lote.nombre ? ` - ${lote.nombre}` : ""
+                    }`,
                 }))}
             />
           </Form.Item>
 
-          <Form.Item name="lotes" label="Observaciones">
+          <Form.Item name="observacion" label="Observación">
             <Input.TextArea
-              placeholder="(Observación opcional)"
+              placeholder="Observaciones adicionales sobre la cosecha..."
               rows={2}
             />
           </Form.Item>
         </Form>
       </Modal>
+
       <Modal
-        title="Detalle de Cosecha"
-        open={isDetailModalOpen}
-        onCancel={handleCloseDetailModal}
+        title={`Detalle de Cosecha - COS-${String(
+          viewingCosecha?.id ?? 0,
+        ).padStart(3, "0")}`}
+        open={isViewModalOpen}
+        onCancel={() => setIsViewModalOpen(false)}
         footer={[
-          <Button key="close" onClick={handleCloseDetailModal}>
+          <Button key="close" onClick={() => setIsViewModalOpen(false)}>
             Cerrar
           </Button>,
         ]}
+        width="min(680px, 95vw)"
         centered
-        width="min(780px, 95vw)"
       >
-        {selectedCosecha && (
-          <Space orientation="vertical" size="middle" style={{ width: "100%" }}>
-            <Card size="small">
-              <Row gutter={[16, 16]}>
-                <Col xs={24} md={12}>
-                  <Typography.Text type="secondary">Fecha</Typography.Text>
-                  <br />
-                  <Typography.Text strong>
-                    {dayjs(selectedCosecha.fecha).format("DD/MM/YYYY")}
-                  </Typography.Text>
-                </Col>
+        {viewingCosecha && (
+          <Descriptions column={1} bordered size="small" style={{ marginTop: 16 }}>
+            <Descriptions.Item label="Código">
+              <Tag color="blue" style={{ fontSize: 13, fontWeight: "bold" }}>
+                COS-{String(viewingCosecha.id).padStart(3, "0")}
+              </Tag>
+            </Descriptions.Item>
 
-                <Col xs={24} md={12}>
-                  <Typography.Text type="secondary">Tipo de cosecha</Typography.Text>
-                  <br />
-                  <Tag color={getTipoCosechaColor(selectedCosecha.tipoCosecha)}>
-                    {selectedCosecha.tipoCosecha.toUpperCase()}
-                  </Tag>
-                </Col>
+            <Descriptions.Item label="Fecha">
+              {dayjs(viewingCosecha.fecha).format("DD/MM/YYYY")}
+            </Descriptions.Item>
 
-                <Col xs={24} md={12}>
-                  <Typography.Text type="secondary">Kilos cosechados</Typography.Text>
-                  <br />
-                  <Typography.Text strong>
-                    {selectedCosecha.kilosCosechados.toLocaleString("es-CL")} kg
-                  </Typography.Text>
-                </Col>
+            <Descriptions.Item label="Tipo Cosecha">
+              <Tag color={getTipoCosechaColor(getTipoCosecha(viewingCosecha))}>
+                {formatEstadoEnum(getTipoCosecha(viewingCosecha))}
+              </Tag>
+            </Descriptions.Item>
 
-                <Col xs={24} md={12}>
-                  <Typography.Text type="secondary">Hectáreas</Typography.Text>
-                  <br />
-                  <Typography.Text strong>
-                    {selectedCosecha.totalHectareas.toLocaleString("es-CL")} ha
-                  </Typography.Text>
-                </Col>
-              </Row>
-            </Card>
-
-            <Card size="small" title="Lotes asociados">
-              {selectedCosecha.cosechaLotes &&
-                selectedCosecha.cosechaLotes.length > 0 ? (
+            <Descriptions.Item label="Trabajadores">
+              {viewingCosecha.cosechaTrabajadores &&
+                viewingCosecha.cosechaTrabajadores.length > 0 ? (
                 <Space wrap>
-                  {selectedCosecha.cosechaLotes.map((item) => (
-                    <Tag key={item.id} icon={<AppstoreOutlined />} color="gold">
-                      {item.lote.codigo}
-                      {item.lote.nombre ? ` - ${item.lote.nombre}` : ""}
-                    </Tag>
-                  ))}
-                </Space>
-              ) : (
-                <Typography.Text type="secondary">
-                  {selectedCosecha.lotes || "No hay lotes asociados."}
-                </Typography.Text>
-              )}
-            </Card>
-
-            <Card size="small" title="Trabajadores asociados">
-              {selectedCosecha.cosechaTrabajadores &&
-                selectedCosecha.cosechaTrabajadores.length > 0 ? (
-                <Space wrap>
-                  {selectedCosecha.cosechaTrabajadores.map((item) => (
-                    <Tag key={item.id} icon={<UserOutlined />} color="green">
+                  {viewingCosecha.cosechaTrabajadores.map((item) => (
+                    <Tag key={item.id} icon={<UserOutlined />} color="blue">
                       {item.trabajador.nombres}
                       {item.trabajador.apellidos
                         ? ` ${item.trabajador.apellidos}`
                         : ""}
-                      {item.kilosAsignados
-                        ? ` - ${item.kilosAsignados.toLocaleString("es-CL")} kg`
-                        : ""}
+                    </Tag>
+                  ))}
+                </Space>
+              ) : viewingCosecha.trabajador?.nombres ? (
+                <Tag icon={<UserOutlined />} color="blue">
+                  {viewingCosecha.trabajador.nombres}
+                </Tag>
+              ) : (
+                "Sin asignar"
+              )}
+            </Descriptions.Item>
+
+            <Descriptions.Item label="Kilos Cosechados">
+              {formatKg(viewingCosecha.kilosCosechados)}
+            </Descriptions.Item>
+
+            <Descriptions.Item label="Total Hectáreas">
+              {Number(viewingCosecha.totalHectareas ?? 0).toLocaleString(
+                "es-CL",
+              )}{" "}
+              ha
+            </Descriptions.Item>
+
+            <Descriptions.Item label="Lotes de Origen">
+              {viewingCosecha.cosechaLotes &&
+                viewingCosecha.cosechaLotes.length > 0 ? (
+                <Space wrap>
+                  {viewingCosecha.cosechaLotes.map((item) => (
+                    <Tag key={item.id} icon={<AppstoreOutlined />} color="gold">
+                      {item.lote.codigo}
                     </Tag>
                   ))}
                 </Space>
               ) : (
-                <Typography.Text type="secondary">
-                  No hay trabajadores asociados.
-                </Typography.Text>
+                viewingCosecha.lotes || "-"
               )}
-            </Card>
-          </Space>
+            </Descriptions.Item>
+
+            <Descriptions.Item label="Observaciones">
+              {viewingCosecha.observacion ||
+                viewingCosecha.observaciones ||
+                "-"}
+            </Descriptions.Item>
+
+            <Descriptions.Item label="Varietales">
+              {Array.isArray(viewingCosecha.varietal)
+                ? viewingCosecha.varietal.join(", ")
+                : viewingCosecha.varietal || "-"}
+            </Descriptions.Item>
+          </Descriptions>
         )}
       </Modal>
     </Space>

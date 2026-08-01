@@ -4,10 +4,12 @@ import {
   Button,
   Card,
   Col,
+  DatePicker,
   Input,
   message,
   Popconfirm,
   Row,
+  Select,
   Space,
   Statistic,
   Table,
@@ -22,23 +24,25 @@ import {
   SearchOutlined,
   ReloadOutlined,
   FireOutlined,
+  ClearOutlined,
 } from "@ant-design/icons";
 import type { ColumnsType } from "antd/es/table";
-import dayjs from "dayjs";
+import dayjs, { type Dayjs } from "dayjs";
 
-import type { Secado, CreateSecadoDTO, UpdateSecadoDTO } from "../../api/secado.api";
+import type { Secado, CreateSecadoDTO, UpdateSecadoDTO } from "./secado.api";
 import {
   getSecadosApi,
   createSecadoApi,
   updateSecadoApi,
   deleteSecadoApi,
-} from "../../api/secado.api";
+} from "./secado.api";
 
-import type { Lote } from "../../api/lotes";
-import { getLotesApi } from "../../api/lotes";
+import type { Lote } from "../lotes/lotes.api";
+import { getLotesApi } from "../lotes/lotes.api";
 
 import CrearSecadoModal from "../../components/secado-modals/CrearSecadoModal";
 import EditarSecadoModal from "../../components/secado-modals/EditarSecadoModal";
+import { formatEstadoEnum } from "../../utils/enumFormatters";
 
 const { Title, Text } = Typography;
 
@@ -48,7 +52,11 @@ export default function SecadoPage() {
   const [lotes, setLotes] = useState<Lote[]>([]);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
+
+  // Filtros
   const [searchText, setSearchText] = useState("");
+  const [filtroFecha, setFiltroFecha] = useState<[Dayjs, Dayjs] | null>(null);
+  const [filtroEstado, setFiltroEstado] = useState<string | undefined>(undefined);
 
   // Modales
   const [isCreateOpen, setIsCreateOpen] = useState(false);
@@ -76,7 +84,6 @@ export default function SecadoPage() {
     fetchData();
   }, []);
 
-  // Crear Secado
   const handleCreate = async (values: CreateSecadoDTO) => {
     setSaving(true);
     try {
@@ -92,7 +99,6 @@ export default function SecadoPage() {
     }
   };
 
-  // Editar Secado
   const handleUpdate = async (id: number, values: UpdateSecadoDTO) => {
     setSaving(true);
     try {
@@ -109,7 +115,6 @@ export default function SecadoPage() {
     }
   };
 
-  // Eliminar Secado
   const handleDelete = async (id: number) => {
     try {
       await deleteSecadoApi(id);
@@ -121,7 +126,12 @@ export default function SecadoPage() {
     }
   };
 
-  // Estadísticas
+  const handleLimpiarFiltros = () => {
+    setSearchText("");
+    setFiltroFecha(null);
+    setFiltroEstado(undefined);
+  };
+
   const stats = useMemo(() => {
     const totalRegistros = secados.length;
     const totalIngresados = secados.reduce((acc, curr) => acc + (curr.kilosIngresados || 0), 0);
@@ -132,18 +142,32 @@ export default function SecadoPage() {
     return { totalRegistros, totalIngresados, totalResultantes, totalMerma, porcentajeMermaPromedio };
   }, [secados]);
 
-  // Filtrado por búsqueda
+  // Filtrado
   const filteredSecados = useMemo(() => {
-    if (!searchText) return secados;
-    const term = searchText.toLowerCase();
-    return secados.filter(
-      (s) =>
-        (s.lote?.codigo && s.lote.codigo.toLowerCase().includes(term)) ||
-        (s.observaciones && s.observaciones.toLowerCase().includes(term))
-    );
-  }, [secados, searchText]);
+    return secados.filter((s) => {
+      if (searchText) {
+        const term = searchText.toLowerCase();
+        const codigoMatches = s.lote?.codigo && s.lote.codigo.toLowerCase().includes(term);
+        const obsMatches = s.observaciones && s.observaciones.toLowerCase().includes(term);
+        if (!codigoMatches && !obsMatches) return false;
+      }
 
-  // Columnas de la tabla
+      if (filtroFecha && s.fechaInicio) {
+        const f = dayjs(s.fechaInicio);
+        if (f.isBefore(filtroFecha[0], "day") || f.isAfter(filtroFecha[1], "day")) {
+          return false;
+        }
+      }
+
+      if (filtroEstado) {
+        const estado = (s as any).estado || (s.kilosResultantes ? "COMPLETADO" : "EN_PROCESO");
+        if (estado !== filtroEstado) return false;
+      }
+
+      return true;
+    });
+  }, [secados, searchText, filtroFecha, filtroEstado]);
+
   const columns: ColumnsType<Secado> = [
     {
       title: "Código del Lote",
@@ -175,7 +199,7 @@ export default function SecadoPage() {
       title: "Perfil",
       dataIndex: "perfilProceso",
       key: "perfilProceso",
-      render: (perfil: string) => perfil ? <Tag color="purple">{perfil}</Tag> : "-",
+      render: (perfil: string) => perfil ? <Tag color="purple">{formatEstadoEnum(perfil)}</Tag> : "-",
     },
     {
       title: "Kilos Resultantes",
@@ -194,6 +218,18 @@ export default function SecadoPage() {
         return (
           <Tag color={val > 0 ? "warning" : "green"}>
             {val?.toLocaleString() ?? 0} kg ({pct}%)
+          </Tag>
+        );
+      },
+    },
+    {
+      title: "Estado",
+      key: "estado",
+      render: (_, record: Secado) => {
+        const estado = (record as any).estado || (record.kilosResultantes ? "COMPLETADO" : "EN_SECADO");
+        return (
+          <Tag color={estado === "COMPLETADO" ? "success" : "orange"}>
+            {formatEstadoEnum(estado)}
           </Tag>
         );
       },
@@ -218,22 +254,16 @@ export default function SecadoPage() {
               setEditingSecado(record);
               setIsEditOpen(true);
             }}
-            title="Editar Secado"
           />
           <Popconfirm
-            title="¿Eliminar este registro de secado?"
-            description="Esta acción eliminará el registro de secado permanentemente."
+            title="¿Eliminar registro de secado?"
+            description="Esta acción no se puede deshacer."
             onConfirm={() => handleDelete(record.id)}
             okText="Sí, eliminar"
             cancelText="Cancelar"
             okButtonProps={{ danger: true }}
           >
-            <Button
-              type="text"
-              danger
-              icon={<DeleteOutlined />}
-              title="Eliminar Secado"
-            />
+            <Button type="text" danger icon={<DeleteOutlined />} />
           </Popconfirm>
         </Space>
       ),
@@ -241,49 +271,66 @@ export default function SecadoPage() {
   ];
 
   return (
-    <div style={{ padding: 24 }}>
+    <div style={{ padding: "24px" }}>
       {/* Encabezado */}
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
-        <div>
-          <Title level={2} style={{ margin: 0 }}>
-            <FireOutlined style={{ color: token.colorPrimary, marginRight: 10 }} />
-            Procesamiento Físico: Secado
-          </Title>
-          <Text type="secondary">
-            Registro y control del proceso de secado de lotes de café con actualización automática de saldo y merma.
-          </Text>
-        </div>
-        <Space>
-          <Button icon={<ReloadOutlined />} onClick={fetchData} loading={loading}>
-            Refrescar
-          </Button>
-          <Button type="primary" icon={<PlusOutlined />} onClick={() => setIsCreateOpen(true)}>
-            Nuevo Proceso de Secado
-          </Button>
-        </Space>
-      </div>
+      <Row justify="space-between" align="middle" style={{ marginBottom: 24 }}>
+        <Col>
+          <Space align="center" size="middle">
+            <FireOutlined style={{ fontSize: 28, color: "#fa8c16" }} />
+            <div>
+              <Title level={3} style={{ margin: 0 }}>
+                Módulo de Secado
+              </Title>
+              <Text type="secondary">
+                Control de ingreso a patios/marquesinas, perfiles de secado y merma.
+              </Text>
+            </div>
+          </Space>
+        </Col>
+        <Col>
+          <Space>
+            <Button icon={<ReloadOutlined />} onClick={fetchData} loading={loading}>
+              Refrescar
+            </Button>
+            <Button
+              type="primary"
+              icon={<PlusOutlined />}
+              onClick={() => setIsCreateOpen(true)}
+              style={{ background: "#fa8c16", borderColor: "#fa8c16" }}
+            >
+              Nuevo Secado
+            </Button>
+          </Space>
+        </Col>
+      </Row>
 
-      {/* Tarjetas de Estadísticas */}
+      {/* KPI Cards */}
       <Row gutter={[16, 16]} style={{ marginBottom: 24 }}>
         <Col xs={24} sm={12} md={6}>
-          <Card size="small" style={{ borderRadius: 8 }}>
-            <Statistic title="Total Procesos" value={stats.totalRegistros} prefix={<FireOutlined />} />
+          <Card size="small">
+            <Statistic title="Total Registros" value={stats.totalRegistros} prefix={<FireOutlined />} />
           </Card>
         </Col>
         <Col xs={24} sm={12} md={6}>
-          <Card size="small" style={{ borderRadius: 8 }}>
-            <Statistic title="Total Kilos Ingresados" value={stats.totalIngresados} precision={1} suffix="kg" />
+          <Card size="small">
+            <Statistic title="Ingresado (Kg)" value={stats.totalIngresados} precision={1} suffix="kg" />
           </Card>
         </Col>
         <Col xs={24} sm={12} md={6}>
-          <Card size="small" style={{ borderRadius: 8 }}>
-            <Statistic title="Total Kilos Resultantes" value={stats.totalResultantes} precision={1} suffix="kg" valueStyle={{ color: token.colorPrimary }} />
-          </Card>
-        </Col>
-        <Col xs={24} sm={12} md={6}>
-          <Card size="small" style={{ borderRadius: 8 }}>
+          <Card size="small">
             <Statistic
-              title="Merma Total Acumulada"
+              title="Resultante (Kg)"
+              value={stats.totalResultantes}
+              precision={1}
+              suffix="kg"
+              valueStyle={{ color: "#3f8600" }}
+            />
+          </Card>
+        </Col>
+        <Col xs={24} sm={12} md={6}>
+          <Card size="small">
+            <Statistic
+              title="Merma Acumulada"
               value={stats.totalMerma}
               precision={1}
               suffix={`kg (${stats.porcentajeMermaPromedio.toFixed(1)}%)`}
@@ -295,7 +342,7 @@ export default function SecadoPage() {
 
       {/* Barra de Filtros y Tabla */}
       <Card style={{ borderRadius: 8 }}>
-        <Row justify="space-between" align="middle" style={{ marginBottom: 16 }}>
+        <Row gutter={[12, 12]} align="middle" style={{ marginBottom: 16 }}>
           <Col xs={24} sm={12} md={8}>
             <Input
               placeholder="Buscar por código de lote u observaciones..."
@@ -303,7 +350,35 @@ export default function SecadoPage() {
               value={searchText}
               onChange={(e) => setSearchText(e.target.value)}
               allowClear
+              style={{ width: "100%" }}
             />
+          </Col>
+          <Col xs={24} sm={12} md={7}>
+            <DatePicker.RangePicker
+              value={filtroFecha}
+              onChange={(val) => setFiltroFecha(val as [Dayjs, Dayjs] | null)}
+              format="DD/MM/YYYY"
+              placeholder={["Fecha inicio", "Fecha fin"]}
+              style={{ width: "100%" }}
+            />
+          </Col>
+          <Col xs={24} sm={12} md={5}>
+            <Select
+              placeholder="Estado"
+              value={filtroEstado}
+              onChange={setFiltroEstado}
+              allowClear
+              style={{ width: "100%" }}
+              options={[
+                { value: "EN_SECADO", label: "En Secado" },
+                { value: "COMPLETADO", label: "Completado" },
+              ]}
+            />
+          </Col>
+          <Col xs={24} sm={12} md={4}>
+            <Button icon={<ClearOutlined />} onClick={handleLimpiarFiltros} block>
+              Limpiar
+            </Button>
           </Col>
         </Row>
 
@@ -314,6 +389,7 @@ export default function SecadoPage() {
           loading={loading}
           pagination={{ pageSize: 10, showSizeChanger: true }}
           locale={{ emptyText: "No hay procesos de secado registrados" }}
+          scroll={{ x: "max-content" }}
         />
       </Card>
 
