@@ -16,6 +16,7 @@ import {
 import {
     AppstoreOutlined,
     BarChartOutlined,
+    EnvironmentOutlined,
     FileExcelOutlined,
     HomeOutlined,
     PartitionOutlined,
@@ -23,8 +24,7 @@ import {
     RiseOutlined,
     SafetyCertificateOutlined,
     ShopOutlined,
-    TeamOutlined,
-    UserOutlined,
+    TrophyOutlined,
 } from "@ant-design/icons";
 import { useNavigate } from "react-router-dom";
 
@@ -296,6 +296,96 @@ export default function HomePage() {
             <Title level={3} style={{ marginTop: 24 }}>
                 Producción del mes actual
             </Title>
+
+            <Row gutter={[16, 16]} style={{ marginBottom: 16 }}>
+                <Col xs={24} md={12}>
+                    <Card
+                        variant="borderless"
+                        style={{
+                            borderRadius: 14,
+                            background: "linear-gradient(135deg, #1e293b 0%, #0f172a 100%)",
+                            color: "#ffffff",
+                        }}
+                    >
+                        <Space size={16} align="center">
+                            <div
+                                style={{
+                                    width: 48,
+                                    height: 48,
+                                    borderRadius: "50%",
+                                    background: "rgba(234, 179, 8, 0.2)",
+                                    display: "flex",
+                                    alignItems: "center",
+                                    justifyContent: "center",
+                                    fontSize: 24,
+                                    color: "#eab308",
+                                }}
+                            >
+                                <TrophyOutlined />
+                            </div>
+                            <div>
+                                <Text style={{ color: "#94a3b8", fontSize: 13, textTransform: "uppercase", letterSpacing: 0.5 }}>
+                                    Mejor Trabajador del Mes
+                                </Text>
+                                <Title level={4} style={{ color: "#ffffff", margin: "2px 0 0 0" }}>
+                                    {resumen.mesActual.mejorTrabajador?.nombre ?? "Sin datos suficientes"}
+                                </Title>
+                                {resumen.mesActual.mejorTrabajador && (
+                                    <Text style={{ color: "#38bdf8", fontWeight: 600 }}>
+                                        {resumen.mesActual.mejorTrabajador.kilos.toLocaleString("es-CL")} kg cosechados
+                                    </Text>
+                                )}
+                            </div>
+                        </Space>
+                    </Card>
+                </Col>
+
+                <Col xs={24} md={12}>
+                    <Card
+                        variant="borderless"
+                        style={{
+                            borderRadius: 14,
+                            background: "linear-gradient(135deg, #1e293b 0%, #0f172a 100%)",
+                            color: "#ffffff",
+                        }}
+                    >
+                        <Space size={16} align="center">
+                            <div
+                                style={{
+                                    width: 48,
+                                    height: 48,
+                                    borderRadius: "50%",
+                                    background: "rgba(34, 197, 94, 0.2)",
+                                    display: "flex",
+                                    alignItems: "center",
+                                    justifyContent: "center",
+                                    fontSize: 24,
+                                    color: "#22c55e",
+                                }}
+                            >
+                                <EnvironmentOutlined />
+                            </div>
+                            <div>
+                                <Text style={{ color: "#94a3b8", fontSize: 13, textTransform: "uppercase", letterSpacing: 0.5 }}>
+                                    Lote Más Productivo (Mes)
+                                </Text>
+                                <Title level={4} style={{ color: "#ffffff", margin: "2px 0 0 0" }}>
+                                    {resumen.mesActual.mejorLote
+                                        ? (resumen.mesActual.mejorLote.nombre
+                                            ? `${resumen.mesActual.mejorLote.codigo} - ${resumen.mesActual.mejorLote.nombre}`
+                                            : resumen.mesActual.mejorLote.codigo)
+                                        : "Sin datos suficientes"}
+                                </Title>
+                                {resumen.mesActual.mejorLote && (
+                                    <Text style={{ color: "#4ade80", fontWeight: 600 }}>
+                                        {resumen.mesActual.mejorLote.kilos.toLocaleString("es-CL")} kg recolectados
+                                    </Text>
+                                )}
+                            </div>
+                        </Space>
+                    </Card>
+                </Col>
+            </Row>
 
             <Row gutter={[16, 16]} style={{ marginBottom: 24 }}>
                 <Col xs={24} sm={12} xl={6}>

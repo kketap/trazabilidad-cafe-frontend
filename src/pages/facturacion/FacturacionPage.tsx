@@ -298,7 +298,7 @@ export default function FacturacionPage() {
                     rowKey="id"
                     bordered
                     pagination={false}
-                    scroll={{ x: 1800 }}
+                    scroll={{ x: "max-content" }}
                 />
             </Space>
 

@@ -11,7 +11,11 @@ import {
     ShopOutlined,
     TeamOutlined,
     SolutionOutlined,
-    AppstoreOutlined
+    AppstoreOutlined,
+    FireOutlined,
+    InboxOutlined,
+    ExperimentOutlined,
+    DollarOutlined,
 } from "@ant-design/icons";
 import { Button, Grid, Layout, Menu, Tooltip, Typography, theme as antdTheme } from "antd";
 import { useState } from "react";
@@ -318,12 +322,48 @@ export default function AppLayout({ themeMode, isDarkMode, onThemeModeChange, te
                         selectedKeys={[location.pathname]}
                         onClick={handleMenuClick}
                         style={{
-                            // Fondo del menú igual al sidebar para mantener continuidad y contraste.
-                            background: isDarkMode ? SIDEBAR_DARK_BG : "transparent",
+                            background: isDarkMode ? SIDEBAR_DARK_BG : HEADER_LIGHT_BG,
                             borderRight: "none",
-                            padding: "16px 8px",
+                            padding: "8px 4px",
+                            fontSize: 13,
                         }}
-                        items={menuItems}
+                        items={[
+                            {
+                                key: "/inicio",
+                                icon: <HomeOutlined />,
+                                label: "Inicio",
+                            },
+                            {
+                                type: "group",
+                                label: sidebarCollapsed ? null : "Campo & Producción",
+                                children: [
+                                    { key: "/cosechas", icon: <ShopOutlined />, label: "Cosechas" },
+                                    { key: "/lotes", icon: <AppstoreOutlined />, label: "Lotes" },
+                                    { key: "/trazabilidad", icon: <PartitionOutlined />, label: "Proceso Húmedo" },
+                                    { key: "/secado", icon: <FireOutlined />, label: "Secado" },
+                                    { key: "/empaque", icon: <InboxOutlined />, label: "Empaque" },
+                                    { key: "/trilla", icon: <ExperimentOutlined />, label: "Trilla" },
+                                ],
+                            },
+                            {
+                                type: "group",
+                                label: sidebarCollapsed ? null : "Comercial & Gestión",
+                                children: [
+                                    { key: "/ventas", icon: <DollarOutlined />, label: "Ventas" },
+                                    { key: "/facturacion", icon: <FileTextOutlined />, label: "Facturación" },
+                                    { key: "/clientes", icon: <TeamOutlined />, label: "Clientes" },
+                                    { key: "/reportes", icon: <FileExcelOutlined />, label: "Reportes" },
+                                ],
+                            },
+                            {
+                                type: "group",
+                                label: sidebarCollapsed ? null : "Administración",
+                                children: [
+                                    { key: "/trabajadores", icon: <SolutionOutlined />, label: "Trabajadores" },
+                                    { key: "/configuracion", icon: <SettingOutlined />, label: "Configuración" },
+                                ],
+                            },
+                        ]}
                     />
 
                     <div
@@ -393,7 +433,68 @@ export default function AppLayout({ themeMode, isDarkMode, onThemeModeChange, te
                                 width: "100%",
                                 borderBottom: "none",
                             }}
-                            items={mobileMenuItems}
+                            items={[
+                                {
+                                    key: "/inicio",
+                                    icon: <HomeOutlined />,
+                                    label: "Inicio",
+                                },
+                                {
+                                    key: "/cosechas",
+                                    icon: <ShopOutlined />,
+                                    label: "Cosechas",
+                                },
+                                {
+                                    key: "/lotes",
+                                    icon: <AppstoreOutlined />,
+                                    label: "Lotes",
+                                },
+                                {
+                                    key: "/trazabilidad",
+                                    icon: <PartitionOutlined />,
+                                    label: "Proceso Húmedo",
+                                },
+                                {
+                                    key: "/secado",
+                                    icon: <FireOutlined />,
+                                    label: "Secado",
+                                },
+                                {
+                                    key: "/empaque",
+                                    icon: <InboxOutlined />,
+                                    label: "Empaque",
+                                },
+                                {
+                                    key: "/trilla",
+                                    icon: <ExperimentOutlined />,
+                                    label: "Trilla",
+                                },
+                                {
+                                    key: "/reportes",
+                                    icon: <FileExcelOutlined />,
+                                    label: "Reportes",
+                                },
+                                {
+                                    key: "/facturacion",
+                                    icon: <FileTextOutlined />,
+                                    label: "Facturación",
+                                },
+                                {
+                                    key: "/clientes",
+                                    icon: <TeamOutlined />,
+                                    label: "Clientes",
+                                },
+                                {
+                                    key: "/trabajadores",
+                                    icon: <SolutionOutlined />,
+                                    label: "Trabajadores",
+                                },
+                                {
+                                    key: "/configuracion",
+                                    icon: <SettingOutlined />,
+                                    label: "Configuración",
+                                },
+                            ]}
                         />
                         <Button
                             type="text"

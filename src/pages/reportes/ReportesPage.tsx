@@ -608,201 +608,26 @@ export default function ReportesPage() {
                                     </Col>
                                 </Row>
 
-                                <Row gutter={[16, 16]}>
-                                    <Col xs={24} lg={12}>
-                                        <Card
-                                            title="Distribución por tipo de cosecha"
-                                            variant="borderless"
-                                            style={{ borderRadius: 14 }}
-                                        >
-                                            {loading ? (
-                                                <Skeleton active />
-                                            ) : barDataTipo.length === 0 ? (
-                                                <Empty description="Sin datos" />
-                                            ) : (
-                                                <ResponsiveContainer
-                                                    width="100%"
-                                                    height={260}
-                                                >
-                                                    <BarChart
-                                                        data={barDataTipo}
-                                                    >
-                                                        <CartesianGrid
-                                                            strokeDasharray="3 3"
-                                                            vertical={false}
-                                                            stroke={
-                                                                token.colorBorder
-                                                            }
-                                                        />
-
-                                                        <XAxis
-                                                            dataKey="tipoCosecha"
-                                                            tick={{
-                                                                fontSize: 12,
-                                                                fill: token.colorTextSecondary,
-                                                            }}
-                                                        />
-
-                                                        <YAxis
-                                                            tick={{
-                                                                fontSize: 12,
-                                                                fill: token.colorTextSecondary,
-                                                            }}
-                                                        />
-
-                                                        <RTooltip
-                                                            formatter={(
-                                                                value: any,
-                                                            ) =>
-                                                                `${formatNumber(
-                                                                    Number(
-                                                                        value ||
-                                                                        0,
-                                                                    ),
-                                                                )} kg`
-                                                            }
-                                                            contentStyle={{
-                                                                background:
-                                                                    token.colorBgElevated,
-                                                                border: `1px solid ${token.colorBorder}`,
-                                                                borderRadius:
-                                                                    token.borderRadius,
-                                                                color: token.colorText,
-                                                            }}
-                                                        />
-
-                                                        <Bar
-                                                            dataKey="kilos"
-                                                            fill={
-                                                                token.colorPrimary
-                                                            }
-                                                            fillOpacity={0.65}
-                                                            radius={[
-                                                                4, 4, 0, 0,
-                                                            ]}
-                                                        />
-                                                    </BarChart>
-                                                </ResponsiveContainer>
-                                            )}
-                                        </Card>
-                                    </Col>
-
-                                    <Col xs={24} lg={12}>
-                                        <Card
-                                            title={
-                                                mesSeleccionado
-                                                    ? `Resumen por quincena - ${mesSeleccionado.format(
-                                                        "MMMM YYYY",
-                                                    )}`
-                                                    : "Resumen por quincena"
-                                            }
-                                            variant="borderless"
-                                            style={{ borderRadius: 14 }}
-                                        >
-                                            <Table
-                                                columns={columnsQuincena}
-                                                dataSource={
-                                                    porQuincenaFiltrado
-                                                }
-                                                rowKey="quincena"
-                                                loading={loading}
-                                                pagination={false}
-                                                locale={{
-                                                    emptyText:
-                                                        "No hay datos por quincena",
-                                                }}
-                                            />
-                                        </Card>
-                                    </Col>
-                                </Row>
-
-                                <Row gutter={[16, 16]}>
-                                    <Col xs={24} lg={12}>
-                                        <Card
-                                            title="Ranking por trabajador"
-                                            variant="borderless"
-                                            style={{ borderRadius: 14 }}
-                                        >
-                                            <Table
-                                                columns={columnsTrabajador}
-                                                dataSource={
-                                                    reporte.porTrabajador
-                                                }
-                                                rowKey="trabajadorId"
-                                                loading={loading}
-                                                pagination={{ pageSize: 5 }}
-                                                locale={{
-                                                    emptyText:
-                                                        "No hay trabajadores asociados a cosechas",
-                                                }}
-                                            />
-                                        </Card>
-                                    </Col>
-
-                                    <Col xs={24} lg={12}>
-                                        <Card
-                                            title="Ranking por lote"
-                                            variant="borderless"
-                                            style={{ borderRadius: 14 }}
-                                        >
-                                            <Table
-                                                columns={columnsLote}
-                                                dataSource={reporte.porLote}
-                                                rowKey="loteId"
-                                                loading={loading}
-                                                pagination={{ pageSize: 5 }}
-                                                locale={{
-                                                    emptyText:
-                                                        "No hay lotes asociados a cosechas",
-                                                }}
-                                            />
-                                        </Card>
-                                    </Col>
-                                </Row>
-
-                                <Row gutter={[16, 16]}>
-                                    <Col xs={24} lg={12}>
-                                        <Card
-                                            title="Detalle diario"
-                                            variant="borderless"
-                                            style={{ borderRadius: 14 }}
-                                        >
-                                            <Table
-                                                columns={columnsDia}
-                                                dataSource={porDiaFiltrado}
-                                                rowKey="fecha"
-                                                loading={loading}
-                                                pagination={{ pageSize: 10 }}
-                                                locale={{
-                                                    emptyText:
-                                                        "No hay cosechas registradas en este periodo",
-                                                }}
-                                            />
-                                        </Card>
-                                    </Col>
-
-                                    <Col xs={24} lg={12}>
-                                        <Card
-                                            title="Detalle por tipo de cosecha"
-                                            variant="borderless"
-                                            style={{ borderRadius: 14 }}
-                                        >
-                                            <Table
-                                                columns={columnsTipo}
-                                                dataSource={
-                                                    reporte.porTipoCosecha
-                                                }
-                                                rowKey="tipoCosecha"
-                                                loading={loading}
-                                                pagination={false}
-                                                locale={{
-                                                    emptyText:
-                                                        "No hay datos por tipo de cosecha",
-                                                }}
-                                            />
-                                        </Card>
-                                    </Col>
-                                </Row>
+                                <Card
+                                    title={`Detalle de cosechas - ${mesSeleccionado.format("MMMM YYYY")}`}
+                                    variant="borderless"
+                                    style={{ borderRadius: 14 }}
+                                >
+                                    {loading ? (
+                                        <Skeleton active paragraph={{ rows: 6 }} />
+                                    ) : (
+                                        <Table
+                                            columns={columns}
+                                            dataSource={dataFiltrada}
+                                            rowKey="id"
+                                            pagination={{ pageSize: 10 }}
+                                            scroll={{ x: "max-content" }}
+                                            locale={{
+                                                emptyText: "No hay cosechas registradas en este mes",
+                                            }}
+                                        />
+                                    )}
+                                </Card>
                             </Space>
                         ),
                     },

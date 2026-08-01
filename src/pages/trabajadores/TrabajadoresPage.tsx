@@ -268,7 +268,7 @@ export default function TrabajadoresPage() {
           rowKey="id"
           loading={loading}
           pagination={{ pageSize: 8, showSizeChanger: true }}
-          scroll={{ x: 900 }}
+          scroll={{ x: "max-content" }}
         />
       </Card>
 
