@@ -1,8 +1,20 @@
 // src/pages/auth/LoginPage.tsx
 import { LockOutlined, MailOutlined } from "@ant-design/icons";
-import { Button, Card, Form, Input, Typography, theme } from "antd";
+import {
+  Alert,
+  Button,
+  Card,
+  Form,
+  Input,
+  Typography,
+  theme,
+} from "antd";
+
+import {
+  useEffect,
+  useState,
+} from "react";
 import type { AxiosError } from "axios";
-import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 import { login, saveToken, saveUserName } from "../../api/auth";
@@ -31,24 +43,77 @@ export default function LoginPage({ themeMode, onThemeModeChange, textSize, onTe
   const [loading, setLoading] = useState(false);
   const [zoom, setZoom] = useState(0.9);
 
-  const handleSubmit = async (values: LoginFormValues) => {
+  const [loginError, setLoginError] =
+    useState<string | null>(null);
+
+  const [sessionMessage, setSessionMessage] =
+    useState<string | null>(null);
+
+  useEffect(() => {
+    const reason = sessionStorage.getItem(
+      "authRedirectReason",
+    );
+
+    const backendMessage = sessionStorage.getItem(
+      "authRedirectMessage",
+    );
+
+    if (backendMessage) {
+      setSessionMessage(backendMessage);
+    } else if (reason === "expired") {
+      setSessionMessage(
+        "Tu sesión expiró por seguridad. Inicia sesión nuevamente para continuar.",
+      );
+    } else if (reason === "invalid") {
+      setSessionMessage(
+        "Tu sesión ya no es válida. Inicia sesión nuevamente.",
+      );
+    }
+
+    sessionStorage.removeItem(
+      "authRedirectReason",
+    );
+
+    sessionStorage.removeItem(
+      "authRedirectMessage",
+    );
+  }, []);
+
+  const handleSubmit = async (
+    values: LoginFormValues,
+  ) => {
     setLoading(true);
+    setLoginError(null);
+    setSessionMessage(null);
 
     try {
-      const resultado = await login(values.email, values.password);
+      const resultado = await login(
+        values.email,
+        values.password,
+      );
 
       saveToken(resultado.token);
       saveUserName(resultado.usuario.nombre);
 
-      navigate("/inicio", { replace: true });
+      navigate("/inicio", {
+        replace: true,
+      });
     } catch (error) {
-      const axiosError = error as AxiosError<{ message?: string }>;
+      const axiosError =
+        error as AxiosError<{
+          message?: string;
+        }>;
 
       const mensaje =
         axiosError.response?.data?.message ??
         "Error al iniciar sesión. Verifique sus credenciales.";
 
-      console.error("Error de login:", mensaje);
+      setLoginError(mensaje);
+
+      console.error(
+        "Error de login:",
+        mensaje,
+      );
     } finally {
       setLoading(false);
     }
@@ -107,12 +172,45 @@ export default function LoginPage({ themeMode, onThemeModeChange, textSize, onTe
           </Text>
         </div>
 
+        {sessionMessage && (
+          <Alert
+            type="warning"
+            showIcon
+            closable
+            message="Sesión finalizada"
+            description={sessionMessage}
+            onClose={() => setSessionMessage(null)}
+            style={{
+              marginBottom: 20,
+            }}
+          />
+        )}
+
+        {loginError && (
+          <Alert
+            type="error"
+            showIcon
+            closable
+            message="No se pudo iniciar sesión"
+            description={loginError}
+            onClose={() => setLoginError(null)}
+            style={{
+              marginBottom: 20,
+            }}
+          />
+        )}
+
         <Form<LoginFormValues>
           name="login"
           layout="vertical"
           onFinish={handleSubmit}
           autoComplete="off"
           requiredMark={false}
+          onValuesChange={() => {
+            if (loginError) {
+              setLoginError(null);
+            }
+          }}
         >
           <Form.Item
             name="email"

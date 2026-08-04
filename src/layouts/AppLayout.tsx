@@ -21,7 +21,7 @@ import { Button, Grid, Layout, Menu, Tooltip, Typography, theme as antdTheme } f
 import { useState } from "react";
 import { useNavigate, Outlet, useLocation } from "react-router-dom";
 import MenuAccesibilidad from "../components/accesibilidad/MenuAccesibilidad";
-import { removeToken, getUserName } from "../api/auth";
+import { clearAuth, getUserName } from "../api/auth";
 
 const { Header, Sider, Content } = Layout;
 const { Text } = Typography;
@@ -66,7 +66,11 @@ export default function AppLayout({ themeMode, isDarkMode, onThemeModeChange, te
     const sidebarCollapsed = isMobile ? true : collapsed;
 
     const handleLogout = () => {
-        removeToken();
+        clearAuth();
+
+        sessionStorage.removeItem("authRedirectReason");
+        sessionStorage.removeItem("authRedirectMessage");
+
         navigate("/login", { replace: true });
     };
 

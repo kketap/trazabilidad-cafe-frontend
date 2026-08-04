@@ -23,19 +23,34 @@ export default function ConfiguracionPage() {
         }
     }, [profileForm]);
 
-    const handleProfileFinish = async (values: { nombreUsuario: string }) => {
+    const handleProfileFinish = async (
+        values: {
+            nombreUsuario: string;
+        },
+    ) => {
         setLoadingProfile(true);
 
         try {
-            await actualizarPerfilApi(values.nombreUsuario);
+            const nombreLimpio =
+                values.nombreUsuario.trim();
 
-            saveUserName(values.nombreUsuario);
+            await actualizarPerfilApi(nombreLimpio);
 
-            message.success("Perfil guardado correctamente.");
+            saveUserName(nombreLimpio);
+
+            message.success(
+                "Perfil guardado correctamente.",
+            );
         } catch (error) {
-            const axiosError = error as AxiosError<{ message?: string }>;
+            const axiosError =
+                error as AxiosError<{
+                    message?: string;
+                }>;
 
-            message.error(axiosError.response?.data?.message ?? "Error al guardar el perfil.");
+            message.error(
+                axiosError.response?.data?.message ??
+                "Error al guardar el perfil.",
+            );
         } finally {
             setLoadingProfile(false);
         }
@@ -118,15 +133,46 @@ export default function ConfiguracionPage() {
                         <Form.Item
                             label="Nueva Contraseña"
                             name="nuevaContrasena"
-                            rules={[{ required: true, message: "Ingresa una nueva contraseña." }]}
+                            rules={[
+                                {
+                                    required: true,
+                                    message: "Ingresa una nueva contraseña.",
+                                },
+                                {
+                                    min: 6,
+                                    message:
+                                        "La nueva contraseña debe tener al menos 6 caracteres.",
+                                },
+                            ]}
                         >
-                            <Input.Password placeholder="Nueva contraseña" />
                         </Form.Item>
 
                         <Form.Item
                             label="Confirmar Nueva Contraseña"
                             name="confirmarContrasena"
-                            rules={[{ required: true, message: "Confirma la nueva contraseña." }]}
+                            dependencies={["nuevaContrasena"]}
+                            rules={[
+                                {
+                                    required: true,
+                                    message: "Confirma la nueva contraseña.",
+                                },
+                                ({ getFieldValue }) => ({
+                                    validator(_, value) {
+                                        if (
+                                            !value ||
+                                            getFieldValue("nuevaContrasena") === value
+                                        ) {
+                                            return Promise.resolve();
+                                        }
+
+                                        return Promise.reject(
+                                            new Error(
+                                                "Las contraseñas nuevas no coinciden.",
+                                            ),
+                                        );
+                                    },
+                                }),
+                            ]}
                         >
                             <Input.Password placeholder="Confirmar nueva contraseña" />
                         </Form.Item>

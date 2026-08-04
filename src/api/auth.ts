@@ -1,8 +1,13 @@
 // src/api/auth.ts
 import { apiClient } from "./apiClient";
 
-const TOKEN_KEY = "fn_auth_token";
-const USER_NAME_KEY = "fn_user_name";
+export {
+  clearAuth,
+  getToken,
+  getUserName,
+  saveToken,
+  saveUserName,
+} from "./authStorage";
 
 export type LoginResponse = {
   token: string;
@@ -14,48 +19,53 @@ export type LoginResponse = {
   };
 };
 
-export async function login(email: string, password: string): Promise<LoginResponse> {
-  const { data } = await apiClient.post<LoginResponse>("/auth/login", {
-    email,
-    password,
-  });
+export type UsuarioPerfil = {
+  id: number;
+  email: string;
+  nombre: string;
+  rol: string;
+};
 
-  return data;
+export async function login(
+  email: string,
+  password: string,
+): Promise<LoginResponse> {
+  const response = await apiClient.post<LoginResponse>(
+    "/auth/login",
+    {
+      email,
+      password,
+    },
+  );
+
+  return response.data;
 }
 
-export function saveToken(token: string) {
-  localStorage.setItem(TOKEN_KEY, token);
+/**
+ * Actualiza el nombre del usuario autenticado.
+ */
+export async function actualizarPerfilApi(
+  nombre: string,
+): Promise<UsuarioPerfil> {
+  const response = await apiClient.put<UsuarioPerfil>(
+    "/auth/perfil",
+    {
+      nombre,
+    },
+  );
+
+  return response.data;
 }
 
-export function getToken(): string | null {
-  return localStorage.getItem(TOKEN_KEY);
-}
-
-export function removeToken() {
-  localStorage.removeItem(TOKEN_KEY);
-  localStorage.removeItem(USER_NAME_KEY);
-}
-
-export function saveUserName(nombre: string) {
-  localStorage.setItem(USER_NAME_KEY, nombre);
-}
-
-export function getUserName(): string | null {
-  return localStorage.getItem(USER_NAME_KEY);
-}
-
-export async function actualizarPerfilApi(nombre: string) {
-  const { data } = await apiClient.put("/auth/perfil", { nombre });
-  return data;
-}
-
+/**
+ * Cambia la contraseña del usuario autenticado.
+ */
 export async function cambiarPasswordApi(
   contrasenaActual: string,
   nuevaContrasena: string,
-) {
-  const { data } = await apiClient.put("/auth/password", {
+): Promise<void> {
+  await apiClient.put("/auth/password", {
     contrasenaActual,
     nuevaContrasena,
   });
-  return data;
 }
