@@ -33,7 +33,11 @@ import {
 } from "@ant-design/icons";
 import dayjs, { type Dayjs } from "dayjs";
 
-import type { Cosecha } from "./cosechas.api";
+import type {
+  Cosecha,
+  CreateCosechaDTO,
+} from "./cosechas.api";
+
 import {
   createCosechaApi,
   deleteCosechaApi,
@@ -49,50 +53,6 @@ import { getLotesApi } from "../lotes/lotes.api";
 
 import { formatEstadoEnum } from "../../utils/enumFormatters";
 
-type CosechaTrabajadorRelacion = {
-  id: number;
-  cosechaId: number;
-  trabajadorId: number;
-  kilosAsignados?: number | null;
-  trabajador: {
-    id: number;
-    nombres: string;
-    apellidos?: string | null;
-    dni: string;
-  };
-};
-
-type CosechaLoteRelacion = {
-  id: number;
-  cosechaId: number;
-  loteId: number;
-  lote: {
-    id: number;
-    codigo: string;
-    nombre?: string | null;
-  };
-};
-
-type CosechaRow = Cosecha & {
-  observacion?: string | null;
-  observaciones?: string | null;
-  varietal?: string[] | string | null;
-
-  tipoCosecha?: string | null;
-  tipo_cosecha?: string | null;
-
-  trabajadorId?: number | null;
-  trabajador?: {
-    id: number;
-    nombres: string;
-    apellidos?: string | null;
-    dni?: string | null;
-  } | null;
-
-  cosechaTrabajadores?: CosechaTrabajadorRelacion[];
-  cosechaLotes?: CosechaLoteRelacion[];
-};
-
 function getTipoCosechaColor(tipo?: string | null) {
   switch (tipo?.toLowerCase()) {
     case "selectiva":
@@ -105,8 +65,8 @@ function getTipoCosechaColor(tipo?: string | null) {
   }
 }
 
-function getTipoCosecha(cosecha: CosechaRow) {
-  return cosecha.tipoCosecha || cosecha.tipo_cosecha || "plena";
+function getTipoCosecha(cosecha: Cosecha) {
+  return cosecha.tipoCosecha || "plena";
 }
 
 function formatKg(value?: number | null) {
@@ -116,7 +76,7 @@ function formatKg(value?: number | null) {
 export default function CosechasPage() {
   const { token } = theme.useToken();
 
-  const [cosechas, setCosechas] = useState<CosechaRow[]>([]);
+  const [cosechas, setCosechas] = useState<Cosecha[]>([]);
   const [trabajadores, setTrabajadores] = useState<Trabajador[]>([]);
   const [lotesList, setLotesList] = useState<Lote[]>([]);
   const [loading, setLoading] = useState(false);
@@ -129,10 +89,12 @@ export default function CosechasPage() {
   const [filtroTipo, setFiltroTipo] = useState<string | undefined>(undefined);
 
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [editingCosecha, setEditingCosecha] = useState<CosechaRow | null>(null);
+  const [editingCosecha, setEditingCosecha] =
+    useState<Cosecha | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
-  const [viewingCosecha, setViewingCosecha] = useState<CosechaRow | null>(null);
+  const [viewingCosecha, setViewingCosecha] =
+    useState<Cosecha | null>(null);
   const [isViewModalOpen, setIsViewModalOpen] = useState(false);
 
   const [form] = Form.useForm();
@@ -142,7 +104,7 @@ export default function CosechasPage() {
 
     try {
       const data = await getCosechasApi();
-      setCosechas(data as CosechaRow[]);
+      setCosechas(data);
     } catch (error: any) {
       message.error(
         error?.response?.data?.message ||
@@ -188,10 +150,12 @@ export default function CosechasPage() {
     setIsModalOpen(true);
   }
 
-  function handleOpenEditModal(record: CosechaRow) {
+  function handleOpenEditModal(record: Cosecha) {
     setEditingCosecha(record);
 
-    const loteIdsRelacion = record.cosechaLotes?.map((item) => item.loteId) ?? [];
+    const loteIdsRelacion = record.cosechaLotes.map(
+      (item) => item.loteId,
+    );
 
     const loteIdsFallback =
       loteIdsRelacion.length > 0
@@ -199,39 +163,38 @@ export default function CosechasPage() {
         : lotesList
           .filter((lote) =>
             record.lotes
-              ?.split(",")
-              .map((item) => item.trim())
+              .split(",")
+              .map((codigo) => codigo.trim())
               .includes(lote.codigo),
           )
           .map((lote) => lote.id);
 
     const trabajadorIdsRelacion =
-      record.cosechaTrabajadores?.map((item) => item.trabajadorId) ?? [];
-
-    const trabajadorIdsFallback =
-      trabajadorIdsRelacion.length > 0
-        ? trabajadorIdsRelacion
-        : record.trabajadorId
-          ? [record.trabajadorId]
-          : record.trabajador?.id
-            ? [record.trabajador.id]
-            : [];
+      record.cosechaTrabajadores.map(
+        (item) => item.trabajadorId,
+      );
 
     form.setFieldsValue({
       fecha: dayjs(record.fecha),
       kilosCosechados: record.kilosCosechados,
       totalHectareas: record.totalHectareas,
       loteIds: loteIdsFallback,
-      trabajadorIds: trabajadorIdsFallback,
-      observacion: record.observacion || record.observaciones || "",
+      trabajadorIds: trabajadorIdsRelacion,
+      observacion: record.observacion ?? "",
       tipoCosecha: getTipoCosecha(record),
-      varietal: record.varietal,
+
+      varietal: record.varietal
+        ? record.varietal
+          .split(",")
+          .map((item: string) => item.trim())
+          .filter(Boolean)
+        : [],
     });
 
     setIsModalOpen(true);
   }
 
-  function handleOpenViewModal(record: CosechaRow) {
+  function handleOpenViewModal(record: Cosecha) {
     setViewingCosecha(record);
     setIsViewModalOpen(true);
   }
@@ -270,29 +233,37 @@ export default function CosechasPage() {
         .map((lote) => lote.codigo)
         .join(", ");
 
-      const payload = {
+      const payload: CreateCosechaDTO = {
         fecha: values.fecha.format("YYYY-MM-DD"),
         kilosCosechados: Number(values.kilosCosechados),
-        cantidadCosechadores: trabajadorIds.length,
         totalHectareas: Number(values.totalHectareas),
         tipoCosecha: values.tipoCosecha,
-        lotes: lotesSeleccionadosTexto,
 
+        lotes: lotesSeleccionadosTexto,
         loteIds,
 
-        trabajadores: trabajadorIds.map((trabajadorId) => ({
-          trabajadorId,
-        })),
+        trabajadores: trabajadorIds.map(
+          (trabajadorId) => ({
+            trabajadorId,
+          }),
+        ),
 
-        observacion: values.observacion?.trim() || null,
+        observacion:
+          values.observacion?.trim() || null,
+
         varietal: values.varietal ?? null,
       };
 
       if (editingCosecha) {
-        await updateCosechaApi(editingCosecha.id, payload as any);
+        await updateCosechaApi(
+          editingCosecha.id,
+          payload,
+        );
+
         message.success("Cosecha actualizada con éxito");
       } else {
-        await createCosechaApi(payload as any);
+        await createCosechaApi(payload);
+
         message.success("Cosecha registrada con éxito");
       }
 
@@ -329,9 +300,9 @@ export default function CosechasPage() {
           );
 
         const matchesTrabajador =
-          cosecha.trabajador?.nombres?.toLowerCase().includes(term) ||
-          cosecha.cosechaTrabajadores?.some((item) =>
-            `${item.trabajador.nombres} ${item.trabajador.apellidos ?? ""}`
+          cosecha.cosechaTrabajadores.some((item) =>
+            `${item.trabajador.nombres} ${item.trabajador.apellidos ?? ""
+              }`
               .toLowerCase()
               .includes(term),
           );
@@ -355,15 +326,11 @@ export default function CosechasPage() {
       }
 
       if (filtroTrabajador !== undefined) {
-        const tieneTrabajadorRelacion = cosecha.cosechaTrabajadores?.some(
+        const tieneTrabajador = cosecha.cosechaTrabajadores.some(
           (item) => item.trabajadorId === filtroTrabajador,
         );
 
-        const tieneTrabajadorLegacy =
-          cosecha.trabajadorId === filtroTrabajador ||
-          cosecha.trabajador?.id === filtroTrabajador;
-
-        if (!tieneTrabajadorRelacion && !tieneTrabajadorLegacy) {
+        if (!tieneTrabajador) {
           return false;
         }
       }
@@ -379,7 +346,7 @@ export default function CosechasPage() {
     });
   }, [cosechas, searchText, filtroFecha, filtroTrabajador, filtroTipo]);
 
-  const columns: ColumnsType<CosechaRow> = [
+  const columns: ColumnsType<Cosecha> = [
     {
       title: "Código Cosecha",
       dataIndex: "id",
@@ -444,15 +411,6 @@ export default function CosechasPage() {
                 </Tag>
               ))}
             </Space>
-          );
-        }
-
-        if (record.trabajador?.nombres) {
-          return (
-            <Tag icon={<UserOutlined />} color="blue">
-              {record.trabajador.nombres}
-              {record.trabajador.apellidos ? ` ${record.trabajador.apellidos}` : ""}
-            </Tag>
           );
         }
 
@@ -841,11 +799,14 @@ export default function CosechasPage() {
             </Descriptions.Item>
 
             <Descriptions.Item label="Trabajadores">
-              {viewingCosecha.cosechaTrabajadores &&
-                viewingCosecha.cosechaTrabajadores.length > 0 ? (
+              {viewingCosecha.cosechaTrabajadores.length > 0 ? (
                 <Space wrap>
                   {viewingCosecha.cosechaTrabajadores.map((item) => (
-                    <Tag key={item.id} icon={<UserOutlined />} color="blue">
+                    <Tag
+                      key={item.id}
+                      icon={<UserOutlined />}
+                      color="blue"
+                    >
                       {item.trabajador.nombres}
                       {item.trabajador.apellidos
                         ? ` ${item.trabajador.apellidos}`
@@ -853,10 +814,6 @@ export default function CosechasPage() {
                     </Tag>
                   ))}
                 </Space>
-              ) : viewingCosecha.trabajador?.nombres ? (
-                <Tag icon={<UserOutlined />} color="blue">
-                  {viewingCosecha.trabajador.nombres}
-                </Tag>
               ) : (
                 "Sin asignar"
               )}
@@ -889,9 +846,7 @@ export default function CosechasPage() {
             </Descriptions.Item>
 
             <Descriptions.Item label="Observaciones">
-              {viewingCosecha.observacion ||
-                viewingCosecha.observaciones ||
-                "-"}
+              {viewingCosecha.observacion || "-"}
             </Descriptions.Item>
 
             <Descriptions.Item label="Varietales">

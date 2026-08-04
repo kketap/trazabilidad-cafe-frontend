@@ -53,12 +53,6 @@ dayjs.locale("es");
 type ProcesoRow = ProcesoTrazabilidad & {
     lote?: Lote | null;
     Lote?: Lote | null;
-    kilosResultantes?: number | null;
-    porcentajeMerma?: number | null;
-    fechaInicio?: string | null;
-    fechaFin?: string | null;
-    duracionHoras?: number | null;
-    etapa?: string | null;
 };
 
 type SortField =
@@ -290,11 +284,6 @@ export default function TrazabilidadPage() {
         try {
             setSaving(true);
 
-            const porcentajeMerma = calcularMermaLocal(
-                values.kilosIngresados,
-                values.kilosResultantes,
-            );
-
             const payload: CreateProcesoTrazabilidadDto = {
                 fecha: values.fecha.format("YYYY-MM-DD"),
                 fechaInicio: values.fechaInicio.toISOString(),
@@ -309,11 +298,7 @@ export default function TrazabilidadPage() {
             const nuevoProceso = await createProcesoTrazabilidad(payload);
 
             setProcesos((currentProcesos) => [
-                normalizeProceso({
-                    ...(nuevoProceso as ProcesoRow),
-                    kilosResultantes: values.kilosResultantes,
-                    porcentajeMerma,
-                }),
+                normalizeProceso(nuevoProceso),
                 ...currentProcesos,
             ]);
 
@@ -349,11 +334,6 @@ export default function TrazabilidadPage() {
         try {
             setSaving(true);
 
-            const porcentajeMerma = calcularMermaLocal(
-                values.kilosIngresados,
-                values.kilosResultantes,
-            );
-
             const payload: Partial<CreateProcesoTrazabilidadDto> = {
                 fecha: values.fecha.format("YYYY-MM-DD"),
                 fechaInicio: values.fechaInicio.toISOString(),
@@ -368,14 +348,10 @@ export default function TrazabilidadPage() {
             const procesoActualizado = await updateProcesoTrazabilidad(id, payload);
 
             setProcesos((current) =>
-                current.map((p) =>
-                    p.id === id
-                        ? normalizeProceso({
-                            ...(procesoActualizado as ProcesoRow),
-                            kilosResultantes: values.kilosResultantes,
-                            porcentajeMerma,
-                        })
-                        : p,
+                current.map((proceso) =>
+                    proceso.id === id
+                        ? normalizeProceso(procesoActualizado)
+                        : proceso,
                 ),
             );
 
@@ -488,18 +464,43 @@ export default function TrazabilidadPage() {
         });
 
         return [...filtrados].sort((a, b) => {
-            let valorA: number;
-            let valorB: number;
+            let valorA = 0;
+            let valorB = 0;
 
-            if (ordenCampo === "fecha") {
-                valorA = dayjs(a.fecha).valueOf();
-                valorB = dayjs(b.fecha).valueOf();
-            } else {
-                valorA = Number(a[ordenCampo] ?? 0);
-                valorB = Number(b[ordenCampo] ?? 0);
+            switch (ordenCampo) {
+                case "fecha":
+                    valorA = dayjs(a.fecha).valueOf();
+                    valorB = dayjs(b.fecha).valueOf();
+                    break;
+
+                case "kilosIngresados":
+                    valorA = Number(a.kilosIngresados ?? 0);
+                    valorB = Number(b.kilosIngresados ?? 0);
+                    break;
+
+                case "kilosResultantes":
+                    valorA = Number(a.kilosResultantes ?? 0);
+                    valorB = Number(b.kilosResultantes ?? 0);
+                    break;
+
+                case "porcentajeMerma":
+                    valorA =
+                        calcularMermaLocal(
+                            a.kilosIngresados,
+                            a.kilosResultantes,
+                        ) ?? 0;
+
+                    valorB =
+                        calcularMermaLocal(
+                            b.kilosIngresados,
+                            b.kilosResultantes,
+                        ) ?? 0;
+                    break;
             }
 
-            return ordenDireccion === "asc" ? valorA - valorB : valorB - valorA;
+            return ordenDireccion === "asc"
+                ? valorA - valorB
+                : valorB - valorA;
         });
     }, [
         procesos,
@@ -522,15 +523,16 @@ export default function TrazabilidadPage() {
     );
 
     const mermasValidas = procesosFiltrados
-        .map(
-            (proceso) =>
-                proceso.porcentajeMerma ??
-                calcularMermaLocal(
-                    proceso.kilosIngresados,
-                    proceso.kilosResultantes,
-                ),
+        .map((proceso) =>
+            calcularMermaLocal(
+                proceso.kilosIngresados,
+                proceso.kilosResultantes,
+            ),
         )
-        .filter((value): value is number => value !== null && value !== undefined);
+        .filter(
+            (value): value is number =>
+                value !== null && value !== undefined,
+        );
 
     const mermaPromedio =
         mermasValidas.length > 0
@@ -634,19 +636,16 @@ export default function TrazabilidadPage() {
         },
         {
             title: "% Merma",
-            dataIndex: "porcentajeMerma",
             key: "porcentajeMerma",
             align: "right",
             width: 120,
-            render: (_porcentajeMerma: number | null | undefined, record) => {
-                const merma =
-                    record.porcentajeMerma ??
-                    calcularMermaLocal(
-                        record.kilosIngresados,
-                        record.kilosResultantes,
-                    );
+            render: (_: unknown, record) => {
+                const merma = calcularMermaLocal(
+                    record.kilosIngresados,
+                    record.kilosResultantes,
+                );
 
-                if (merma === null || merma === undefined) {
+                if (merma === null) {
                     return "-";
                 }
 
@@ -658,14 +657,16 @@ export default function TrazabilidadPage() {
             },
             sorter: (a, b) => {
                 const mermaA =
-                    a.porcentajeMerma ??
-                    calcularMermaLocal(a.kilosIngresados, a.kilosResultantes) ??
-                    0;
+                    calcularMermaLocal(
+                        a.kilosIngresados,
+                        a.kilosResultantes,
+                    ) ?? 0;
 
                 const mermaB =
-                    b.porcentajeMerma ??
-                    calcularMermaLocal(b.kilosIngresados, b.kilosResultantes) ??
-                    0;
+                    calcularMermaLocal(
+                        b.kilosIngresados,
+                        b.kilosResultantes,
+                    ) ?? 0;
 
                 return mermaA - mermaB;
             },
@@ -1000,12 +1001,10 @@ export default function TrazabilidadPage() {
 
                         <Descriptions.Item label="Merma">
                             {(() => {
-                                const merma =
-                                    selectedProceso.porcentajeMerma ??
-                                    calcularMermaLocal(
-                                        selectedProceso.kilosIngresados,
-                                        selectedProceso.kilosResultantes,
-                                    );
+                                const merma = calcularMermaLocal(
+                                    selectedProceso.kilosIngresados,
+                                    selectedProceso.kilosResultantes,
+                                );
 
                                 if (merma === null || merma === undefined) {
                                     return "-";

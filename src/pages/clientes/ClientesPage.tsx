@@ -44,6 +44,10 @@ export default function ClientesPage() {
   const [loading, setLoading] = useState(false);
   const [searchText, setSearchText] = useState("");
 
+  const [filtroEstado, setFiltroEstado] = useState<
+    "TODOS" | "ACTIVOS" | "INACTIVOS"
+  >("ACTIVOS");
+
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingCliente, setEditingCliente] = useState<Cliente | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -130,9 +134,18 @@ export default function ClientesPage() {
   };
 
   const filteredData = useMemo(() => {
-    const search = searchText.toLowerCase();
+    const search = searchText.trim().toLowerCase();
 
     return clientes.filter((cliente) => {
+      const cumpleEstado =
+        filtroEstado === "TODOS" ||
+        (filtroEstado === "ACTIVOS" && cliente.activo) ||
+        (filtroEstado === "INACTIVOS" && !cliente.activo);
+
+      if (!cumpleEstado) {
+        return false;
+      }
+
       return (
         cliente.nombre.toLowerCase().includes(search) ||
         cliente.dniRut.toLowerCase().includes(search) ||
@@ -145,7 +158,7 @@ export default function ClientesPage() {
         (cliente.activo ? "activo" : "inactivo").includes(search)
       );
     });
-  }, [clientes, searchText]);
+  }, [clientes, searchText, filtroEstado]);
 
   const columns = [
     {
@@ -231,16 +244,44 @@ export default function ClientesPage() {
             onClick={() => handleOpenEditModal(record)}
           />
 
-          <Popconfirm
-            title="Desactivar cliente"
-            description="¿Está seguro de desactivar este cliente?"
-            onConfirm={() => handleDelete(record.id)}
-            okText="Sí, desactivar"
-            cancelText="Cancelar"
-            okButtonProps={{ danger: true }}
-          >
-            <Button type="text" danger icon={<DeleteOutlined />} />
-          </Popconfirm>
+          {record.activo ? (
+            <Popconfirm
+              title="Desactivar cliente"
+              description="¿Está seguro de desactivar este cliente?"
+              onConfirm={() => handleDelete(record.id)}
+              okText="Sí, desactivar"
+              cancelText="Cancelar"
+              okButtonProps={{ danger: true }}
+            >
+              <Button
+                type="text"
+                danger
+                icon={<DeleteOutlined />}
+                title="Desactivar cliente"
+              />
+            </Popconfirm>
+          ) : (
+            <Button
+              type="link"
+              onClick={async () => {
+                try {
+                  await updateClienteApi(record.id, {
+                    activo: true,
+                  });
+
+                  message.success("Cliente reactivado correctamente");
+                  await fetchClientes();
+                } catch (error: any) {
+                  message.error(
+                    error?.response?.data?.message ||
+                    "No se pudo reactivar el cliente",
+                  );
+                }
+              }}
+            >
+              Reactivar
+            </Button>
+          )}
         </Space>
       ),
     },
@@ -285,15 +326,58 @@ export default function ClientesPage() {
           boxShadow: "0 4px 20px rgba(0,0,0,0.06)",
         }}
       >
-        <div style={{ marginBottom: 16, maxWidth: 420 }}>
+        <Space
+          wrap
+          style={{
+            marginBottom: 16,
+            width: "100%",
+          }}
+        >
           <Input
             placeholder="Buscar por nombre, DNI/RUT, teléfono o correo..."
-            prefix={<SearchOutlined style={{ color: token.colorTextSecondary }} />}
+            prefix={
+              <SearchOutlined
+                style={{ color: token.colorTextSecondary }}
+              />
+            }
             value={searchText}
             onChange={(event) => setSearchText(event.target.value)}
             allowClear
+            style={{
+              width: 380,
+              maxWidth: "100%",
+            }}
           />
-        </div>
+
+          <Select
+            value={filtroEstado}
+            onChange={setFiltroEstado}
+            style={{ minWidth: 180 }}
+            options={[
+              {
+                value: "TODOS",
+                label: "Todos los clientes",
+              },
+              {
+                value: "ACTIVOS",
+                label: "Solo activos",
+              },
+              {
+                value: "INACTIVOS",
+                label: "Solo inactivos",
+              },
+            ]}
+          />
+
+          <Button
+            onClick={() => {
+              setSearchText("");
+              setFiltroEstado("TODOS");
+            }}
+          >
+            Limpiar filtros
+          </Button>
+        </Space>
 
         <Table
           columns={columns}

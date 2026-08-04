@@ -43,7 +43,7 @@ import {
 } from "./ventas.api";
 
 import type { Cliente } from "../../pages/clientes/clientes.api";
-import { getClientesApi } from "../../pages/clientes/clientes.api";
+import { getClientesActivosApi } from "../../pages/clientes/clientes.api";
 
 import type { OrdenTrilla } from "../trilla/trilla.api";
 import { getOrdenesTrilaApi } from "../trilla/trilla.api";
@@ -70,7 +70,7 @@ export default function VentasPage() {
     try {
       const [ventasData, clientesData, ordenesData] = await Promise.all([
         getVentasApi(),
-        getClientesApi(),
+        getClientesActivosApi(),
         getOrdenesTrilaApi(),
       ]);
       setVentas(ventasData);

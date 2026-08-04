@@ -1,92 +1,123 @@
-// src/api/cosechas.ts
+// src/pages/cosechas/cosechas.api.ts
 import { apiClient } from "../../api/apiClient";
-import type { Trabajador } from "../trabajadores/trabajadores.api";
-import type { Lote } from "../lotes/lotes.api";
 
+import type { Lote } from "../lotes/lotes.api";
+import type { Trabajador } from "../trabajadores/trabajadores.api";
+
+/**
+ * Formato estándar de respuesta utilizado por el backend.
+ */
 type ApiResponse<T> = {
   ok: boolean;
   data: T;
   message?: string;
 };
 
+/**
+ * Relación entre una cosecha y uno de sus lotes de origen.
+ */
 export type CosechaLote = {
   id: number;
   cosechaId: number;
   loteId: number;
+  createdAt?: string;
   lote: Lote;
 };
 
+/**
+ * Relación entre una cosecha y un trabajador asignado.
+ */
 export type CosechaTrabajador = {
   id: number;
   cosechaId: number;
   trabajadorId: number;
-  kilosAsignados?: number | null;
+  kilosAsignados: number | null;
+  createdAt?: string;
   trabajador: Trabajador;
 };
 
+/**
+ * Cosecha devuelta por la API.
+ *
+ * cantidadCosechadores no se almacena directamente en Prisma.
+ * El backend la calcula desde cosechaTrabajadores.length.
+ */
 export type Cosecha = {
   id: number;
   fecha: string;
   kilosCosechados: number;
+
   cantidadCosechadores: number;
+
   lotes: string;
   totalHectareas: number;
   tipoCosecha: string;
 
-  varietal?: string | string[] | null;
-  observacion?: string | null;
-  observaciones?: string | null;
+  varietal: string | null;
+  observacion: string | null;
 
-  cosechaLotes?: CosechaLote[];
-  cosechaTrabajadores?: CosechaTrabajador[];
+  cosechaLotes: CosechaLote[];
+  cosechaTrabajadores: CosechaTrabajador[];
 
-  // Compatibilidad con datos antiguos si todavía llegan desde el backend
-  trabajadorId?: number | null;
-  trabajador?: Trabajador | null;
-  tipo_cosecha?: string | null;
-  kilos_diarios?: number | null;
-  kilos_quincena?: number | null;
-  kilos_mensuales?: number | null;
-
-  createdAt?: string;
-  updatedAt?: string;
+  createdAt: string;
+  updatedAt: string;
 };
 
+/**
+ * Trabajador enviado al crear o editar una cosecha.
+ */
 export type CosechaTrabajadorPayload = {
   trabajadorId: number;
   kilosAsignados?: number | null;
 };
 
+/**
+ * Payload requerido para registrar una cosecha.
+ */
 export type CreateCosechaDTO = {
   fecha: string;
   kilosCosechados: number;
-  cantidadCosechadores?: number;
   totalHectareas: number;
 
+  loteIds: number[];
   lotes?: string;
-  loteIds?: number[];
 
   tipoCosecha: string;
   varietal?: string | string[] | null;
   observacion?: string | null;
 
-  trabajadores?: CosechaTrabajadorPayload[];
-
-  // Compatibilidad con versión antigua
-  trabajadorId?: number | null;
-  tipo_cosecha?: string | null;
-  kilos_diarios?: number | null;
-  kilos_quincena?: number | null;
-  kilos_mensuales?: number | null;
+  trabajadores: CosechaTrabajadorPayload[];
 };
 
+/**
+ * Payload parcial utilizado para actualizar una cosecha.
+ */
 export type UpdateCosechaDTO = Partial<CreateCosechaDTO>;
 
+export type MejorTrabajadorCosecha = {
+  id: number;
+  nombre: string;
+  kilos: number;
+};
+
+export type MejorLoteCosecha = {
+  id: number;
+  codigo: string;
+  nombre: string | null;
+  kilos: number;
+};
+
+/**
+ * Resumen general o correspondiente al periodo solicitado.
+ */
 export type CosechasResumen = {
   totalCosechas: number;
   kilosTotales: number;
   totalHectareas: number;
   rendimiento: number;
+
+  mejorTrabajador: MejorTrabajadorCosecha | null;
+  mejorLote: MejorLoteCosecha | null;
 };
 
 export type CosechasReporte = {
@@ -127,9 +158,15 @@ export type CosechasReporte = {
   }[];
 };
 
-function unwrapResponse<T>(responseData: ApiResponse<T> | T): T {
+/**
+ * Admite temporalmente respuestas directas y respuestas envueltas
+ * mediante el formato { ok, data }.
+ */
+function unwrapResponse<T>(
+  responseData: ApiResponse<T> | T,
+): T {
   if (
-    responseData &&
+    responseData !== null &&
     typeof responseData === "object" &&
     "data" in responseData
   ) {
@@ -140,9 +177,9 @@ function unwrapResponse<T>(responseData: ApiResponse<T> | T): T {
 }
 
 export async function getCosechasApi(): Promise<Cosecha[]> {
-  const response = await apiClient.get<ApiResponse<Cosecha[]> | Cosecha[]>(
-    "/cosechas",
-  );
+  const response = await apiClient.get<
+    ApiResponse<Cosecha[]> | Cosecha[]
+  >("/cosechas");
 
   return unwrapResponse(response.data) ?? [];
 }
@@ -150,10 +187,9 @@ export async function getCosechasApi(): Promise<Cosecha[]> {
 export async function createCosechaApi(
   data: CreateCosechaDTO,
 ): Promise<Cosecha> {
-  const response = await apiClient.post<ApiResponse<Cosecha> | Cosecha>(
-    "/cosechas",
-    data,
-  );
+  const response = await apiClient.post<
+    ApiResponse<Cosecha> | Cosecha
+  >("/cosechas", data);
 
   return unwrapResponse(response.data);
 }
@@ -162,22 +198,27 @@ export async function updateCosechaApi(
   id: number,
   data: UpdateCosechaDTO,
 ): Promise<Cosecha> {
-  const response = await apiClient.put<ApiResponse<Cosecha> | Cosecha>(
-    `/cosechas/${id}`,
-    data,
-  );
+  const response = await apiClient.put<
+    ApiResponse<Cosecha> | Cosecha
+  >(`/cosechas/${id}`, data);
 
   return unwrapResponse(response.data);
 }
 
-export async function deleteCosechaApi(id: number): Promise<void> {
+export async function deleteCosechaApi(
+  id: number,
+): Promise<void> {
   await apiClient.delete(`/cosechas/${id}`);
 }
 
-export async function getCosechasResumenApi(): Promise<CosechasResumen> {
+export async function getCosechasResumenApi(
+  periodo?: "mes-actual",
+): Promise<CosechasResumen> {
   const response = await apiClient.get<
     ApiResponse<CosechasResumen> | CosechasResumen
-  >("/cosechas/resumen");
+  >("/cosechas/resumen", {
+    params: periodo ? { periodo } : undefined,
+  });
 
   return unwrapResponse(response.data);
 }

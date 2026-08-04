@@ -44,6 +44,20 @@ export async function getClientesApi(): Promise<Cliente[]> {
   return response.data.data ?? [];
 }
 
+export async function getClientesActivosApi(): Promise<
+  Cliente[]
+> {
+  const response = await apiClient.get<
+    ApiResponse<Cliente[]> | Cliente[]
+  >("/clientes/activos");
+
+  if (Array.isArray(response.data)) {
+    return response.data;
+  }
+
+  return response.data.data ?? [];
+}
+
 export async function createClienteApi(
   data: CreateClienteDTO,
 ): Promise<Cliente> {
