@@ -72,3 +72,87 @@ export async function getCosechasReporteApi(): Promise<CosechasReporte> {
 
     return response.data.data;
 }
+
+export type ProcesoDetalleItem = {
+    id: number;
+    codigo: string;
+    fecha: string;
+    etapa: string | null;
+    duracionHoras: number;
+    kilosIngresados: number;
+    loteCodigo: string | null;
+};
+
+export type SecadoDetalleItem = {
+    id: number;
+    fechaInicio: string;
+    fechaFin: string | null;
+    kilosIngresados: number;
+    kilosResultantes: number;
+    merma: number;
+    observaciones: string | null;
+    loteCodigo: string | null;
+};
+
+export type TrillaDetalleItem = {
+    id: string;
+    codigoTrilla: string;
+    fechaDespacho: string;
+    fechaIngreso: string | null;
+    calidad: string | null;
+    tipoSaco: string | null;
+    kilosEnviados: number;
+    kilosNetos: number | null;
+    lotes: string[];
+};
+
+export type KpisTrazabilidadData = {
+    resumen: {
+        totalIngresadoProcesos: number;
+        totalProcesos: number;
+        duracionPromedioHoras: number;
+        totalIngresadoSecado: number;
+        totalResultanteSecado: number;
+        totalMermaSecado: number;
+        porcMermaSecadoPromedio: number;
+        totalKilosEnviadosTrilla: number;
+        totalKilosNetosTrilla: number;
+        totalOrdenesTrilla: number;
+        totalKilosVendidos: number;
+        totalIngresosVentas: number;
+        totalVentas: number;
+    };
+    porTipoProceso: {
+        tipo: string;
+        kilos: number;
+        duracionHoras: number;
+        cantidad: number;
+        duracionPromedio: number;
+        detalles?: ProcesoDetalleItem[];
+    }[];
+    porPerfilSecado: {
+        perfil: string;
+        kilosIngresados: number;
+        kilosResultantes: number;
+        merma: number;
+        cantidad: number;
+        porcentajeMerma: number;
+        detalles?: SecadoDetalleItem[];
+    }[];
+    porCalidadTrilla: {
+        calidad: string;
+        kilosEnviados: number;
+        kilosNetos: number;
+        cantidad: number;
+        detalles?: TrillaDetalleItem[];
+    }[];
+};
+
+export async function getKpisTrazabilidadApi(): Promise<KpisTrazabilidadData> {
+    const response = await apiClient.get<ApiResponse<KpisTrazabilidadData>>(
+        "/kpis/trazabilidad",
+    );
+
+    return response.data.data;
+}
+

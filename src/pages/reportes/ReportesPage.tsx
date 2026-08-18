@@ -21,7 +21,7 @@ import {
 import type { ColumnsType } from "antd/es/table";
 import dayjs, { type Dayjs } from "dayjs";
 import "dayjs/locale/es";
-import { EyeOutlined, CoffeeOutlined } from "@ant-design/icons";
+import { EyeOutlined, CoffeeOutlined, ExperimentOutlined, SunOutlined, DollarOutlined, ToolOutlined } from "@ant-design/icons";
 import {
     Bar,
     BarChart,
@@ -35,7 +35,9 @@ import {
 } from "recharts";
 import {
     getCosechasReporteApi,
+    getKpisTrazabilidadApi,
     type CosechasReporte,
+    type KpisTrazabilidadData,
     type ReportePorDia,
 } from "./reportes.api";
 
@@ -57,6 +59,10 @@ function formatNumber(value: number): string {
     return value.toLocaleString("es-CL");
 }
 
+function formatCurrency(value: number): string {
+    return `$${value.toLocaleString("es-CL")}`;
+}
+
 const emptyReporte: CosechasReporte = {
     porDia: [],
     porMes: [],
@@ -66,31 +72,70 @@ const emptyReporte: CosechasReporte = {
     porLote: [],
 };
 
+const emptyTrazabilidad: KpisTrazabilidadData = {
+    resumen: {
+        totalIngresadoProcesos: 0,
+        totalProcesos: 0,
+        duracionPromedioHoras: 0,
+        totalIngresadoSecado: 0,
+        totalResultanteSecado: 0,
+        totalMermaSecado: 0,
+        porcMermaSecadoPromedio: 0,
+        totalKilosEnviadosTrilla: 0,
+        totalKilosNetosTrilla: 0,
+        totalOrdenesTrilla: 0,
+        totalKilosVendidos: 0,
+        totalIngresosVentas: 0,
+        totalVentas: 0,
+    },
+    porTipoProceso: [],
+    porPerfilSecado: [],
+    porCalidadTrilla: [],
+};
+
 export default function ReportesPage() {
     const { token } = theme.useToken();
 
     const [reporte, setReporte] = useState<CosechasReporte>(emptyReporte);
+    const [trazabilidad, setTrazabilidad] = useState<KpisTrazabilidadData>(emptyTrazabilidad);
     const [loading, setLoading] = useState(true);
+    const [loadingTrazabilidad, setLoadingTrazabilidad] = useState(true);
     const [mesSeleccionado, setMesSeleccionado] = useState<Dayjs | null>(null);
 
-    // Estado del modal de detalles por día
+    // Estado del modal de detalles por día (Cosechas)
     const [modalVisible, setModalVisible] = useState(false);
     const [diaSeleccionado, setDiaSeleccionado] = useState<ReportePorDia | null>(null);
 
+    // Estados de modales para Trazabilidad
+    const [modalSecadoVisible, setModalSecadoVisible] = useState(false);
+    const [secadoSeleccionado, setSecadoSeleccionado] = useState<KpisTrazabilidadData["porPerfilSecado"][0] | null>(null);
+
+    const [modalTrillaVisible, setModalTrillaVisible] = useState(false);
+    const [trillaSeleccionada, setTrillaSeleccionada] = useState<KpisTrazabilidadData["porCalidadTrilla"][0] | null>(null);
+
+    const [modalProcesosVisible, setModalProcesosVisible] = useState(false);
+    const [procesoSeleccionado, setProcesoSeleccionado] = useState<KpisTrazabilidadData["porTipoProceso"][0] | null>(null);
+
     useEffect(() => {
-        cargarReporte();
+        cargarReportes();
     }, []);
 
-    async function cargarReporte() {
+    async function cargarReportes() {
         try {
             setLoading(true);
-            const data = await getCosechasReporteApi();
-            setReporte(data);
+            setLoadingTrazabilidad(true);
+            const [dataCosechas, dataTrazabilidad] = await Promise.all([
+                getCosechasReporteApi(),
+                getKpisTrazabilidadApi(),
+            ]);
+            setReporte(dataCosechas);
+            setTrazabilidad(dataTrazabilidad);
         } catch (error) {
-            console.error("Error cargando reporte de cosechas:", error);
-            message.error("No se pudo cargar el reporte de cosechas.");
+            console.error("Error cargando reportes:", error);
+            message.error("No se pudieron cargar todos los datos de reportes.");
         } finally {
             setLoading(false);
+            setLoadingTrazabilidad(false);
         }
     }
 
@@ -236,6 +281,24 @@ export default function ReportesPage() {
             ),
         },
     ];
+
+    // Datos procesados para gráficos de Trazabilidad
+    const dataSecadoChart = useMemo(() => {
+        return trazabilidad.porPerfilSecado.map((p) => ({
+            perfil: p.perfil.replace(/_/g, " "),
+            Ingresado: p.kilosIngresados,
+            Resultante: p.kilosResultantes,
+            MermaPorc: p.porcentajeMerma,
+        }));
+    }, [trazabilidad.porPerfilSecado]);
+
+    const dataProcesosChart = useMemo(() => {
+        return trazabilidad.porTipoProceso.map((p) => ({
+            tipo: p.tipo.replace(/_/g, " "),
+            Kilos: p.kilos,
+            HorasPromedio: p.duracionPromedio,
+        }));
+    }, [trazabilidad.porTipoProceso]);
 
     return (
         <Space orientation="vertical" size="large" style={{ width: "100%" }}>
@@ -570,15 +633,302 @@ export default function ReportesPage() {
                         key: "trazabilidad",
                         label: "KPIs Trazabilidad",
                         children: (
-                            <Card
-                                variant="borderless"
-                                style={{ borderRadius: 14 }}
+                            <Space
+                                orientation="vertical"
+                                size="large"
+                                style={{ width: "100%" }}
                             >
-                                <Empty
-                                    description="Módulo en construcción"
-                                    style={{ padding: "48px 0" }}
-                                />
-                            </Card>
+                                <Row gutter={[16, 16]}>
+                                    <Col xs={24} sm={12} lg={6}>
+                                        <Card className="report-kpi-card report-kpi-card-coffee">
+                                            <Statistic
+                                                title="Procesos Húmedos"
+                                                value={trazabilidad.resumen.totalIngresadoProcesos}
+                                                suffix="kg"
+                                                prefix={<ExperimentOutlined />}
+                                                formatter={(val) => formatNumber(Number(val))}
+                                            />
+                                            <Typography.Text type="secondary" style={{ fontSize: 12 }}>
+                                                {trazabilidad.resumen.totalProcesos} procesos ({trazabilidad.resumen.duracionPromedioHoras}h prom.)
+                                            </Typography.Text>
+                                        </Card>
+                                    </Col>
+
+                                    <Col xs={24} sm={12} lg={6}>
+                                        <Card className="report-kpi-card report-kpi-card-earth">
+                                            <Statistic
+                                                title="Merma Prom. Secado"
+                                                value={trazabilidad.resumen.porcMermaSecadoPromedio}
+                                                suffix="%"
+                                                prefix={<SunOutlined />}
+                                                precision={2}
+                                            />
+                                            <Typography.Text type="secondary" style={{ fontSize: 12 }}>
+                                                Resultante: {formatNumber(trazabilidad.resumen.totalResultanteSecado)} kg
+                                            </Typography.Text>
+                                        </Card>
+                                    </Col>
+
+                                    <Col xs={24} sm={12} lg={6}>
+                                        <Card className="report-kpi-card report-kpi-card-plantation">
+                                            <Statistic
+                                                title="Café Trillado Neto"
+                                                value={trazabilidad.resumen.totalKilosNetosTrilla}
+                                                suffix="kg"
+                                                prefix={<ToolOutlined />}
+                                                formatter={(val) => formatNumber(Number(val))}
+                                            />
+                                            <Typography.Text type="secondary" style={{ fontSize: 12 }}>
+                                                {trazabilidad.resumen.totalOrdenesTrilla} órdenes de trilla
+                                            </Typography.Text>
+                                        </Card>
+                                    </Col>
+
+                                    <Col xs={24} sm={12} lg={6}>
+                                        <Card className="report-kpi-card report-kpi-card-gold">
+                                            <Statistic
+                                                title="Ingresos por Ventas"
+                                                value={trazabilidad.resumen.totalIngresosVentas}
+                                                prefix={<DollarOutlined />}
+                                                formatter={(val) => formatCurrency(Number(val))}
+                                            />
+                                            <Typography.Text type="secondary" style={{ fontSize: 12 }}>
+                                                {formatNumber(trazabilidad.resumen.totalKilosVendidos)} kg en {trazabilidad.resumen.totalVentas} ventas
+                                            </Typography.Text>
+                                        </Card>
+                                    </Col>
+                                </Row>
+
+                                <Row gutter={[16, 16]}>
+                                    <Col xs={24} lg={12}>
+                                        <Card
+                                            title="Eficiencia por Perfil de Secado (Ingresado vs Resultante)"
+                                            variant="borderless"
+                                            style={{ borderRadius: 14 }}
+                                        >
+                                            {loadingTrazabilidad ? (
+                                                <Skeleton.Input active style={{ width: "100%", height: 250 }} />
+                                            ) : dataSecadoChart.length === 0 ? (
+                                                <Empty description="Sin datos de secado" style={{ padding: "40px 0" }} />
+                                            ) : (
+                                                <ResponsiveContainer width="100%" height={250}>
+                                                    <BarChart data={dataSecadoChart}>
+                                                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={token.colorBorder} />
+                                                        <XAxis dataKey="perfil" tick={{ fontSize: 12, fill: token.colorTextSecondary }} />
+                                                        <YAxis tick={{ fontSize: 12, fill: token.colorTextSecondary }} />
+                                                        <RTooltip
+                                                            formatter={(val: any, name: any) =>
+                                                                name === "MermaPorc" ? `${val}%` : `${formatNumber(Number(val))} kg`
+                                                            }
+                                                        />
+                                                        <Bar dataKey="Ingresado" fill="#8c6d58" radius={[4, 4, 0, 0]} />
+                                                        <Bar dataKey="Resultante" fill="#52c41a" radius={[4, 4, 0, 0]} />
+                                                    </BarChart>
+                                                </ResponsiveContainer>
+                                            )}
+                                        </Card>
+                                    </Col>
+
+                                    <Col xs={24} lg={12}>
+                                        <Card
+                                            title="Procesos Húmedos por Tipo (Kilos & Duración)"
+                                            variant="borderless"
+                                            style={{ borderRadius: 14 }}
+                                        >
+                                            {loadingTrazabilidad ? (
+                                                <Skeleton.Input active style={{ width: "100%", height: 250 }} />
+                                            ) : dataProcesosChart.length === 0 ? (
+                                                <Empty description="Sin datos de procesos húmedos" style={{ padding: "40px 0" }} />
+                                            ) : (
+                                                <ResponsiveContainer width="100%" height={250}>
+                                                    <BarChart data={dataProcesosChart}>
+                                                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={token.colorBorder} />
+                                                        <XAxis dataKey="tipo" tick={{ fontSize: 11, fill: token.colorTextSecondary }} />
+                                                        <YAxis tick={{ fontSize: 12, fill: token.colorTextSecondary }} />
+                                                        <RTooltip
+                                                            formatter={(val: any, name: any) =>
+                                                                name === "HorasPromedio" ? `${val} hrs` : `${formatNumber(Number(val))} kg`
+                                                            }
+                                                        />
+                                                        <Bar dataKey="Kilos" fill={token.colorPrimary} radius={[4, 4, 0, 0]} />
+                                                    </BarChart>
+                                                </ResponsiveContainer>
+                                            )}
+                                        </Card>
+                                    </Col>
+                                </Row>
+
+                                <Row gutter={[16, 16]}>
+                                    <Col xs={24} lg={8}>
+                                        <Card
+                                            title="Procesos Húmedos (Detalles)"
+                                            variant="borderless"
+                                            style={{ borderRadius: 14 }}
+                                        >
+                                            <Table
+                                                dataSource={trazabilidad.porTipoProceso}
+                                                rowKey="tipo"
+                                                pagination={false}
+                                                size="small"
+                                                onRow={(record) => ({
+                                                    onClick: () => {
+                                                        setProcesoSeleccionado(record);
+                                                        setModalProcesosVisible(true);
+                                                    },
+                                                    style: { cursor: "pointer" },
+                                                })}
+                                                columns={[
+                                                    {
+                                                        title: "Etapa / Tipo",
+                                                        dataIndex: "tipo",
+                                                        key: "tipo",
+                                                        render: (t: string) => <Tag color="purple">{t.replace(/_/g, " ")}</Tag>,
+                                                    },
+                                                    {
+                                                        title: "Kilos",
+                                                        dataIndex: "kilos",
+                                                        key: "kilos",
+                                                        align: "right",
+                                                        render: (k: number) => `${formatNumber(k)} kg`,
+                                                    },
+                                                    {
+                                                        title: "Acción",
+                                                        key: "acc",
+                                                        align: "center",
+                                                        render: (_, record) => (
+                                                            <Button
+                                                                type="link"
+                                                                size="small"
+                                                                icon={<EyeOutlined />}
+                                                                onClick={(e) => {
+                                                                    e.stopPropagation();
+                                                                    setProcesoSeleccionado(record);
+                                                                    setModalProcesosVisible(true);
+                                                                }}
+                                                            />
+                                                        ),
+                                                    },
+                                                ]}
+                                            />
+                                        </Card>
+                                    </Col>
+
+                                    <Col xs={24} lg={8}>
+                                        <Card
+                                            title="Desglose por Perfil de Secado"
+                                            variant="borderless"
+                                            style={{ borderRadius: 14 }}
+                                        >
+                                            <Table
+                                                dataSource={trazabilidad.porPerfilSecado}
+                                                rowKey="perfil"
+                                                pagination={false}
+                                                size="small"
+                                                onRow={(record) => ({
+                                                    onClick: () => {
+                                                        setSecadoSeleccionado(record);
+                                                        setModalSecadoVisible(true);
+                                                    },
+                                                    style: { cursor: "pointer" },
+                                                })}
+                                                columns={[
+                                                    {
+                                                        title: "Perfil",
+                                                        dataIndex: "perfil",
+                                                        key: "perfil",
+                                                        render: (p: string) => <Tag color="orange">{p.replace(/_/g, " ")}</Tag>,
+                                                    },
+                                                    {
+                                                        title: "Resultante",
+                                                        dataIndex: "kilosResultantes",
+                                                        key: "kilosResultantes",
+                                                        align: "right",
+                                                        render: (k: number) => `${formatNumber(k)} kg`,
+                                                    },
+                                                    {
+                                                        title: "% Merma",
+                                                        dataIndex: "porcentajeMerma",
+                                                        key: "porcentajeMerma",
+                                                        align: "right",
+                                                        render: (p: number) => <Tag color={p > 20 ? "volcano" : "green"}>{p}%</Tag>,
+                                                    },
+                                                    {
+                                                        title: "Acción",
+                                                        key: "acc",
+                                                        align: "center",
+                                                        render: (_, record) => (
+                                                            <Button
+                                                                type="link"
+                                                                size="small"
+                                                                icon={<EyeOutlined />}
+                                                                onClick={(e) => {
+                                                                    e.stopPropagation();
+                                                                    setSecadoSeleccionado(record);
+                                                                    setModalSecadoVisible(true);
+                                                                }}
+                                                            />
+                                                        ),
+                                                    },
+                                                ]}
+                                            />
+                                        </Card>
+                                    </Col>
+
+                                    <Col xs={24} lg={8}>
+                                        <Card
+                                            title="Desglose por Calidad en Trilla"
+                                            variant="borderless"
+                                            style={{ borderRadius: 14 }}
+                                        >
+                                            <Table
+                                                dataSource={trazabilidad.porCalidadTrilla}
+                                                rowKey="calidad"
+                                                pagination={false}
+                                                size="small"
+                                                onRow={(record) => ({
+                                                    onClick: () => {
+                                                        setTrillaSeleccionada(record);
+                                                        setModalTrillaVisible(true);
+                                                    },
+                                                    style: { cursor: "pointer" },
+                                                })}
+                                                columns={[
+                                                    {
+                                                        title: "Calidad",
+                                                        dataIndex: "calidad",
+                                                        key: "calidad",
+                                                        render: (c: string) => <Tag color="blue">{c}</Tag>,
+                                                    },
+                                                    {
+                                                        title: "Kg Netos",
+                                                        dataIndex: "kilosNetos",
+                                                        key: "kilosNetos",
+                                                        align: "right",
+                                                        render: (k: number) => <strong>{formatNumber(k)} kg</strong>,
+                                                    },
+                                                    {
+                                                        title: "Acción",
+                                                        key: "acc",
+                                                        align: "center",
+                                                        render: (_, record) => (
+                                                            <Button
+                                                                type="link"
+                                                                size="small"
+                                                                icon={<EyeOutlined />}
+                                                                onClick={(e) => {
+                                                                    e.stopPropagation();
+                                                                    setTrillaSeleccionada(record);
+                                                                    setModalTrillaVisible(true);
+                                                                }}
+                                                            />
+                                                        ),
+                                                    },
+                                                ]}
+                                            />
+                                        </Card>
+                                    </Col>
+                                </Row>
+                            </Space>
                         ),
                     },
                 ]}
@@ -755,6 +1105,103 @@ export default function ReportesPage() {
                             ]}
                         />
                     </Space>
+                )}
+            </Modal>
+
+            {/* Modal de Detalle de Secado */}
+            <Modal
+                title={
+                    <Space align="center">
+                        <SunOutlined style={{ color: "#fa8c16", fontSize: 20 }} />
+                        <span>Detalle de Secado - {secadoSeleccionado?.perfil.replace(/_/g, " ")}</span>
+                    </Space>
+                }
+                open={modalSecadoVisible}
+                onCancel={() => setModalSecadoVisible(false)}
+                footer={[<Button key="cerrar" onClick={() => setModalSecadoVisible(false)}>Cerrar</Button>]}
+                width={780}
+            >
+                {secadoSeleccionado && (
+                    <Table
+                        dataSource={secadoSeleccionado.detalles || []}
+                        rowKey="id"
+                        pagination={false}
+                        size="small"
+                        style={{ marginTop: 16 }}
+                        columns={[
+                            { title: "ID", dataIndex: "id", key: "id", width: 50 },
+                            { title: "Lote", dataIndex: "loteCodigo", key: "loteCodigo", render: (c: string | null) => (c ? <Tag color="green">{c}</Tag> : "-") },
+                            { title: "Fecha Inicio", dataIndex: "fechaInicio", key: "fechaInicio", render: (f: string) => formatDate(f) },
+                            { title: "Fecha Fin", dataIndex: "fechaFin", key: "fechaFin", render: (f: string | null) => (f ? formatDate(f) : "-") },
+                            { title: "Ingresado", dataIndex: "kilosIngresados", key: "kilosIngresados", align: "right", render: (k: number) => `${formatNumber(k)} kg` },
+                            { title: "Resultante", dataIndex: "kilosResultantes", key: "kilosResultantes", align: "right", render: (k: number) => `${formatNumber(k)} kg` },
+                            { title: "Merma", dataIndex: "merma", key: "merma", align: "right", render: (m: number) => <Tag color="volcano">{formatNumber(m)} kg</Tag> },
+                        ]}
+                    />
+                )}
+            </Modal>
+
+            {/* Modal de Detalle de Trilla */}
+            <Modal
+                title={
+                    <Space align="center">
+                        <ToolOutlined style={{ color: token.colorPrimary, fontSize: 20 }} />
+                        <span>Detalle de Orden de Trilla - Calidad {trillaSeleccionada?.calidad}</span>
+                    </Space>
+                }
+                open={modalTrillaVisible}
+                onCancel={() => setModalTrillaVisible(false)}
+                footer={[<Button key="cerrar" onClick={() => setModalTrillaVisible(false)}>Cerrar</Button>]}
+                width={780}
+            >
+                {trillaSeleccionada && (
+                    <Table
+                        dataSource={trillaSeleccionada.detalles || []}
+                        rowKey="id"
+                        pagination={false}
+                        size="small"
+                        style={{ marginTop: 16 }}
+                        columns={[
+                            { title: "Código Trilla", dataIndex: "codigoTrilla", key: "codigoTrilla", render: (c: string) => <Tag color="blue">{c}</Tag> },
+                            { title: "Fecha Despacho", dataIndex: "fechaDespacho", key: "fechaDespacho", render: (f: string) => formatDate(f) },
+                            { title: "Tipo Saco", dataIndex: "tipoSaco", key: "tipoSaco", render: (s: string | null) => s || "Estándar" },
+                            { title: "Kg Enviados", dataIndex: "kilosEnviados", key: "kilosEnviados", align: "right", render: (k: number) => `${formatNumber(k)} kg` },
+                            { title: "Kg Netos", dataIndex: "kilosNetos", key: "kilosNetos", align: "right", render: (k: number | null) => (k ? <strong>{formatNumber(k)} kg</strong> : "-") },
+                            { title: "Lotes", dataIndex: "lotes", key: "lotes", render: (l: string[]) => l.map((code) => <Tag key={code} color="green">{code}</Tag>) },
+                        ]}
+                    />
+                )}
+            </Modal>
+
+            {/* Modal de Detalle de Procesos Húmedos */}
+            <Modal
+                title={
+                    <Space align="center">
+                        <ExperimentOutlined style={{ color: "#722ed1", fontSize: 20 }} />
+                        <span>Detalle de Procesos Húmedos - {procesoSeleccionado?.tipo.replace(/_/g, " ")}</span>
+                    </Space>
+                }
+                open={modalProcesosVisible}
+                onCancel={() => setModalProcesosVisible(false)}
+                footer={[<Button key="cerrar" onClick={() => setModalProcesosVisible(false)}>Cerrar</Button>]}
+                width={780}
+            >
+                {procesoSeleccionado && (
+                    <Table
+                        dataSource={procesoSeleccionado.detalles || []}
+                        rowKey="id"
+                        pagination={false}
+                        size="small"
+                        style={{ marginTop: 16 }}
+                        columns={[
+                            { title: "Código Proceso", dataIndex: "codigo", key: "codigo", render: (c: string) => <Tag color="purple">{c}</Tag> },
+                            { title: "Fecha", dataIndex: "fecha", key: "fecha", render: (f: string) => formatDate(f) },
+                            { title: "Etapa", dataIndex: "etapa", key: "etapa", render: (e: string | null) => e || "-" },
+                            { title: "Duración", dataIndex: "duracionHoras", key: "duracionHoras", align: "right", render: (h: number) => `${h} hrs` },
+                            { title: "Kg Ingresados", dataIndex: "kilosIngresados", key: "kilosIngresados", align: "right", render: (k: number) => <strong>{formatNumber(k)} kg</strong> },
+                            { title: "Lote", dataIndex: "loteCodigo", key: "loteCodigo", render: (c: string | null) => (c ? <Tag color="green">{c}</Tag> : "-") },
+                        ]}
+                    />
                 )}
             </Modal>
         </Space>
