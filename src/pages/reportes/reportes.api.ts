@@ -7,10 +7,23 @@ type ApiResponse<T> = {
     message?: string;
 };
 
+export type CosechaDetalleItem = {
+    id: number;
+    kilosCosechados: number;
+    totalHectareas: number;
+    tipoCosecha: string;
+    varietal: string | null;
+    lotes: { id: number; codigo: string; nombre: string | null; hectareas: number | null }[];
+    trabajadores: { id: number; nombre: string; dni: string; kilosAsignados: number | null }[];
+};
+
 export type ReportePorDia = {
     fecha: string;
     kilos: number;
+    cantidadRegistros?: number;
+    detalles?: CosechaDetalleItem[];
 };
+
 
 export type ReportePorMes = {
     mes: string;

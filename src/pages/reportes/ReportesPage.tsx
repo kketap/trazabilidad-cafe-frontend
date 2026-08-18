@@ -1,23 +1,27 @@
 // src/pages/reportes/ReportesPage.tsx
 import { useEffect, useMemo, useState } from "react";
 import {
+    Button,
     Card,
     Col,
     DatePicker,
     Empty,
-    message,
+    Modal,
     Row,
     Skeleton,
     Space,
+    Statistic,
     Table,
     Tabs,
+    Tag,
     Typography,
+    message,
     theme,
-    Statistic,
 } from "antd";
 import type { ColumnsType } from "antd/es/table";
 import dayjs, { type Dayjs } from "dayjs";
 import "dayjs/locale/es";
+import { EyeOutlined, CoffeeOutlined } from "@ant-design/icons";
 import {
     Bar,
     BarChart,
@@ -69,6 +73,10 @@ export default function ReportesPage() {
     const [loading, setLoading] = useState(true);
     const [mesSeleccionado, setMesSeleccionado] = useState<Dayjs | null>(null);
 
+    // Estado del modal de detalles por día
+    const [modalVisible, setModalVisible] = useState(false);
+    const [diaSeleccionado, setDiaSeleccionado] = useState<ReportePorDia | null>(null);
+
     useEffect(() => {
         cargarReporte();
     }, []);
@@ -85,6 +93,11 @@ export default function ReportesPage() {
             setLoading(false);
         }
     }
+
+    const abrirModalDetalle = (record: ReportePorDia) => {
+        setDiaSeleccionado(record);
+        setModalVisible(true);
+    };
 
     const porDiaFiltrado = useMemo(() => {
         if (!mesSeleccionado) {
@@ -150,12 +163,50 @@ export default function ReportesPage() {
         };
     }, [porDiaFiltrado, reporte.porMes]);
 
+    // Extraer lotes únicos del día seleccionado
+    const lotesUnicosDia = useMemo(() => {
+        if (!diaSeleccionado?.detalles) return [];
+        const map = new Map<number, { id: number; codigo: string; nombre: string | null; hectareas: number | null }>();
+        diaSeleccionado.detalles.forEach((d) => {
+            d.lotes.forEach((l) => {
+                if (!map.has(l.id)) map.set(l.id, l);
+            });
+        });
+        return Array.from(map.values());
+    }, [diaSeleccionado]);
+
+    // Extraer trabajadores únicos del día seleccionado
+    const trabajadoresUnicosDia = useMemo(() => {
+        if (!diaSeleccionado?.detalles) return [];
+        const map = new Map<number, { id: number; nombre: string; dni: string; kilosAsignados: number | null }>();
+        diaSeleccionado.detalles.forEach((d) => {
+            d.trabajadores.forEach((t) => {
+                if (!map.has(t.id)) map.set(t.id, t);
+            });
+        });
+        return Array.from(map.values());
+    }, [diaSeleccionado]);
+
     const columnsDia: ColumnsType<ReportePorDia> = [
         {
             title: "Fecha",
             dataIndex: "fecha",
             key: "fecha",
-            render: (fecha: string) => formatDate(fecha),
+            render: (fecha: string) => <strong>{formatDate(fecha)}</strong>,
+        },
+        {
+            title: "Registros",
+            dataIndex: "cantidadRegistros",
+            key: "cantidadRegistros",
+            align: "center",
+            render: (cnt: number, record: ReportePorDia) => {
+                const total = cnt || record.detalles?.length || 1;
+                return (
+                    <Tag color="gold">
+                        {total} {total === 1 ? "cosecha" : "cosechas"}
+                    </Tag>
+                );
+            },
         },
         {
             title: "Kilos cosechados",
@@ -164,6 +215,25 @@ export default function ReportesPage() {
             align: "right",
             render: (value: number) => `${formatNumber(value)} kg`,
             sorter: (a, b) => a.kilos - b.kilos,
+        },
+        {
+            title: "Acción",
+            key: "accion",
+            align: "center",
+            render: (_, record: ReportePorDia) => (
+                <Button
+                    type="primary"
+                    ghost
+                    size="small"
+                    icon={<EyeOutlined />}
+                    onClick={(e) => {
+                        e.stopPropagation();
+                        abrirModalDetalle(record);
+                    }}
+                >
+                    Ver detalle
+                </Button>
+            ),
         },
     ];
 
@@ -481,6 +551,10 @@ export default function ReportesPage() {
                                             rowKey="fecha"
                                             pagination={{ pageSize: 10 }}
                                             scroll={{ x: "max-content" }}
+                                            onRow={(record) => ({
+                                                onClick: () => abrirModalDetalle(record),
+                                                style: { cursor: "pointer" },
+                                            })}
                                             locale={{
                                                 emptyText: mesSeleccionado
                                                     ? "No hay cosechas registradas en este mes"
@@ -509,6 +583,180 @@ export default function ReportesPage() {
                     },
                 ]}
             />
+
+            {/* Modal de Detalle Completo de Cosecha por Día */}
+            <Modal
+                title={
+                    <Space align="center">
+                        <CoffeeOutlined style={{ color: token.colorPrimary, fontSize: 20 }} />
+                        <span>
+                            Detalle de Cosecha - {diaSeleccionado ? formatDate(diaSeleccionado.fecha) : ""}
+                        </span>
+                    </Space>
+                }
+                open={modalVisible}
+                onCancel={() => setModalVisible(false)}
+                footer={[
+                    <Button key="cerrar" onClick={() => setModalVisible(false)}>
+                        Cerrar
+                    </Button>,
+                ]}
+                width={780}
+                style={{ top: 30 }}
+            >
+                {diaSeleccionado && (
+                    <Space orientation="vertical" size="middle" style={{ width: "100%", marginTop: 16 }}>
+                        <Row gutter={[16, 16]}>
+                            <Col span={8}>
+                                <Card size="small" style={{ background: token.colorBgLayout }}>
+                                    <Statistic
+                                        title="Total Kilos Cosechados"
+                                        value={diaSeleccionado.kilos}
+                                        suffix="kg"
+                                        valueStyle={{ color: token.colorPrimary, fontWeight: "bold" }}
+                                        formatter={(val) => formatNumber(Number(val))}
+                                    />
+                                </Card>
+                            </Col>
+                            <Col span={8}>
+                                <Card size="small" style={{ background: token.colorBgLayout }}>
+                                    <Statistic
+                                        title="Lotes Cosechados"
+                                        value={lotesUnicosDia.length}
+                                        suffix="lote(s)"
+                                    />
+                                </Card>
+                            </Col>
+                            <Col span={8}>
+                                <Card size="small" style={{ background: token.colorBgLayout }}>
+                                    <Statistic
+                                        title="Recolectores"
+                                        value={trabajadoresUnicosDia.length}
+                                        suffix="persona(s)"
+                                    />
+                                </Card>
+                            </Col>
+                        </Row>
+
+                        <Tabs
+                            defaultActiveKey="registros"
+                            items={[
+                                {
+                                    key: "registros",
+                                    label: `Registros de Cosecha (${diaSeleccionado.detalles?.length || 0})`,
+                                    children: (
+                                        <Table
+                                            dataSource={diaSeleccionado.detalles || []}
+                                            rowKey="id"
+                                            pagination={false}
+                                            size="small"
+                                            columns={[
+                                                {
+                                                    title: "ID",
+                                                    dataIndex: "id",
+                                                    key: "id",
+                                                    width: 60,
+                                                },
+                                                {
+                                                    title: "Tipo Cosecha",
+                                                    dataIndex: "tipoCosecha",
+                                                    key: "tipoCosecha",
+                                                    render: (t: string) => <Tag color="brown">{t}</Tag>,
+                                                },
+                                                {
+                                                    title: "Varietal",
+                                                    dataIndex: "varietal",
+                                                    key: "varietal",
+                                                    render: (v: string | null) => v || "No especificado",
+                                                },
+                                                {
+                                                    title: "Hectáreas",
+                                                    dataIndex: "totalHectareas",
+                                                    key: "totalHectareas",
+                                                    align: "right",
+                                                    render: (h: number) => `${h} ha`,
+                                                },
+                                                {
+                                                    title: "Kilos",
+                                                    dataIndex: "kilosCosechados",
+                                                    key: "kilosCosechados",
+                                                    align: "right",
+                                                    render: (k: number) => <strong>{formatNumber(k)} kg</strong>,
+                                                },
+                                            ]}
+                                        />
+                                    ),
+                                },
+                                {
+                                    key: "lotes",
+                                    label: `Lotes (${lotesUnicosDia.length})`,
+                                    children: (
+                                        <Table
+                                            dataSource={lotesUnicosDia}
+                                            rowKey="id"
+                                            pagination={false}
+                                            size="small"
+                                            columns={[
+                                                {
+                                                    title: "Código Lote",
+                                                    dataIndex: "codigo",
+                                                    key: "codigo",
+                                                    render: (code: string) => <Tag color="green">{code}</Tag>,
+                                                },
+                                                {
+                                                    title: "Nombre",
+                                                    dataIndex: "nombre",
+                                                    key: "nombre",
+                                                    render: (n: string | null) => n || "Sin nombre",
+                                                },
+                                                {
+                                                    title: "Hectáreas",
+                                                    dataIndex: "hectareas",
+                                                    key: "hectareas",
+                                                    align: "right",
+                                                    render: (h: number | null) => (h ? `${h} ha` : "-"),
+                                                },
+                                            ]}
+                                        />
+                                    ),
+                                },
+                                {
+                                    key: "trabajadores",
+                                    label: `Recolectores (${trabajadoresUnicosDia.length})`,
+                                    children: (
+                                        <Table
+                                            dataSource={trabajadoresUnicosDia}
+                                            rowKey="id"
+                                            pagination={false}
+                                            size="small"
+                                            columns={[
+                                                {
+                                                    title: "Nombre Recolector",
+                                                    dataIndex: "nombre",
+                                                    key: "nombre",
+                                                },
+                                                {
+                                                    title: "DNI",
+                                                    dataIndex: "dni",
+                                                    key: "dni",
+                                                    render: (dni: string) => <Tag>{dni || "-"}</Tag>,
+                                                },
+                                                {
+                                                    title: "Kilos Asignados",
+                                                    dataIndex: "kilosAsignados",
+                                                    key: "kilosAsignados",
+                                                    align: "right",
+                                                    render: (k: number | null) => (k ? `${formatNumber(k)} kg` : "-"),
+                                                },
+                                            ]}
+                                        />
+                                    ),
+                                },
+                            ]}
+                        />
+                    </Space>
+                )}
+            </Modal>
         </Space>
     );
 }
