@@ -189,3 +189,94 @@ export async function getCosechasReporteApi(): Promise<CosechasReporte> {
 
   return unwrapResponse(response.data);
 }
+
+export type CargaMasivaResponse = {
+  totalFilasProcesadas: number;
+  totalGruposCreados: number;
+  cosechas: Cosecha[];
+};
+
+export type FilaCosechaPreview = {
+  filaNumero: number;
+  fecha: string;
+  tipoCosecha: string;
+  trabajadorDni: string;
+  trabajadorNombre: string | null;
+  trabajadorExiste: boolean;
+  kilosRecolectados: number;
+  codigosLotes: string[];
+  lotesValidos: { codigo: string; nombre: string | null; existe: boolean }[];
+  totalHectareas: number;
+  varietal: string | null;
+  esValida: boolean;
+  errores: string[];
+};
+
+export type PreviewCargaMasivaResponse = {
+  resumen: {
+    totalFilas: number;
+    filasValidas: number;
+    filasConError: number;
+    totalKilos: number;
+    gruposEstimados: number;
+    trabajadoresDetectados: number;
+    lotesDetectados: number;
+  };
+  filas: FilaCosechaPreview[];
+};
+
+export type FilaConfirmacionInput = {
+  filaNumero?: number;
+  fecha: string;
+  tipoCosecha?: string;
+  trabajadorDni: string;
+  kilosRecolectados: number;
+  codigosLotes: string[] | string;
+  totalHectareas?: number;
+  varietal?: string | null;
+};
+
+export async function previewCargaMasivaApi(
+  file: File,
+): Promise<PreviewCargaMasivaResponse> {
+  const formData = new FormData();
+  formData.append("file", file);
+
+  const response = await apiClient.post<
+    ApiResponse<PreviewCargaMasivaResponse> | PreviewCargaMasivaResponse
+  >("/cosechas/masiva/preview", formData, {
+    headers: {
+      "Content-Type": "multipart/form-data",
+    },
+  });
+
+  return unwrapResponse(response.data);
+}
+
+export async function confirmarCargaMasivaApi(
+  filas: FilaConfirmacionInput[],
+): Promise<CargaMasivaResponse> {
+  const response = await apiClient.post<
+    ApiResponse<CargaMasivaResponse> | CargaMasivaResponse
+  >("/cosechas/masiva/confirmar", { filas });
+
+  return unwrapResponse(response.data);
+}
+
+export async function cargarCosechasMasivasApi(
+  file: File,
+): Promise<CargaMasivaResponse> {
+  const formData = new FormData();
+  formData.append("file", file);
+
+  const response = await apiClient.post<
+    ApiResponse<CargaMasivaResponse> | CargaMasivaResponse
+  >("/cosechas/masiva", formData, {
+    headers: {
+      "Content-Type": "multipart/form-data",
+    },
+  });
+
+  return unwrapResponse(response.data);
+}
+

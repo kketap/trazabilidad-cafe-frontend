@@ -27,11 +27,14 @@ import {
   DeleteOutlined,
   EditOutlined,
   EyeOutlined,
+  FileExcelOutlined,
   PlusOutlined,
   SearchOutlined,
   UserOutlined,
 } from "@ant-design/icons";
 import dayjs, { type Dayjs } from "dayjs";
+
+import CargaMasivaModal from "./CargaMasivaModal";
 
 import type { Cosecha } from "./cosechas.api";
 import {
@@ -134,8 +137,10 @@ export default function CosechasPage() {
 
   const [viewingCosecha, setViewingCosecha] = useState<CosechaRow | null>(null);
   const [isViewModalOpen, setIsViewModalOpen] = useState(false);
+  const [isMasivaModalOpen, setIsMasivaModalOpen] = useState(false);
 
   const [form] = Form.useForm();
+
 
   async function fetchCosechas() {
     setLoading(true);
@@ -553,15 +558,26 @@ export default function CosechasPage() {
           </Typography.Text>
         </div>
 
-        <Button
-          type="primary"
-          icon={<PlusOutlined />}
-          size="large"
-          onClick={handleOpenCreateModal}
-          style={{ borderRadius: 8 }}
-        >
-          Nueva Cosecha
-        </Button>
+        <Space size="middle" wrap>
+          <Button
+            icon={<FileExcelOutlined style={{ color: "#52c41a" }} />}
+            size="large"
+            onClick={() => setIsMasivaModalOpen(true)}
+            style={{ borderRadius: 8 }}
+          >
+            Carga Masiva
+          </Button>
+
+          <Button
+            type="primary"
+            icon={<PlusOutlined />}
+            size="large"
+            onClick={handleOpenCreateModal}
+            style={{ borderRadius: 8 }}
+          >
+            Nueva Cosecha
+          </Button>
+        </Space>
       </div>
 
       <Card
@@ -902,6 +918,13 @@ export default function CosechasPage() {
           </Descriptions>
         )}
       </Modal>
+
+      {/* Modal de Carga Masiva */}
+      <CargaMasivaModal
+        open={isMasivaModalOpen}
+        onClose={() => setIsMasivaModalOpen(false)}
+        onSuccess={fetchCosechas}
+      />
     </Space>
   );
 }
