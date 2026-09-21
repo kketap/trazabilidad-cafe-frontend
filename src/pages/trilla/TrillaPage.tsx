@@ -5,9 +5,11 @@ import {
   Card,
   Col,
   DatePicker,
+  Descriptions,
   Input,
   message,
   Popconfirm,
+  Popover,
   Row,
   Select,
   Space,
@@ -20,6 +22,7 @@ import {
   Badge,
 } from "antd";
 import {
+  BarChartOutlined,
   DeleteOutlined,
   EditOutlined,
   PlusOutlined,
@@ -305,6 +308,81 @@ export default function TrillaPage() {
       key: "tipoSaco",
       render: (tipoSaco?: string | null) =>
         tipoSaco ? <Tag color="cyan">{tipoSaco}</Tag> : <Text type="secondary">-</Text>,
+    },
+    {
+      title: "N° Guía",
+      dataIndex: "numeroGuia",
+      key: "numeroGuia",
+      render: (val?: string | null) =>
+        val ? (
+          <Tag color="geekblue" style={{ fontSize: 12 }}>
+            {val}
+          </Tag>
+        ) : (
+          <Text type="secondary">-</Text>
+        ),
+    },
+    {
+      title: "Subproductos",
+      key: "subproductos",
+      align: "center",
+      render: (_: unknown, record: OrdenTrilla) => {
+        const SUBPRODUCTO_LABELS: { key: keyof OrdenTrilla; label: string }[] = [
+          { key: "exportable", label: "Exportable" },
+          { key: "recuperado", label: "Recuperado" },
+          { key: "malla13", label: "Malla 13" },
+          { key: "segundaBuena", label: "2° Buena" },
+          { key: "segundaMala", label: "2° Mala" },
+          { key: "sucioEscojo", label: "Sucio/Escojo" },
+          { key: "cisco", label: "Cisco" },
+          { key: "descarteMaquina", label: "Descarte Máq." },
+          { key: "cascarilla", label: "Cascarilla" },
+        ];
+        const tieneSubproductos = SUBPRODUCTO_LABELS.some(
+          (s) => (record[s.key] as number | null | undefined) != null
+        );
+        if (!tieneSubproductos) {
+          return <Text type="secondary">-</Text>;
+        }
+        const content = (
+          <Descriptions
+            size="small"
+            column={1}
+            bordered
+            style={{ minWidth: 200 }}
+          >
+            {SUBPRODUCTO_LABELS.map((s) => {
+              const val = record[s.key] as number | null | undefined;
+              return val != null ? (
+                <Descriptions.Item key={s.key} label={s.label}>
+                  <strong>{val.toLocaleString("es-AR", { minimumFractionDigits: 2 })} kg</strong>
+                </Descriptions.Item>
+              ) : null;
+            })}
+          </Descriptions>
+        );
+        return (
+          <Popover
+            title={
+              <Space>
+                <BarChartOutlined />
+                <span>Subproductos de Trilla</span>
+              </Space>
+            }
+            content={content}
+            trigger="click"
+            placement="left"
+          >
+            <Tag
+              color="purple"
+              style={{ cursor: "pointer" }}
+              icon={<BarChartOutlined />}
+            >
+              Ver desglose
+            </Tag>
+          </Popover>
+        );
+      },
     },
     {
       title: "Estado",
