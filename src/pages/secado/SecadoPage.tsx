@@ -5,8 +5,11 @@ import {
   Card,
   Col,
   DatePicker,
+  Descriptions,
+  Divider,
   Input,
   message,
+  Modal,
   Popconfirm,
   Row,
   Select,
@@ -14,12 +17,14 @@ import {
   Statistic,
   Table,
   Tag,
+  Tooltip,
   Typography,
   theme,
 } from "antd";
 import {
   DeleteOutlined,
   EditOutlined,
+  EyeOutlined,
   PlusOutlined,
   SearchOutlined,
   ReloadOutlined,
@@ -62,6 +67,8 @@ export default function SecadoPage() {
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [editingSecado, setEditingSecado] = useState<Secado | null>(null);
+  const [viewingSecado, setViewingSecado] = useState<Secado | null>(null);
+  const [isViewOpen, setIsViewOpen] = useState(false);
 
   const fetchData = async () => {
     setLoading(true);
@@ -170,6 +177,16 @@ export default function SecadoPage() {
 
   const columns: ColumnsType<Secado> = [
     {
+      title: "Código",
+      key: "codigo",
+      width: 120,
+      render: (_: unknown, record: Secado) => (
+        <Tag color="cyan" style={{ fontWeight: "bold", fontSize: 13 }}>
+          {record.codigo || `SEC-${String(record.id).padStart(3, "0")}`}
+        </Tag>
+      ),
+    },
+    {
       title: "Código del Lote",
       dataIndex: ["lote", "codigo"],
       key: "loteCodigo",
@@ -246,15 +263,24 @@ export default function SecadoPage() {
       key: "acciones",
       align: "center",
       render: (_, record: Secado) => (
-        <Space size="middle">
-          <Button
-            type="text"
-            icon={<EditOutlined style={{ color: "#1890ff" }} />}
-            onClick={() => {
-              setEditingSecado(record);
-              setIsEditOpen(true);
-            }}
-          />
+        <Space size="small">
+          <Tooltip title="Ver detalle">
+            <Button
+              type="text"
+              icon={<EyeOutlined style={{ color: token.colorInfo }} />}
+              onClick={() => { setViewingSecado(record); setIsViewOpen(true); }}
+            />
+          </Tooltip>
+          <Tooltip title="Editar">
+            <Button
+              type="text"
+              icon={<EditOutlined style={{ color: "#1890ff" }} />}
+              onClick={() => {
+                setEditingSecado(record);
+                setIsEditOpen(true);
+              }}
+            />
+          </Tooltip>
           <Popconfirm
             title="¿Eliminar registro de secado?"
             description="Esta acción no se puede deshacer."
@@ -263,7 +289,9 @@ export default function SecadoPage() {
             cancelText="Cancelar"
             okButtonProps={{ danger: true }}
           >
-            <Button type="text" danger icon={<DeleteOutlined />} />
+            <Tooltip title="Eliminar">
+              <Button type="text" danger icon={<DeleteOutlined />} />
+            </Tooltip>
           </Popconfirm>
         </Space>
       ),
@@ -413,6 +441,122 @@ export default function SecadoPage() {
         lotes={lotes}
         loading={saving}
       />
+
+      {/* ── Modal Detalle Secado ── */}
+      <Modal
+        title={
+          <Space>
+            <Tag color="cyan" style={{ fontWeight: "bold", fontSize: 14 }}>
+              {viewingSecado?.codigo || `SEC-${String(viewingSecado?.id ?? 0).padStart(3, "0")}`}
+            </Tag>
+            <Typography.Text type="secondary">Detalle del proceso de secado</Typography.Text>
+          </Space>
+        }
+        open={isViewOpen}
+        onCancel={() => { setIsViewOpen(false); setViewingSecado(null); }}
+        footer={[
+          <Button key="close" onClick={() => { setIsViewOpen(false); setViewingSecado(null); }}>
+            Cerrar
+          </Button>,
+        ]}
+        width="min(720px, 95vw)"
+        centered
+        destroyOnHidden
+      >
+        {viewingSecado && (
+          <>
+            <Descriptions
+              bordered
+              column={{ xs: 1, sm: 2, md: 2 }}
+              size="middle"
+              style={{ marginTop: 8 }}
+            >
+              <Descriptions.Item label="Código Secado">
+                <Tag color="cyan" style={{ fontWeight: "bold" }}>
+                  {viewingSecado.codigo || `SEC-${String(viewingSecado.id).padStart(3, "0")}`}
+                </Tag>
+              </Descriptions.Item>
+
+              <Descriptions.Item label="Lote de origen">
+                <Space direction="vertical" size={0}>
+                  <Tag color="blue" style={{ fontWeight: "bold" }}>
+                    {viewingSecado.lote?.codigo || `Lote #${viewingSecado.loteId}`}
+                  </Tag>
+                  {viewingSecado.lote?.nombre && (
+                    <Typography.Text type="secondary" style={{ fontSize: 12 }}>
+                      {viewingSecado.lote.nombre}
+                    </Typography.Text>
+                  )}
+                </Space>
+              </Descriptions.Item>
+
+              <Descriptions.Item label="Perfil de proceso">
+                {viewingSecado.perfilProceso ? (
+                  <Tag color="purple">{formatEstadoEnum(viewingSecado.perfilProceso)}</Tag>
+                ) : <Typography.Text type="secondary">-</Typography.Text>}
+              </Descriptions.Item>
+
+              <Descriptions.Item label="Secadora / Infraestructura">
+                {viewingSecado.secadora || <Typography.Text type="secondary">-</Typography.Text>}
+              </Descriptions.Item>
+
+              <Descriptions.Item label="Fecha inicio">
+                {dayjs(viewingSecado.fechaInicio).format("DD/MM/YYYY HH:mm")}
+              </Descriptions.Item>
+
+              <Descriptions.Item label="Fecha fin">
+                {viewingSecado.fechaFin
+                  ? dayjs(viewingSecado.fechaFin).format("DD/MM/YYYY HH:mm")
+                  : <Typography.Text type="secondary">En proceso</Typography.Text>}
+              </Descriptions.Item>
+
+              <Descriptions.Item label="Kg ingresados">
+                <strong>{viewingSecado.kilosIngresados?.toLocaleString("es-CL")} kg</strong>
+              </Descriptions.Item>
+
+              <Descriptions.Item label="Kg resultantes (secos)">
+                <strong style={{ color: token.colorPrimary }}>
+                  {viewingSecado.kilosResultantes?.toLocaleString("es-CL")} kg
+                </strong>
+              </Descriptions.Item>
+
+              <Descriptions.Item label="Merma">
+                {(() => {
+                  const pct = viewingSecado.kilosIngresados
+                    ? ((viewingSecado.merma / viewingSecado.kilosIngresados) * 100).toFixed(1)
+                    : "0";
+                  return (
+                    <Tag color={viewingSecado.merma > 0 ? "warning" : "green"}>
+                      {viewingSecado.merma?.toLocaleString("es-CL")} kg ({pct}%)
+                    </Tag>
+                  );
+                })()}
+              </Descriptions.Item>
+
+              <Descriptions.Item label="Temp. mínima">
+                {viewingSecado.tempMinima != null
+                  ? <Tag color="blue">{viewingSecado.tempMinima} °C</Tag>
+                  : <Typography.Text type="secondary">-</Typography.Text>}
+              </Descriptions.Item>
+
+              <Descriptions.Item label="Temp. máxima">
+                {viewingSecado.tempMaxima != null
+                  ? <Tag color="red">{viewingSecado.tempMaxima} °C</Tag>
+                  : <Typography.Text type="secondary">-</Typography.Text>}
+              </Descriptions.Item>
+            </Descriptions>
+
+            {viewingSecado.observaciones && (
+              <>
+                <Divider orientation="left" orientationMargin={0} style={{ marginTop: 20 }}>
+                  <Typography.Text strong style={{ fontSize: 13 }}>Observaciones</Typography.Text>
+                </Divider>
+                <Typography.Text type="secondary">{viewingSecado.observaciones}</Typography.Text>
+              </>
+            )}
+          </>
+        )}
+      </Modal>
     </div>
   );
 }

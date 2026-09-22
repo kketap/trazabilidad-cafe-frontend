@@ -4,6 +4,7 @@ import type { Lote } from "../lotes/lotes.api";
 
 export type Secado = {
   id: number;
+  codigo?: string | null;
   loteId: number;
   fechaInicio: string;
   fechaFin?: string | null;
