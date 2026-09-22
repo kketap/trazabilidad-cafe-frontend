@@ -5,6 +5,8 @@ import {
   Card,
   Col,
   DatePicker,
+  Descriptions,
+  Divider,
   Form,
   Input,
   InputNumber,
@@ -16,16 +18,19 @@ import {
   Space,
   Table,
   Tag,
+  Tooltip,
   Typography,
   message,
   theme,
 } from "antd";
 import type { ColumnsType } from "antd/es/table";
 import {
+  AppstoreOutlined,
   BarcodeOutlined,
   ClearOutlined,
   DeleteOutlined,
   EditOutlined,
+  EyeOutlined,
   PlusOutlined,
   SafetyCertificateOutlined,
   SearchOutlined,
@@ -128,6 +133,9 @@ export default function LotesPage() {
   const [editingLote, setEditingLote] = useState<Lote | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
+  const [viewingLote, setViewingLote] = useState<Lote | null>(null);
+  const [isViewModalOpen, setIsViewModalOpen] = useState(false);
+
   const [form] = Form.useForm();
 
   const tipoCafeWatch = Form.useWatch("tipoCafe", form);
@@ -185,11 +193,17 @@ export default function LotesPage() {
       estado: record.estado || "EN_PROCESO",
       kilosIniciales: record.kilosIniciales ?? null,
       kilosActuales: record.kilosActuales ?? null,
+      gradosBrix: record.gradosBrix ?? null,
       observacion: record.observacion || "",
       activo: record.activo,
     });
 
     setIsModalOpen(true);
+  }
+
+  function handleOpenViewModal(record: Lote) {
+    setViewingLote(record);
+    setIsViewModalOpen(true);
   }
 
   async function handleDelete(id: number) {
@@ -226,6 +240,10 @@ export default function LotesPage() {
         kilosActuales:
           kilosActuales !== undefined && kilosActuales !== null
             ? Number(kilosActuales)
+            : null,
+        gradosBrix:
+          values.gradosBrix !== undefined && values.gradosBrix !== null
+            ? Number(values.gradosBrix)
             : null,
         observacion: values.observacion?.trim() || null,
         activo: values.activo ?? true,
@@ -424,16 +442,25 @@ export default function LotesPage() {
     {
       title: "Acciones",
       key: "acciones",
-      width: 120,
+      width: 140,
       fixed: "right",
       render: (_: unknown, record: Lote) => (
         <Space size="small">
-          <Button
-            type="text"
-            icon={<EditOutlined style={{ color: token.colorPrimary }} />}
-            onClick={() => handleOpenEditModal(record)}
-            title="Editar lote"
-          />
+          <Tooltip title="Ver detalle">
+            <Button
+              type="text"
+              icon={<EyeOutlined style={{ color: token.colorInfo }} />}
+              onClick={() => handleOpenViewModal(record)}
+            />
+          </Tooltip>
+
+          <Tooltip title="Editar">
+            <Button
+              type="text"
+              icon={<EditOutlined style={{ color: token.colorPrimary }} />}
+              onClick={() => handleOpenEditModal(record)}
+            />
+          </Tooltip>
 
           <Popconfirm
             title="Eliminar lote"
@@ -443,12 +470,13 @@ export default function LotesPage() {
             cancelText="Cancelar"
             okButtonProps={{ danger: true }}
           >
-            <Button
-              type="text"
-              danger
-              icon={<DeleteOutlined />}
-              title="Eliminar"
-            />
+            <Tooltip title="Eliminar">
+              <Button
+                type="text"
+                danger
+                icon={<DeleteOutlined />}
+              />
+            </Tooltip>
           </Popconfirm>
         </Space>
       ),
@@ -677,6 +705,26 @@ export default function LotesPage() {
             </Col>
           </Row>
 
+          <Row gutter={16}>
+            <Col xs={24} sm={12}>
+              <Form.Item
+                name="gradosBrix"
+                label="Grados Brix"
+                tooltip="Concentración de azúcares al momento de la recepción del lote"
+              >
+                <InputNumber
+                  style={{ width: "100%" }}
+                  min={0}
+                  max={30}
+                  step={0.1}
+                  precision={1}
+                  addonAfter="°Bx"
+                  placeholder="Ej: 18.5"
+                />
+              </Form.Item>
+            </Col>
+          </Row>
+
           <Form.Item name="estado" label="Etapa / Estado">
             <Select
               options={[
@@ -705,6 +753,132 @@ export default function LotesPage() {
             </Radio.Group>
           </Form.Item>
         </Form>
+      </Modal>
+
+      {/* ── Modal Detalle Lote ── */}
+      <Modal
+        title={
+          <Space>
+            <Tag color="gold" style={{ fontSize: 13, fontWeight: "bold" }}>
+              {viewingLote?.codigo}
+            </Tag>
+            {viewingLote?.nombre && (
+              <Typography.Text type="secondary">{viewingLote.nombre}</Typography.Text>
+            )}
+          </Space>
+        }
+        open={isViewModalOpen}
+        onCancel={() => { setIsViewModalOpen(false); setViewingLote(null); }}
+        footer={[
+          <Button key="close" onClick={() => { setIsViewModalOpen(false); setViewingLote(null); }}>
+            Cerrar
+          </Button>,
+        ]}
+        width="min(720px, 95vw)"
+        centered
+        destroyOnHidden
+      >
+        {viewingLote && (
+          <>
+            <Descriptions
+              bordered
+              column={{ xs: 1, sm: 2, md: 2 }}
+              size="middle"
+              style={{ marginTop: 8 }}
+            >
+              <Descriptions.Item label="Código">
+                <Tag icon={<BarcodeOutlined />} color="gold" style={{ fontWeight: "bold", fontSize: 13 }}>
+                  {viewingLote.codigo}
+                </Tag>
+              </Descriptions.Item>
+
+              <Descriptions.Item label="Tipo">
+                <Tag
+                  color={getTipoCodigoColor(viewingLote.tipoCodigo)}
+                  icon={viewingLote.tipoCodigo === "ESPECIAL" ? <SafetyCertificateOutlined /> : undefined}
+                >
+                  {viewingLote.tipoCodigo === "COMERCIAL"
+                    ? "Comercial"
+                    : viewingLote.tipoCodigo === "ESPECIAL"
+                      ? "Especial"
+                      : "Personalizado"}
+                </Tag>
+              </Descriptions.Item>
+
+              <Descriptions.Item label="Estado">
+                {(() => {
+                  const colores: Record<EstadoLote, string> = {
+                    EN_PROCESO: "blue",
+                    EN_SECADO: "orange",
+                    EN_ALMACEN: "purple",
+                    TRILLADO: "magenta",
+                    VENDIDO: "success",
+                    CERRADO: "default",
+                    INACTIVO: "error",
+                  };
+                  return (
+                    <Tag color={colores[viewingLote.estado] || "default"}>
+                      {formatEstadoEnum(viewingLote.estado || "EN_PROCESO")}
+                    </Tag>
+                  );
+                })()}
+              </Descriptions.Item>
+
+              <Descriptions.Item label="Activo">
+                <Tag color={viewingLote.activo ? "success" : "default"}>
+                  {viewingLote.activo ? "Activo" : "Inactivo"}
+                </Tag>
+              </Descriptions.Item>
+
+              <Descriptions.Item label="Kg iniciales">
+                <strong>{formatKg(viewingLote.kilosIniciales)}</strong>
+              </Descriptions.Item>
+
+              <Descriptions.Item label="Kg actuales">
+                <strong>{formatKg(viewingLote.kilosActuales)}</strong>
+              </Descriptions.Item>
+
+              <Descriptions.Item label="Saldo calculado">
+                {(() => {
+                  const saldo = calcularSaldo(viewingLote.kilosIniciales, viewingLote.kilosActuales);
+                  return saldo !== null ? (
+                    <Tag color={saldo > 0 ? "orange" : "green"}>{formatKg(saldo)}</Tag>
+                  ) : "-";
+                })()}
+              </Descriptions.Item>
+
+              <Descriptions.Item label="Grados Brix">
+                {viewingLote.gradosBrix != null ? (
+                  <Tag color="cyan">{viewingLote.gradosBrix} °Bx</Tag>
+                ) : "No registrado"}
+              </Descriptions.Item>
+            </Descriptions>
+
+            {viewingLote.cosechaLotes && viewingLote.cosechaLotes.length > 0 && (
+              <>
+                <Divider orientation="left" orientationMargin={0} style={{ marginTop: 20 }}>
+                  <Typography.Text strong style={{ fontSize: 13 }}>Cosechas asociadas</Typography.Text>
+                </Divider>
+                <Space wrap>
+                  {viewingLote.cosechaLotes.map((item) => (
+                    <Tag key={item.id} icon={<AppstoreOutlined />} color="blue">
+                      COS-{String(item.cosechaId).padStart(3, "0")} · {item.cosecha.fecha ? dayjs(item.cosecha.fecha).format("DD/MM/YYYY") : ""}
+                    </Tag>
+                  ))}
+                </Space>
+              </>
+            )}
+
+            {viewingLote.observacion && (
+              <>
+                <Divider orientation="left" orientationMargin={0} style={{ marginTop: 20 }}>
+                  <Typography.Text strong style={{ fontSize: 13 }}>Observaciones</Typography.Text>
+                </Divider>
+                <Typography.Text type="secondary">{viewingLote.observacion}</Typography.Text>
+              </>
+            )}
+          </>
+        )}
       </Modal>
     </Space>
   );
