@@ -28,13 +28,18 @@ export type ProcesoTrazabilidad = {
     tipoProceso?: TipoProceso | string | null;
 
     kilosIngresados: number;
-
-    /**
-     * Estos campos pueden venir undefined/null porque actualmente
-     * no existen en tu schema Prisma de ProcesoTrazabilidad.
-     */
     kilosResultantes?: number | null;
     porcentajeMerma?: number | null;
+
+    // Campos de proceso húmedo / fermentación
+    fueDespulpado?: boolean | null;
+    tanqueFermentacion?: string | null;
+    inicioFermentacion?: string | null;
+    finFermentacion?: string | null;
+    nivelPh?: number | null;
+    tempMaxima?: number | null;
+    tempMinima?: number | null;
+    fueLavado?: boolean | null;
 
     loteId?: number | null;
 
@@ -72,12 +77,17 @@ export type CreateProcesoTrazabilidadDto = {
     tipoProceso?: TipoProceso | string | null;
 
     kilosIngresados: number;
-
-    /**
-     * El formulario puede enviarlo, pero el backend actual
-     * no lo guarda si el schema no tiene kilosResultantes.
-     */
     kilosResultantes?: number | null;
+
+    // Campos de proceso húmedo / fermentación
+    fueDespulpado?: boolean | null;
+    tanqueFermentacion?: string | null;
+    inicioFermentacion?: string | null;
+    finFermentacion?: string | null;
+    nivelPh?: number | null;
+    tempMaxima?: number | null;
+    tempMinima?: number | null;
+    fueLavado?: boolean | null;
 };
 
 export type TrazabilidadResumen = {

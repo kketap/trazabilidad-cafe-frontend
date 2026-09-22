@@ -297,13 +297,22 @@ export default function TrazabilidadPage() {
 
             const payload: CreateProcesoTrazabilidadDto = {
                 fecha: values.fecha.format("YYYY-MM-DD"),
-                fechaInicio: values.fechaInicio.toISOString(),
+                fechaInicio: values.inicioFermentacion?.toISOString() ?? null,
+                finFermentacion: values.finFermentacion?.toISOString() ?? null,
                 duracionHoras: values.duracionHoras,
                 loteId: values.loteId ?? null,
                 cosechaId: values.cosechaId ?? null,
                 etapa: values.etapa,
                 kilosIngresados: values.kilosIngresados,
                 kilosResultantes: values.kilosResultantes,
+                // Campos de fermentación
+                fueDespulpado: values.fueDespulpado ?? false,
+                tanqueFermentacion: values.tanqueFermentacion ?? null,
+                inicioFermentacion: values.inicioFermentacion?.toISOString() ?? null,
+                nivelPh: values.nivelPh ?? null,
+                tempMaxima: values.tempMaxima ?? null,
+                tempMinima: values.tempMinima ?? null,
+                fueLavado: values.fueLavado ?? false,
             };
 
             const nuevoProceso = await createProcesoTrazabilidad(payload);
@@ -356,13 +365,22 @@ export default function TrazabilidadPage() {
 
             const payload: Partial<CreateProcesoTrazabilidadDto> = {
                 fecha: values.fecha.format("YYYY-MM-DD"),
-                fechaInicio: values.fechaInicio.toISOString(),
+                fechaInicio: values.inicioFermentacion?.toISOString() ?? null,
+                finFermentacion: values.finFermentacion?.toISOString() ?? null,
                 duracionHoras: values.duracionHoras,
                 loteId: values.loteId ?? null,
                 cosechaId: values.cosechaId ?? null,
                 etapa: values.etapa,
                 kilosIngresados: values.kilosIngresados,
                 kilosResultantes: values.kilosResultantes,
+                // Campos de fermentación
+                fueDespulpado: values.fueDespulpado ?? false,
+                tanqueFermentacion: values.tanqueFermentacion ?? null,
+                inicioFermentacion: values.inicioFermentacion?.toISOString() ?? null,
+                nivelPh: values.nivelPh ?? null,
+                tempMaxima: values.tempMaxima ?? null,
+                tempMinima: values.tempMinima ?? null,
+                fueLavado: values.fueLavado ?? false,
             };
 
             const procesoActualizado = await updateProcesoTrazabilidad(id, payload);
@@ -947,12 +965,36 @@ export default function TrazabilidadPage() {
                             </Tag>
                         </Descriptions.Item>
 
-                        <Descriptions.Item label="Inicio del proceso">
-                            {selectedProceso.fechaInicio
-                                ? dayjs(selectedProceso.fechaInicio).format(
-                                    "DD/MM/YYYY HH:mm",
-                                )
-                                : "No registrada"}
+                        <Descriptions.Item label="Fecha">
+                            {dayjs(selectedProceso.fecha).format("DD/MM/YYYY")}
+                        </Descriptions.Item>
+
+                        <Descriptions.Item label="Lote Origen">
+                            {renderLoteOrigen(selectedProceso)}
+                        </Descriptions.Item>
+
+                        <Descriptions.Item label="Etapa">
+                            <Tag color={getEtapaColor(selectedProceso.etapa)}>
+                                {selectedProceso.etapa ?? "-"}
+                            </Tag>
+                        </Descriptions.Item>
+
+                        <Descriptions.Item label="Tipo de Cosecha">
+                            {getTipoCosechaProceso(selectedProceso) ?? "-"}
+                        </Descriptions.Item>
+
+                        <Descriptions.Item label="Kg Cosechados">
+                            {formatKg(
+                                getKilosCosechadosProceso(selectedProceso),
+                            )}
+                        </Descriptions.Item>
+
+                        <Descriptions.Item label="Posa / Tanque">
+                            {selectedProceso.tanqueFermentacion ? (
+                                <Tag color="blue">{selectedProceso.tanqueFermentacion}</Tag>
+                            ) : (
+                                "No registrado"
+                            )}
                         </Descriptions.Item>
 
                         <Descriptions.Item label="Duración">
@@ -966,27 +1008,55 @@ export default function TrazabilidadPage() {
                             )}
                         </Descriptions.Item>
 
-                        <Descriptions.Item label="Fecha">
-                            {dayjs(selectedProceso.fecha).format("DD/MM/YYYY")}
+                        <Descriptions.Item label="Inicio Fermentación">
+                            {selectedProceso.inicioFermentacion
+                                ? dayjs(selectedProceso.inicioFermentacion).format(
+                                    "DD/MM/YYYY HH:mm",
+                                )
+                                : selectedProceso.fechaInicio
+                                    ? dayjs(selectedProceso.fechaInicio).format(
+                                        "DD/MM/YYYY HH:mm",
+                                    )
+                                    : "No registrada"}
                         </Descriptions.Item>
 
-                        <Descriptions.Item label="Lote Origen">
-                            {renderLoteOrigen(selectedProceso)}
+                        <Descriptions.Item label="Fin Fermentación">
+                            {selectedProceso.finFermentacion
+                                ? dayjs(selectedProceso.finFermentacion).format(
+                                    "DD/MM/YYYY HH:mm",
+                                )
+                                : "No registrada"}
                         </Descriptions.Item>
 
-                        <Descriptions.Item label="Tipo de Cosecha">
-                            {getTipoCosechaProceso(selectedProceso) ?? "-"}
-                        </Descriptions.Item>
-
-                        <Descriptions.Item label="Kg Cosechados">
-                            {formatKg(
-                                getKilosCosechadosProceso(selectedProceso),
+                        <Descriptions.Item label="Temperaturas">
+                            {selectedProceso.tempMinima != null || selectedProceso.tempMaxima != null ? (
+                                <Space>
+                                    <span>Mín: <strong>{selectedProceso.tempMinima != null ? `${selectedProceso.tempMinima} °C` : "-"}</strong></span>
+                                    <span>·</span>
+                                    <span>Máx: <strong>{selectedProceso.tempMaxima != null ? `${selectedProceso.tempMaxima} °C` : "-"}</strong></span>
+                                </Space>
+                            ) : (
+                                "No registradas"
                             )}
                         </Descriptions.Item>
 
-                        <Descriptions.Item label="Etapa">
-                            <Tag color={getEtapaColor(selectedProceso.etapa)}>
-                                {selectedProceso.etapa ?? "-"}
+                        <Descriptions.Item label="pH de salida">
+                            {selectedProceso.nivelPh != null ? (
+                                <Tag orientation="horizontal" color="geekblue">{selectedProceso.nivelPh} pH</Tag>
+                            ) : (
+                                "No registrado"
+                            )}
+                        </Descriptions.Item>
+
+                        <Descriptions.Item label="¿Se despulpó?">
+                            <Tag color={selectedProceso.fueDespulpado ? "green" : "default"}>
+                                {selectedProceso.fueDespulpado ? "Sí" : "No"}
+                            </Tag>
+                        </Descriptions.Item>
+
+                        <Descriptions.Item label="¿Se lavó?">
+                            <Tag color={selectedProceso.fueLavado ? "green" : "default"}>
+                                {selectedProceso.fueLavado ? "Sí" : "No"}
                             </Tag>
                         </Descriptions.Item>
 
@@ -998,7 +1068,7 @@ export default function TrazabilidadPage() {
                             {formatKg(selectedProceso.kilosResultantes)}
                         </Descriptions.Item>
 
-                        <Descriptions.Item label="Merma">
+                        <Descriptions.Item label="Merma" span={2}>
                             {(() => {
                                 const merma =
                                     selectedProceso.porcentajeMerma ??
