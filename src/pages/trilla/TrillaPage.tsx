@@ -25,6 +25,7 @@ import {
   BarChartOutlined,
   DeleteOutlined,
   EditOutlined,
+  EyeOutlined,
   PlusOutlined,
   SearchOutlined,
   ReloadOutlined,
@@ -50,6 +51,7 @@ import { getLotesApi } from "../lotes/lotes.api";
 
 import EnviarATrillaModal from "../../components/trilla-modals/EnviarATrillaModal";
 import RecepcionTrillaModal from "../../components/trilla-modals/RecepcionTrillaModal";
+import DetalleTrillaModal from "../../components/trilla-modals/DetalleTrillaModal";
 
 const { Title, Text } = Typography;
 
@@ -79,6 +81,8 @@ export default function TrillaPage() {
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [editingOrden, setEditingOrden] = useState<OrdenTrilla | null>(null);
+  const [isViewOpen, setIsViewOpen] = useState(false);
+  const [viewingOrden, setViewingOrden] = useState<OrdenTrilla | null>(null);
 
   const fetchData = async () => {
     setLoading(true);
@@ -404,6 +408,17 @@ export default function TrillaPage() {
       align: "center",
       render: (_, record: OrdenTrilla) => (
         <Space size="middle">
+          <Tooltip title="Ver detalle">
+            <Button
+              type="text"
+              icon={<EyeOutlined style={{ color: "#722ed1" }} />}
+              onClick={() => {
+                setViewingOrden(record);
+                setIsViewOpen(true);
+              }}
+              aria-label="Ver detalle de orden de trilla"
+            />
+          </Tooltip>
           <Tooltip title="Registrar recepción / editar">
             <Button
               type="text"
@@ -598,6 +613,15 @@ export default function TrillaPage() {
         onSubmit={handleUpdate}
         orden={editingOrden}
         loading={saving}
+      />
+
+      <DetalleTrillaModal
+        open={isViewOpen}
+        onClose={() => {
+          setIsViewOpen(false);
+          setViewingOrden(null);
+        }}
+        orden={viewingOrden}
       />
     </div>
   );

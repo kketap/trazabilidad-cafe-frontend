@@ -15,6 +15,7 @@ import {
   Select,
   Space,
   Table,
+  Tabs,
   Tag,
   Typography,
   message,
@@ -23,6 +24,7 @@ import {
 import type { ColumnsType } from "antd/es/table";
 import {
   AppstoreOutlined,
+  BarChartOutlined,
   ClearOutlined,
   DeleteOutlined,
   EditOutlined,
@@ -30,11 +32,13 @@ import {
   FileExcelOutlined,
   PlusOutlined,
   SearchOutlined,
+  UnorderedListOutlined,
   UserOutlined,
 } from "@ant-design/icons";
 import dayjs, { type Dayjs } from "dayjs";
 
 import CargaMasivaModal from "./CargaMasivaModal";
+import DashboardCosechas from "./DashboardCosechas";
 
 import type { Cosecha } from "./cosechas.api";
 import {
@@ -539,391 +543,423 @@ export default function CosechasPage() {
 
   return (
     <Space direction="vertical" size="large" style={{ width: "100%" }}>
-      <div
-        style={{
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-          flexWrap: "wrap",
-          gap: 16,
-        }}
-      >
-        <div>
-          <Typography.Title level={2} style={{ margin: 0 }}>
-            Gestión de Cosechas
-          </Typography.Title>
+      <Tabs
+        defaultActiveKey="registros"
+        size="large"
+        style={{ marginBottom: -8 }}
+        items={[
+          {
+            key: "registros",
+            label: (
+              <span>
+                <UnorderedListOutlined style={{ marginRight: 6 }} />
+                Registros
+              </span>
+            ),
+            children: (
+              <Space direction="vertical" size="large" style={{ width: "100%" }}>
+                <div
+                  style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                    flexWrap: "wrap",
+                    gap: 16,
+                  }}
+                >
+                  <div>
+                    <Typography.Title level={2} style={{ margin: 0 }}>
+                      Gestión de Cosechas
+                    </Typography.Title>
 
-          <Typography.Text type="secondary">
-            Registro diario de recolección de café y asignación de trabajadores.
-          </Typography.Text>
-        </div>
+                    <Typography.Text type="secondary">
+                      Registro diario de recolección de café y asignación de trabajadores.
+                    </Typography.Text>
+                  </div>
 
-        <Space size="middle" wrap>
-          <Button
-            icon={<FileExcelOutlined style={{ color: "#52c41a" }} />}
-            size="large"
-            onClick={() => setIsMasivaModalOpen(true)}
-            style={{ borderRadius: 8 }}
-          >
-            Carga Masiva
-          </Button>
+                  <Space size="middle" wrap>
+                    <Button
+                      icon={<FileExcelOutlined style={{ color: "#52c41a" }} />}
+                      size="large"
+                      onClick={() => setIsMasivaModalOpen(true)}
+                      style={{ borderRadius: 8 }}
+                    >
+                      Carga Masiva
+                    </Button>
 
-          <Button
-            type="primary"
-            icon={<PlusOutlined />}
-            size="large"
-            onClick={handleOpenCreateModal}
-            style={{ borderRadius: 8 }}
-          >
-            Nueva Cosecha
-          </Button>
-        </Space>
-      </div>
+                    <Button
+                      type="primary"
+                      icon={<PlusOutlined />}
+                      size="large"
+                      onClick={handleOpenCreateModal}
+                      style={{ borderRadius: 8 }}
+                    >
+                      Nueva Cosecha
+                    </Button>
+                  </Space>
+                </div>
 
-      <Card
-        style={{
-          borderRadius: 16,
-          boxShadow: "0 4px 20px rgba(0,0,0,0.06)",
-        }}
-      >
-        <Row gutter={[12, 12]} align="middle" style={{ marginBottom: 16 }}>
-          <Col xs={24} sm={12} md={6}>
-            <Input
-              placeholder="Buscar por código, lote o trabajador..."
-              prefix={
-                <SearchOutlined style={{ color: token.colorTextSecondary }} />
-              }
-              value={searchText}
-              onChange={(event) => setSearchText(event.target.value)}
-              allowClear
-              style={{ width: "100%" }}
-            />
-          </Col>
+                <Card
+                  style={{
+                    borderRadius: 16,
+                    boxShadow: "0 4px 20px rgba(0,0,0,0.06)",
+                  }}
+                >
+                  <Row gutter={[12, 12]} align="middle" style={{ marginBottom: 16 }}>
+                    <Col xs={24} sm={12} md={6}>
+                      <Input
+                        placeholder="Buscar por código, lote o trabajador..."
+                        prefix={
+                          <SearchOutlined style={{ color: token.colorTextSecondary }} />
+                        }
+                        value={searchText}
+                        onChange={(event) => setSearchText(event.target.value)}
+                        allowClear
+                        style={{ width: "100%" }}
+                      />
+                    </Col>
 
-          <Col xs={24} sm={12} md={6}>
-            <DatePicker.RangePicker
-              value={filtroFecha}
-              onChange={(value) =>
-                setFiltroFecha(value as [Dayjs, Dayjs] | null)
-              }
-              format="DD/MM/YYYY"
-              placeholder={["Fecha inicio", "Fecha fin"]}
-              style={{ width: "100%" }}
-            />
-          </Col>
+                    <Col xs={24} sm={12} md={6}>
+                      <DatePicker.RangePicker
+                        value={filtroFecha}
+                        onChange={(value) =>
+                          setFiltroFecha(value as [Dayjs, Dayjs] | null)
+                        }
+                        format="DD/MM/YYYY"
+                        placeholder={["Fecha inicio", "Fecha fin"]}
+                        style={{ width: "100%" }}
+                      />
+                    </Col>
 
-          <Col xs={24} sm={12} md={5}>
-            <Select
-              placeholder="Filtrar por trabajador"
-              value={filtroTrabajador}
-              onChange={setFiltroTrabajador}
-              allowClear
-              showSearch
-              optionFilterProp="label"
-              style={{ width: "100%" }}
-              options={trabajadores.map((trabajador) => ({
-                value: trabajador.id,
-                label: `${trabajador.nombres}${trabajador.apellidos ? ` ${trabajador.apellidos}` : ""
-                  } (${trabajador.dni})`,
-              }))}
-            />
-          </Col>
+                    <Col xs={24} sm={12} md={5}>
+                      <Select
+                        placeholder="Filtrar por trabajador"
+                        value={filtroTrabajador}
+                        onChange={setFiltroTrabajador}
+                        allowClear
+                        showSearch
+                        optionFilterProp="label"
+                        style={{ width: "100%" }}
+                        options={trabajadores.map((trabajador) => ({
+                          value: trabajador.id,
+                          label: `${trabajador.nombres}${trabajador.apellidos ? ` ${trabajador.apellidos}` : ""
+                            } (${trabajador.dni})`,
+                        }))}
+                      />
+                    </Col>
 
-          <Col xs={24} sm={12} md={4}>
-            <Select
-              placeholder="Tipo Cosecha"
-              value={filtroTipo}
-              onChange={setFiltroTipo}
-              allowClear
-              style={{ width: "100%" }}
-              options={[
-                { value: "plena", label: "Plena" },
-                { value: "rebusca", label: "Rebusca" },
-                { value: "selectiva", label: "Selectiva" },
-              ]}
-            />
-          </Col>
+                    <Col xs={24} sm={12} md={4}>
+                      <Select
+                        placeholder="Tipo Cosecha"
+                        value={filtroTipo}
+                        onChange={setFiltroTipo}
+                        allowClear
+                        style={{ width: "100%" }}
+                        options={[
+                          { value: "plena", label: "Plena" },
+                          { value: "rebusca", label: "Rebusca" },
+                          { value: "selectiva", label: "Selectiva" },
+                        ]}
+                      />
+                    </Col>
 
-          <Col xs={24} sm={12} md={3}>
-            <Button
-              icon={<ClearOutlined />}
-              onClick={handleLimpiarFiltros}
-              block
-            >
-              Limpiar
-            </Button>
-          </Col>
-        </Row>
+                    <Col xs={24} sm={12} md={3}>
+                      <Button
+                        icon={<ClearOutlined />}
+                        onClick={handleLimpiarFiltros}
+                        block
+                      >
+                        Limpiar
+                      </Button>
+                    </Col>
+                  </Row>
 
-        <Table
-          columns={columns}
-          dataSource={filteredData}
-          rowKey="id"
-          loading={loading}
-          pagination={{ pageSize: 8, showSizeChanger: true }}
-          scroll={{ x: "max-content" }}
-        />
-      </Card>
+                  <Table
+                    columns={columns}
+                    dataSource={filteredData}
+                    rowKey="id"
+                    loading={loading}
+                    pagination={{ pageSize: 8, showSizeChanger: true }}
+                    scroll={{ x: "max-content" }}
+                  />
+                </Card>
 
-      <Modal
-        title={
-          editingCosecha
-            ? "Editar Registro de Cosecha"
-            : "Nuevo Registro de Cosecha"
-        }
-        open={isModalOpen}
-        onOk={handleSubmit}
-        onCancel={handleCloseModal}
-        confirmLoading={submitting}
-        okText={editingCosecha ? "Guardar Cambios" : "Registrar Cosecha"}
-        cancelText="Cancelar"
-        width="min(760px, 95vw)"
-        destroyOnClose
-      >
-        <Form form={form} layout="vertical" style={{ marginTop: 16 }}>
-          <Row gutter={16}>
-            <Col xs={24} sm={12}>
-              <Form.Item
-                name="fecha"
-                label="Fecha de Cosecha"
-                rules={[{ required: true, message: "Seleccione la fecha" }]}
-              >
-                <DatePicker
-                  style={{ width: "100%" }}
-                  format="DD/MM/YYYY"
-                  placeholder="Seleccione la fecha"
-                />
-              </Form.Item>
-            </Col>
+                {/* ── Modal Crear / Editar ── */}
+                <Modal
+                  title={
+                    editingCosecha
+                      ? "Editar Registro de Cosecha"
+                      : "Nuevo Registro de Cosecha"
+                  }
+                  open={isModalOpen}
+                  onOk={handleSubmit}
+                  onCancel={handleCloseModal}
+                  confirmLoading={submitting}
+                  okText={editingCosecha ? "Guardar Cambios" : "Registrar Cosecha"}
+                  cancelText="Cancelar"
+                  width="min(760px, 95vw)"
+                  destroyOnClose
+                >
+                  <Form form={form} layout="vertical" style={{ marginTop: 16 }}>
+                    <Row gutter={16}>
+                      <Col xs={24} sm={12}>
+                        <Form.Item
+                          name="fecha"
+                          label="Fecha de Cosecha"
+                          rules={[{ required: true, message: "Seleccione la fecha" }]}
+                        >
+                          <DatePicker
+                            style={{ width: "100%" }}
+                            format="DD/MM/YYYY"
+                            placeholder="Seleccione la fecha"
+                          />
+                        </Form.Item>
+                      </Col>
 
-            <Col xs={24} sm={12}>
-              <Form.Item
-                name="trabajadorIds"
-                label="Trabajadores / Cosechadores"
-              >
-                <Select
-                  mode="multiple"
-                  placeholder="Seleccione trabajadores..."
-                  showSearch
-                  optionFilterProp="label"
-                  options={trabajadores
-                    .filter((trabajador) => trabajador.activo)
-                    .map((trabajador) => ({
-                      value: trabajador.id,
-                      label: `${trabajador.nombres}${trabajador.apellidos ? ` ${trabajador.apellidos}` : ""
-                        } (${trabajador.dni})`,
-                    }))}
-                />
-              </Form.Item>
-            </Col>
-          </Row>
+                      <Col xs={24} sm={12}>
+                        <Form.Item
+                          name="trabajadorIds"
+                          label="Trabajadores / Cosechadores"
+                        >
+                          <Select
+                            mode="multiple"
+                            placeholder="Seleccione trabajadores..."
+                            showSearch
+                            optionFilterProp="label"
+                            options={trabajadores
+                              .filter((trabajador) => trabajador.activo)
+                              .map((trabajador) => ({
+                                value: trabajador.id,
+                                label: `${trabajador.nombres}${trabajador.apellidos ? ` ${trabajador.apellidos}` : ""
+                                  } (${trabajador.dni})`,
+                              }))}
+                          />
+                        </Form.Item>
+                      </Col>
+                    </Row>
 
-          <Row gutter={16}>
-            <Col xs={24} sm={12}>
-              <Form.Item
-                name="tipoCosecha"
-                label="Tipo de Cosecha"
-                rules={[
-                  { required: true, message: "Seleccione el tipo de cosecha" },
-                ]}
-              >
-                <Select
-                  placeholder="Seleccionar tipo..."
-                  options={[
-                    { value: "plena", label: "Plena" },
-                    { value: "rebusca", label: "Rebusca" },
-                    { value: "selectiva", label: "Selectiva" },
+                    <Row gutter={16}>
+                      <Col xs={24} sm={12}>
+                        <Form.Item
+                          name="tipoCosecha"
+                          label="Tipo de Cosecha"
+                          rules={[
+                            { required: true, message: "Seleccione el tipo de cosecha" },
+                          ]}
+                        >
+                          <Select
+                            placeholder="Seleccionar tipo..."
+                            options={[
+                              { value: "plena", label: "Plena" },
+                              { value: "rebusca", label: "Rebusca" },
+                              { value: "selectiva", label: "Selectiva" },
+                            ]}
+                          />
+                        </Form.Item>
+                      </Col>
+
+                      <Col xs={24} sm={12}>
+                        <Form.Item name="varietal" label="Varietal">
+                          <Select
+                            mode="tags"
+                            placeholder="Ej: Geisha, Caturra..."
+                            options={[
+                              { value: "Geisha", label: "Geisha" },
+                              { value: "Java", label: "Java" },
+                              { value: "Caturra", label: "Caturra" },
+                              { value: "Catimor", label: "Catimor" },
+                            ]}
+                          />
+                        </Form.Item>
+                      </Col>
+                    </Row>
+
+                    <Row gutter={16}>
+                      <Col xs={24} sm={12}>
+                        <Form.Item
+                          name="kilosCosechados"
+                          label="Kilos Cosechados"
+                          rules={[
+                            { required: true, message: "Ingrese los kilos cosechados" },
+                          ]}
+                        >
+                          <InputNumber
+                            style={{ width: "100%" }}
+                            min={0.1}
+                            addonAfter="kg"
+                            placeholder="Ej: 450"
+                          />
+                        </Form.Item>
+                      </Col>
+
+                      <Col xs={24} sm={12}>
+                        <Form.Item
+                          name="totalHectareas"
+                          label="Total Hectáreas Recorridas"
+                          rules={[
+                            { required: true, message: "Ingrese total de hectáreas" },
+                          ]}
+                        >
+                          <InputNumber
+                            style={{ width: "100%" }}
+                            min={0.1}
+                            addonAfter="ha"
+                            placeholder="Ej: 2.5"
+                          />
+                        </Form.Item>
+                      </Col>
+                    </Row>
+
+                    <Form.Item
+                      name="loteIds"
+                      label="Lotes de Origen"
+                      rules={[
+                        {
+                          required: true,
+                          message: "Seleccione al menos un lote de origen",
+                        },
+                      ]}
+                    >
+                      <Select
+                        mode="multiple"
+                        placeholder="Seleccione los lotes de origen..."
+                        showSearch
+                        optionFilterProp="label"
+                        options={lotesList
+                          .filter((lote) => lote.activo)
+                          .map((lote) => ({
+                            value: lote.id,
+                            label: `${lote.codigo}${lote.nombre ? ` - ${lote.nombre}` : ""
+                              }`,
+                          }))}
+                      />
+                    </Form.Item>
+
+                    <Form.Item name="observacion" label="Observación">
+                      <Input.TextArea
+                        placeholder="Observaciones adicionales sobre la cosecha..."
+                        rows={2}
+                      />
+                    </Form.Item>
+                  </Form>
+                </Modal>
+
+                {/* ── Modal Detalle ── */}
+                <Modal
+                  title={`Detalle de Cosecha - COS-${String(
+                    viewingCosecha?.id ?? 0,
+                  ).padStart(3, "0")}`}
+                  open={isViewModalOpen}
+                  onCancel={() => setIsViewModalOpen(false)}
+                  footer={[
+                    <Button key="close" onClick={() => setIsViewModalOpen(false)}>
+                      Cerrar
+                    </Button>,
                   ]}
+                  width="min(680px, 95vw)"
+                  centered
+                >
+                  {viewingCosecha && (
+                    <Descriptions column={1} bordered size="small" style={{ marginTop: 16 }}>
+                      <Descriptions.Item label="Código">
+                        <Tag color="blue" style={{ fontSize: 13, fontWeight: "bold" }}>
+                          COS-{String(viewingCosecha.id).padStart(3, "0")}
+                        </Tag>
+                      </Descriptions.Item>
+
+                      <Descriptions.Item label="Fecha">
+                        {dayjs(viewingCosecha.fecha).format("DD/MM/YYYY")}
+                      </Descriptions.Item>
+
+                      <Descriptions.Item label="Tipo Cosecha">
+                        <Tag color={getTipoCosechaColor(getTipoCosecha(viewingCosecha))}>
+                          {formatEstadoEnum(getTipoCosecha(viewingCosecha))}
+                        </Tag>
+                      </Descriptions.Item>
+
+                      <Descriptions.Item label="Trabajadores">
+                        {viewingCosecha.cosechaTrabajadores &&
+                          viewingCosecha.cosechaTrabajadores.length > 0 ? (
+                          <Space wrap>
+                            {viewingCosecha.cosechaTrabajadores.map((item) => (
+                              <Tag key={item.id} icon={<UserOutlined />} color="blue">
+                                {item.trabajador.nombres}
+                                {item.trabajador.apellidos
+                                  ? ` ${item.trabajador.apellidos}`
+                                  : ""}
+                              </Tag>
+                            ))}
+                          </Space>
+                        ) : viewingCosecha.trabajador?.nombres ? (
+                          <Tag icon={<UserOutlined />} color="blue">
+                            {viewingCosecha.trabajador.nombres}
+                          </Tag>
+                        ) : (
+                          "Sin asignar"
+                        )}
+                      </Descriptions.Item>
+
+                      <Descriptions.Item label="Kilos Cosechados">
+                        {formatKg(viewingCosecha.kilosCosechados)}
+                      </Descriptions.Item>
+
+                      <Descriptions.Item label="Total Hectáreas">
+                        {Number(viewingCosecha.totalHectareas ?? 0).toLocaleString(
+                          "es-CL",
+                        )}{" "}
+                        ha
+                      </Descriptions.Item>
+
+                      <Descriptions.Item label="Lotes de Origen">
+                        {viewingCosecha.cosechaLotes &&
+                          viewingCosecha.cosechaLotes.length > 0 ? (
+                          <Space wrap>
+                            {viewingCosecha.cosechaLotes.map((item) => (
+                              <Tag key={item.id} icon={<AppstoreOutlined />} color="gold">
+                                {item.lote.codigo}
+                              </Tag>
+                            ))}
+                          </Space>
+                        ) : (
+                          viewingCosecha.lotes || "-"
+                        )}
+                      </Descriptions.Item>
+
+                      <Descriptions.Item label="Observaciones">
+                        {viewingCosecha.observacion ||
+                          viewingCosecha.observaciones ||
+                          "-"}
+                      </Descriptions.Item>
+
+                      <Descriptions.Item label="Varietales">
+                        {Array.isArray(viewingCosecha.varietal)
+                          ? viewingCosecha.varietal.join(", ")
+                          : viewingCosecha.varietal || "-"}
+                      </Descriptions.Item>
+                    </Descriptions>
+                  )}
+                </Modal>
+
+                {/* ── Modal Carga Masiva ── */}
+                <CargaMasivaModal
+                  open={isMasivaModalOpen}
+                  onClose={() => setIsMasivaModalOpen(false)}
+                  onSuccess={fetchCosechas}
                 />
-              </Form.Item>
-            </Col>
-
-            <Col xs={24} sm={12}>
-              <Form.Item name="varietal" label="Varietal">
-                <Select
-                  mode="tags"
-                  placeholder="Ej: Geisha, Caturra..."
-                  options={[
-                    { value: "Geisha", label: "Geisha" },
-                    { value: "Java", label: "Java" },
-                    { value: "Caturra", label: "Caturra" },
-                    { value: "Catimor", label: "Catimor" },
-                  ]}
-                />
-              </Form.Item>
-            </Col>
-          </Row>
-
-          <Row gutter={16}>
-            <Col xs={24} sm={12}>
-              <Form.Item
-                name="kilosCosechados"
-                label="Kilos Cosechados"
-                rules={[
-                  { required: true, message: "Ingrese los kilos cosechados" },
-                ]}
-              >
-                <InputNumber
-                  style={{ width: "100%" }}
-                  min={0.1}
-                  addonAfter="kg"
-                  placeholder="Ej: 450"
-                />
-              </Form.Item>
-            </Col>
-
-            <Col xs={24} sm={12}>
-              <Form.Item
-                name="totalHectareas"
-                label="Total Hectáreas Recorridas"
-                rules={[
-                  { required: true, message: "Ingrese total de hectáreas" },
-                ]}
-              >
-                <InputNumber
-                  style={{ width: "100%" }}
-                  min={0.1}
-                  addonAfter="ha"
-                  placeholder="Ej: 2.5"
-                />
-              </Form.Item>
-            </Col>
-          </Row>
-
-          <Form.Item
-            name="loteIds"
-            label="Lotes de Origen"
-            rules={[
-              {
-                required: true,
-                message: "Seleccione al menos un lote de origen",
-              },
-            ]}
-          >
-            <Select
-              mode="multiple"
-              placeholder="Seleccione los lotes de origen..."
-              showSearch
-              optionFilterProp="label"
-              options={lotesList
-                .filter((lote) => lote.activo)
-                .map((lote) => ({
-                  value: lote.id,
-                  label: `${lote.codigo}${lote.nombre ? ` - ${lote.nombre}` : ""
-                    }`,
-                }))}
-            />
-          </Form.Item>
-
-          <Form.Item name="observacion" label="Observación">
-            <Input.TextArea
-              placeholder="Observaciones adicionales sobre la cosecha..."
-              rows={2}
-            />
-          </Form.Item>
-        </Form>
-      </Modal>
-
-      <Modal
-        title={`Detalle de Cosecha - COS-${String(
-          viewingCosecha?.id ?? 0,
-        ).padStart(3, "0")}`}
-        open={isViewModalOpen}
-        onCancel={() => setIsViewModalOpen(false)}
-        footer={[
-          <Button key="close" onClick={() => setIsViewModalOpen(false)}>
-            Cerrar
-          </Button>,
+              </Space>
+            ),
+          },
+          {
+            key: "dashboard",
+            label: (
+              <span>
+                <BarChartOutlined style={{ marginRight: 6 }} />
+                Dashboard y Reportes
+              </span>
+            ),
+            children: <DashboardCosechas />,
+          },
         ]}
-        width="min(680px, 95vw)"
-        centered
-      >
-        {viewingCosecha && (
-          <Descriptions column={1} bordered size="small" style={{ marginTop: 16 }}>
-            <Descriptions.Item label="Código">
-              <Tag color="blue" style={{ fontSize: 13, fontWeight: "bold" }}>
-                COS-{String(viewingCosecha.id).padStart(3, "0")}
-              </Tag>
-            </Descriptions.Item>
-
-            <Descriptions.Item label="Fecha">
-              {dayjs(viewingCosecha.fecha).format("DD/MM/YYYY")}
-            </Descriptions.Item>
-
-            <Descriptions.Item label="Tipo Cosecha">
-              <Tag color={getTipoCosechaColor(getTipoCosecha(viewingCosecha))}>
-                {formatEstadoEnum(getTipoCosecha(viewingCosecha))}
-              </Tag>
-            </Descriptions.Item>
-
-            <Descriptions.Item label="Trabajadores">
-              {viewingCosecha.cosechaTrabajadores &&
-                viewingCosecha.cosechaTrabajadores.length > 0 ? (
-                <Space wrap>
-                  {viewingCosecha.cosechaTrabajadores.map((item) => (
-                    <Tag key={item.id} icon={<UserOutlined />} color="blue">
-                      {item.trabajador.nombres}
-                      {item.trabajador.apellidos
-                        ? ` ${item.trabajador.apellidos}`
-                        : ""}
-                    </Tag>
-                  ))}
-                </Space>
-              ) : viewingCosecha.trabajador?.nombres ? (
-                <Tag icon={<UserOutlined />} color="blue">
-                  {viewingCosecha.trabajador.nombres}
-                </Tag>
-              ) : (
-                "Sin asignar"
-              )}
-            </Descriptions.Item>
-
-            <Descriptions.Item label="Kilos Cosechados">
-              {formatKg(viewingCosecha.kilosCosechados)}
-            </Descriptions.Item>
-
-            <Descriptions.Item label="Total Hectáreas">
-              {Number(viewingCosecha.totalHectareas ?? 0).toLocaleString(
-                "es-CL",
-              )}{" "}
-              ha
-            </Descriptions.Item>
-
-            <Descriptions.Item label="Lotes de Origen">
-              {viewingCosecha.cosechaLotes &&
-                viewingCosecha.cosechaLotes.length > 0 ? (
-                <Space wrap>
-                  {viewingCosecha.cosechaLotes.map((item) => (
-                    <Tag key={item.id} icon={<AppstoreOutlined />} color="gold">
-                      {item.lote.codigo}
-                    </Tag>
-                  ))}
-                </Space>
-              ) : (
-                viewingCosecha.lotes || "-"
-              )}
-            </Descriptions.Item>
-
-            <Descriptions.Item label="Observaciones">
-              {viewingCosecha.observacion ||
-                viewingCosecha.observaciones ||
-                "-"}
-            </Descriptions.Item>
-
-            <Descriptions.Item label="Varietales">
-              {Array.isArray(viewingCosecha.varietal)
-                ? viewingCosecha.varietal.join(", ")
-                : viewingCosecha.varietal || "-"}
-            </Descriptions.Item>
-          </Descriptions>
-        )}
-      </Modal>
-
-      {/* Modal de Carga Masiva */}
-      <CargaMasivaModal
-        open={isMasivaModalOpen}
-        onClose={() => setIsMasivaModalOpen(false)}
-        onSuccess={fetchCosechas}
       />
     </Space>
   );
