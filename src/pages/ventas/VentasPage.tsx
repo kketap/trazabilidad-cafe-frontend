@@ -5,8 +5,11 @@ import {
   Card,
   Col,
   DatePicker,
+  Descriptions,
+  Divider,
   Input,
   message,
+  Modal,
   Popconfirm,
   Row,
   Select,
@@ -22,6 +25,7 @@ import {
 import {
   DeleteOutlined,
   EditOutlined,
+  EyeOutlined,
   PlusOutlined,
   SearchOutlined,
   ReloadOutlined,
@@ -64,6 +68,8 @@ export default function VentasPage() {
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingVenta, setEditingVenta] = useState<Venta | null>(null);
+  const [isViewOpen, setIsViewOpen] = useState(false);
+  const [viewingVenta, setViewingVenta] = useState<Venta | null>(null);
 
   const fetchData = async () => {
     setLoading(true);
@@ -286,6 +292,17 @@ export default function VentasPage() {
       fixed: "right",
       render: (_, record: Venta) => (
         <Space>
+          <Tooltip title="Ver detalle">
+            <Button
+              type="text"
+              icon={<EyeOutlined style={{ color: token.colorInfo }} />}
+              onClick={() => {
+                setViewingVenta(record);
+                setIsViewOpen(true);
+              }}
+              aria-label="Ver detalle de venta"
+            />
+          </Tooltip>
           <Tooltip title="Editar venta">
             <Button
               type="text"
@@ -467,6 +484,115 @@ export default function VentasPage() {
         editingVenta={editingVenta}
         loading={saving}
       />
+
+      {/* Modal Detalle de Venta */}
+      <Modal
+        title={
+          <Space>
+            <Tag color="green" style={{ fontWeight: "bold", fontSize: 14 }}>
+              VENTA #{viewingVenta?.id}
+            </Tag>
+            <Typography.Text type="secondary">Detalle de la Operación Comercial</Typography.Text>
+          </Space>
+        }
+        open={isViewOpen}
+        onCancel={() => {
+          setIsViewOpen(false);
+          setViewingVenta(null);
+        }}
+        footer={[
+          <Button key="close" onClick={() => { setIsViewOpen(false); setViewingVenta(null); }}>
+            Cerrar
+          </Button>,
+        ]}
+        width="min(720px, 95vw)"
+        centered
+        destroyOnHidden
+      >
+        {viewingVenta && (
+          <>
+            <Descriptions bordered column={{ xs: 1, sm: 2, md: 2 }} size="middle" style={{ marginTop: 8 }}>
+              <Descriptions.Item label="Cliente">
+                <Space direction="vertical" size={0}>
+                  <strong>{viewingVenta.cliente?.nombre || `Cliente #${viewingVenta.clienteId}`}</strong>
+                  {viewingVenta.cliente?.dniRut && (
+                    <Typography.Text type="secondary" style={{ fontSize: 12 }}>
+                      RUT/DNI: {viewingVenta.cliente.dniRut}
+                    </Typography.Text>
+                  )}
+                  {viewingVenta.cliente?.telefono && (
+                    <Typography.Text type="secondary" style={{ fontSize: 12 }}>
+                      Tel: {viewingVenta.cliente.telefono}
+                    </Typography.Text>
+                  )}
+                </Space>
+              </Descriptions.Item>
+
+              <Descriptions.Item label="Fecha de Venta">
+                {dayjs(viewingVenta.fechaVenta).format("DD/MM/YYYY")}
+              </Descriptions.Item>
+
+              <Descriptions.Item label="Orden de Trilla">
+                <Tag color="blue" style={{ fontWeight: "bold" }}>
+                  {viewingVenta.ordenTrilla?.codigoTrilla || `OT-${viewingVenta.ordenTrillaId}`}
+                </Tag>
+              </Descriptions.Item>
+
+              <Descriptions.Item label="Producto">
+                <Tag color="green" style={{ fontWeight: "bold" }}>{viewingVenta.producto}</Tag>
+              </Descriptions.Item>
+
+              <Descriptions.Item label="Presentación">
+                <Tag>Saco {viewingVenta.presentacionSacos} kg</Tag>
+              </Descriptions.Item>
+
+              <Descriptions.Item label="Finca de Origen">
+                {viewingVenta.fincaOrigen || <Typography.Text type="secondary">—</Typography.Text>}
+              </Descriptions.Item>
+
+              <Descriptions.Item label="Kilos Vendidos">
+                <strong>{viewingVenta.kilosVendidos?.toLocaleString("es-CL")} kg</strong>
+              </Descriptions.Item>
+
+              <Descriptions.Item label="Precio por Kilo">
+                <Typography.Text style={{ color: token.colorSuccess, fontWeight: "bold" }}>
+                  ${viewingVenta.precioVentaKilo?.toLocaleString("es-PE", { minimumFractionDigits: 2 })}
+                </Typography.Text>
+              </Descriptions.Item>
+
+              <Descriptions.Item label="Total Venta" span={2}>
+                <Typography.Title level={4} style={{ color: token.colorPrimary, margin: 0 }}>
+                  ${((viewingVenta.kilosVendidos || 0) * (viewingVenta.precioVentaKilo || 0)).toLocaleString("es-PE", { minimumFractionDigits: 2 })}
+                </Typography.Title>
+              </Descriptions.Item>
+
+              <Descriptions.Item label="N° Factura">
+                {viewingVenta.numeroFactura ? (
+                  <Space>
+                    <FileTextOutlined style={{ color: token.colorSuccess }} />
+                    <strong>{viewingVenta.numeroFactura}</strong>
+                  </Space>
+                ) : (
+                  <Badge status="warning" text="Pendiente" />
+                )}
+              </Descriptions.Item>
+
+              <Descriptions.Item label="Guía de Remisión">
+                {viewingVenta.numeroGuiaRemision || <Typography.Text type="secondary">—</Typography.Text>}
+              </Descriptions.Item>
+            </Descriptions>
+
+            {viewingVenta.observaciones && (
+              <>
+                <Divider orientation="left" orientationMargin={0} style={{ marginTop: 20 }}>
+                  <Typography.Text strong style={{ fontSize: 13 }}>Observaciones</Typography.Text>
+                </Divider>
+                <Typography.Text type="secondary">{viewingVenta.observaciones}</Typography.Text>
+              </>
+            )}
+          </>
+        )}
+      </Modal>
     </div>
   );
 }

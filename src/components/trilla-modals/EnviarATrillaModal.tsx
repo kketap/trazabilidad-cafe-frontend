@@ -12,10 +12,11 @@ import {
   Row,
   Select,
   Space,
+  Table,
   Tag,
   Typography,
 } from "antd";
-import { BarChartOutlined, NumberOutlined, SendOutlined, ShopOutlined } from "@ant-design/icons";
+import { BarChartOutlined, NumberOutlined, SendOutlined, ShopOutlined, InboxOutlined } from "@ant-design/icons";
 import dayjs from "dayjs";
 import type { Lote } from "../../pages/lotes/lotes.api";
 import type { CreateOrdenTrillaDTO } from "../../pages/trilla/trilla.api";
@@ -91,6 +92,7 @@ export default function EnviarATrillaModal({ open, onClose, onSubmit, lotes, loa
         ? values.fechaDespacho.toISOString()
         : new Date().toISOString(),
       numeroGuia: values.numeroGuia?.trim() || null,
+      sacosEnviados: toNumberOrNull(values.sacosEnviados),
       ...Object.fromEntries(
         SUBPRODUCTOS.map((s) => [s.name, toNumberOrNull(values[s.name])])
       ),
@@ -108,6 +110,31 @@ export default function EnviarATrillaModal({ open, onClose, onSubmit, lotes, loa
   );
 
   const hayLotesSeleccionados = selectedLoteIds.length > 0;
+
+  // Lógica de simulación de saldos parciales
+  let restantePorDescontar = kilosEnviados || 0;
+  const remanenteData = selectedLoteIds.map((id) => {
+    const lote = lotes.find((l) => l.id === id);
+    if (!lote) return null;
+    const disponible = Number(lote.kilosActuales ?? lote.kilosIniciales ?? 0);
+    const aDescontar = Math.min(disponible, restantePorDescontar);
+    const nuevoSaldo = Math.max(0, disponible - aDescontar);
+    restantePorDescontar -= aDescontar;
+    return {
+      key: lote.id,
+      codigo: lote.codigo,
+      disponible,
+      aDescontar,
+      nuevoSaldo,
+    };
+  }).filter(Boolean);
+
+  const remanenteColumns = [
+    { title: "Lote", dataIndex: "codigo", key: "codigo", render: (text: string) => <strong>{text}</strong> },
+    { title: "Disponible (kg)", dataIndex: "disponible", key: "disponible", align: "right" as const },
+    { title: "A descontar (kg)", dataIndex: "aDescontar", key: "aDescontar", align: "right" as const, render: (val: number) => <Text type="danger">-{val.toFixed(2)}</Text> },
+    { title: "Nuevo Saldo (kg)", dataIndex: "nuevoSaldo", key: "nuevoSaldo", align: "right" as const, render: (val: number) => <Tag color={val === 0 ? "default" : "blue"}>{val.toFixed(2)}</Tag> },
+  ];
 
   return (
     <Modal
@@ -170,21 +197,36 @@ export default function EnviarATrillaModal({ open, onClose, onSubmit, lotes, loa
           />
         </Form.Item>
 
-        {/* Saldo total acumulado de lotes seleccionados */}
         {hayLotesSeleccionados && kilosDisponiblesTotal > 0 && (
-          <Alert
-            type="info"
-            showIcon
-            style={{ marginBottom: 16, borderRadius: 6 }}
-            message={
-              <span>
-                Saldo total disponible de los lotes seleccionados:{" "}
-                <Tag color="blue" style={{ fontSize: 13 }}>
-                  {kilosDisponiblesTotal.toLocaleString("es-AR", { minimumFractionDigits: 2 })} kg
-                </Tag>
-              </span>
-            }
-          />
+          <>
+            <Alert
+              type="info"
+              showIcon
+              style={{ marginBottom: 12, borderRadius: 6 }}
+              message={
+                <span>
+                  Saldo total disponible de los lotes seleccionados:{" "}
+                  <Tag color="blue" style={{ fontSize: 13 }}>
+                    {kilosDisponiblesTotal.toLocaleString("es-AR", { minimumFractionDigits: 2 })} kg
+                  </Tag>
+                </span>
+              }
+            />
+            {kilosEnviados && kilosEnviados > 0 && remanenteData.length > 0 ? (
+              <div style={{ marginBottom: 16 }}>
+                <Text strong style={{ fontSize: 13, display: "block", marginBottom: 8 }}>
+                  Descuento estimado por lote:
+                </Text>
+                <Table
+                  dataSource={remanenteData as any}
+                  columns={remanenteColumns}
+                  pagination={false}
+                  size="small"
+                  bordered
+                />
+              </div>
+            ) : null}
+          </>
         )}
 
         <Divider style={{ margin: "12px 0" }} />
@@ -248,19 +290,37 @@ export default function EnviarATrillaModal({ open, onClose, onSubmit, lotes, loa
           </Col>
         </Row>
 
-        {/* ── N° Guía de Despacho ── */}
-        <Form.Item
-          label={
-            <Space>
-              <NumberOutlined />
-              <span>N° Guía de Despacho (Opcional)</span>
-            </Space>
-          }
-          name="numeroGuia"
-          tooltip="Número de guía de remisión o despacho emitido por el transportista o proveedor"
-        >
-          <Input placeholder='Ej. "GR-2026-00145"' maxLength={80} allowClear />
-        </Form.Item>
+        {/* ── N° Guía y Sacos ── */}
+        <Row gutter={16}>
+          <Col span={12}>
+            <Form.Item
+              label={
+                <Space>
+                  <NumberOutlined />
+                  <span>N° Guía de Despacho (Opcional)</span>
+                </Space>
+              }
+              name="numeroGuia"
+              tooltip="Número de guía de remisión o despacho emitido por el transportista o proveedor"
+            >
+              <Input placeholder='Ej. "GR-2026-00145"' maxLength={80} allowClear />
+            </Form.Item>
+          </Col>
+          <Col span={12}>
+            <Form.Item
+              label={
+                <Space>
+                  <InboxOutlined />
+                  <span>Sacos Enviados (Opcional)</span>
+                </Space>
+              }
+              name="sacosEnviados"
+              tooltip="Cantidad total de sacos enviados a la trilladora"
+            >
+              <InputNumber style={{ width: "100%" }} placeholder="Ej: 50" min={1} />
+            </Form.Item>
+          </Col>
+        </Row>
 
         {/* ── Desglose de Subproductos ── */}
         <Divider orientation={"left" as const} style={{ margin: "16px 0 12px" }}>

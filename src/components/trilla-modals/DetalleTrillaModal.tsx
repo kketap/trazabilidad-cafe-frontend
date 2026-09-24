@@ -214,6 +214,14 @@ export default function DetalleTrillaModal({ open, onClose, orden }: Props) {
             )}
           </Descriptions.Item>
 
+          <Descriptions.Item label="Sacos Enviados">
+            {orden.sacosEnviados != null ? (
+              <strong style={{ fontSize: 13 }}>{orden.sacosEnviados}</strong>
+            ) : (
+              <Text type="secondary">—</Text>
+            )}
+          </Descriptions.Item>
+
           {merma != null && (
             <Descriptions.Item label="Merma Estimada" span={2}>
               <Text type={merma > 0 ? "secondary" : "danger"}>

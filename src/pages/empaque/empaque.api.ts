@@ -10,7 +10,17 @@ export type Empaque = {
   kilosIngresados: number;
   kilosResultantes: number;
   merma: number;
+  secadoId?: number | null;
+  tipoEmpaque?: string | null;
+  cantidadEmpaques?: number | null;
+  rendimiento?: number | null;
   observaciones?: string | null;
+  // Campos de calidad
+  humedad?: number | null;
+  actividadAgua?: number | null;
+  puntajeSca?: number | null;
+  perfilSensorial?: string | null;
+  fueCatado?: boolean | null;
   createdAt?: string;
   updatedAt?: string;
   lote?: Lote;
@@ -22,7 +32,17 @@ export type CreateEmpaqueDTO = {
   fechaFin?: string | null;
   kilosIngresados: number;
   kilosResultantes: number;
+  secadoId?: number | null;
+  tipoEmpaque?: string | null;
+  cantidadEmpaques?: number | null;
+  rendimiento?: number | null;
   observaciones?: string | null;
+  // Campos de calidad
+  humedad?: number | null;
+  actividadAgua?: number | null;
+  puntajeSca?: number | null;
+  perfilSensorial?: string | null;
+  fueCatado?: boolean | null;
 };
 
 export type UpdateEmpaqueDTO = Partial<CreateEmpaqueDTO>;

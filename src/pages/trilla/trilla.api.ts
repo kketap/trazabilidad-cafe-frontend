@@ -24,6 +24,7 @@ export type OrdenTrilla = {
   tipoSaco?: string | null;
   kilosEnviados: number;
   kilosNetos?: number | null;
+  sacosEnviados?: number | null;
   /** N° de guía de despacho (opcional) */
   numeroGuia?: string | null;
   // Subproductos del proceso de trilla
@@ -44,6 +45,7 @@ export type OrdenTrilla = {
 export type CreateOrdenTrillaDTO = {
   loteIds: number[];
   kilosEnviados: number;
+  sacosEnviados?: number | null;
   fechaDespacho?: string;
   codigoTrilla?: string;
   numeroGuia?: string | null;
@@ -65,6 +67,7 @@ export type UpdateOrdenTrillaDTO = {
   fechaIngreso?: string | null;
   calidad?: string | null;
   tipoSaco?: string | null;
+  sacosEnviados?: number | null;
   kilosEnviados?: number;
   kilosNetos?: number | null;
   loteIds?: number[];
