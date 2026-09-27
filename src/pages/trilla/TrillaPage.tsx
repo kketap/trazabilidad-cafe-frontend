@@ -5,9 +5,11 @@ import {
   Card,
   Col,
   DatePicker,
+  Descriptions,
   Input,
   message,
   Popconfirm,
+  Popover,
   Row,
   Select,
   Space,
@@ -20,8 +22,10 @@ import {
   Badge,
 } from "antd";
 import {
+  BarChartOutlined,
   DeleteOutlined,
   EditOutlined,
+  EyeOutlined,
   PlusOutlined,
   SearchOutlined,
   ReloadOutlined,
@@ -47,6 +51,7 @@ import { getLotesApi } from "../lotes/lotes.api";
 
 import EnviarATrillaModal from "../../components/trilla-modals/EnviarATrillaModal";
 import RecepcionTrillaModal from "../../components/trilla-modals/RecepcionTrillaModal";
+import DetalleTrillaModal from "../../components/trilla-modals/DetalleTrillaModal";
 
 const { Title, Text } = Typography;
 
@@ -76,6 +81,8 @@ export default function TrillaPage() {
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [editingOrden, setEditingOrden] = useState<OrdenTrilla | null>(null);
+  const [isViewOpen, setIsViewOpen] = useState(false);
+  const [viewingOrden, setViewingOrden] = useState<OrdenTrilla | null>(null);
 
   const fetchData = async () => {
     setLoading(true);
@@ -307,6 +314,81 @@ export default function TrillaPage() {
         tipoSaco ? <Tag color="cyan">{tipoSaco}</Tag> : <Text type="secondary">-</Text>,
     },
     {
+      title: "N° Guía",
+      dataIndex: "numeroGuia",
+      key: "numeroGuia",
+      render: (val?: string | null) =>
+        val ? (
+          <Tag color="geekblue" style={{ fontSize: 12 }}>
+            {val}
+          </Tag>
+        ) : (
+          <Text type="secondary">-</Text>
+        ),
+    },
+    {
+      title: "Subproductos",
+      key: "subproductos",
+      align: "center",
+      render: (_: unknown, record: OrdenTrilla) => {
+        const SUBPRODUCTO_LABELS: { key: keyof OrdenTrilla; label: string }[] = [
+          { key: "exportable", label: "Exportable" },
+          { key: "recuperado", label: "Recuperado" },
+          { key: "malla13", label: "Malla 13" },
+          { key: "segundaBuena", label: "2° Buena" },
+          { key: "segundaMala", label: "2° Mala" },
+          { key: "sucioEscojo", label: "Sucio/Escojo" },
+          { key: "cisco", label: "Cisco" },
+          { key: "descarteMaquina", label: "Descarte Máq." },
+          { key: "cascarilla", label: "Cascarilla" },
+        ];
+        const tieneSubproductos = SUBPRODUCTO_LABELS.some(
+          (s) => (record[s.key] as number | null | undefined) != null
+        );
+        if (!tieneSubproductos) {
+          return <Text type="secondary">-</Text>;
+        }
+        const content = (
+          <Descriptions
+            size="small"
+            column={1}
+            bordered
+            style={{ minWidth: 200 }}
+          >
+            {SUBPRODUCTO_LABELS.map((s) => {
+              const val = record[s.key] as number | null | undefined;
+              return val != null ? (
+                <Descriptions.Item key={s.key} label={s.label}>
+                  <strong>{val.toLocaleString("es-AR", { minimumFractionDigits: 2 })} kg</strong>
+                </Descriptions.Item>
+              ) : null;
+            })}
+          </Descriptions>
+        );
+        return (
+          <Popover
+            title={
+              <Space>
+                <BarChartOutlined />
+                <span>Subproductos de Trilla</span>
+              </Space>
+            }
+            content={content}
+            trigger="click"
+            placement="left"
+          >
+            <Tag
+              color="purple"
+              style={{ cursor: "pointer" }}
+              icon={<BarChartOutlined />}
+            >
+              Ver desglose
+            </Tag>
+          </Popover>
+        );
+      },
+    },
+    {
       title: "Estado",
       key: "estado",
       align: "center",
@@ -326,6 +408,17 @@ export default function TrillaPage() {
       align: "center",
       render: (_, record: OrdenTrilla) => (
         <Space size="middle">
+          <Tooltip title="Ver detalle">
+            <Button
+              type="text"
+              icon={<EyeOutlined style={{ color: "#722ed1" }} />}
+              onClick={() => {
+                setViewingOrden(record);
+                setIsViewOpen(true);
+              }}
+              aria-label="Ver detalle de orden de trilla"
+            />
+          </Tooltip>
           <Tooltip title="Registrar recepción / editar">
             <Button
               type="text"
@@ -520,6 +613,15 @@ export default function TrillaPage() {
         onSubmit={handleUpdate}
         orden={editingOrden}
         loading={saving}
+      />
+
+      <DetalleTrillaModal
+        open={isViewOpen}
+        onClose={() => {
+          setIsViewOpen(false);
+          setViewingOrden(null);
+        }}
+        orden={viewingOrden}
       />
     </div>
   );

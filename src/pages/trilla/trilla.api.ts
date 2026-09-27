@@ -2,6 +2,19 @@
 import { apiClient } from "../../api/apiClient";
 import type { Lote } from "../lotes/lotes.api";
 
+/** Subproductos resultantes del proceso de trilla */
+export type SubproductosTrilla = {
+  exportable?: number | null;
+  recuperado?: number | null;
+  malla13?: number | null;
+  segundaBuena?: number | null;
+  segundaMala?: number | null;
+  sucioEscojo?: number | null;
+  cisco?: number | null;
+  descarteMaquina?: number | null;
+  cascarilla?: number | null;
+};
+
 export type OrdenTrilla = {
   id: string;
   codigoTrilla: string;
@@ -11,6 +24,19 @@ export type OrdenTrilla = {
   tipoSaco?: string | null;
   kilosEnviados: number;
   kilosNetos?: number | null;
+  sacosEnviados?: number | null;
+  /** N° de guía de despacho (opcional) */
+  numeroGuia?: string | null;
+  // Subproductos del proceso de trilla
+  exportable?: number | null;
+  recuperado?: number | null;
+  malla13?: number | null;
+  segundaBuena?: number | null;
+  segundaMala?: number | null;
+  sucioEscojo?: number | null;
+  cisco?: number | null;
+  descarteMaquina?: number | null;
+  cascarilla?: number | null;
   createdAt?: string;
   updatedAt?: string;
   lotes?: Lote[];
@@ -19,8 +45,20 @@ export type OrdenTrilla = {
 export type CreateOrdenTrillaDTO = {
   loteIds: number[];
   kilosEnviados: number;
+  sacosEnviados?: number | null;
   fechaDespacho?: string;
   codigoTrilla?: string;
+  numeroGuia?: string | null;
+  // Subproductos (opcionales al crear)
+  exportable?: number | null;
+  recuperado?: number | null;
+  malla13?: number | null;
+  segundaBuena?: number | null;
+  segundaMala?: number | null;
+  sucioEscojo?: number | null;
+  cisco?: number | null;
+  descarteMaquina?: number | null;
+  cascarilla?: number | null;
 };
 
 export type UpdateOrdenTrillaDTO = {
@@ -29,9 +67,21 @@ export type UpdateOrdenTrillaDTO = {
   fechaIngreso?: string | null;
   calidad?: string | null;
   tipoSaco?: string | null;
+  sacosEnviados?: number | null;
   kilosEnviados?: number;
   kilosNetos?: number | null;
   loteIds?: number[];
+  numeroGuia?: string | null;
+  // Subproductos
+  exportable?: number | null;
+  recuperado?: number | null;
+  malla13?: number | null;
+  segundaBuena?: number | null;
+  segundaMala?: number | null;
+  sucioEscojo?: number | null;
+  cisco?: number | null;
+  descarteMaquina?: number | null;
+  cascarilla?: number | null;
 };
 
 export async function getOrdenesTrilaApi(): Promise<OrdenTrilla[]> {

@@ -30,6 +30,16 @@ export type ProcesoTrazabilidad = {
     kilosIngresados: number;
     kilosResultantes?: number | null;
 
+    // Campos de proceso húmedo / fermentación
+    fueDespulpado?: boolean | null;
+    tanqueFermentacion?: string | null;
+    inicioFermentacion?: string | null;
+    finFermentacion?: string | null;
+    nivelPh?: number | null;
+    tempMaxima?: number | null;
+    tempMinima?: number | null;
+    fueLavado?: boolean | null;
+
     loteId?: number | null;
 
     /**
@@ -67,6 +77,16 @@ export type CreateProcesoTrazabilidadDto = {
 
     kilosIngresados: number;
     kilosResultantes?: number | null;
+
+    // Campos de proceso húmedo / fermentación
+    fueDespulpado?: boolean | null;
+    tanqueFermentacion?: string | null;
+    inicioFermentacion?: string | null;
+    finFermentacion?: string | null;
+    nivelPh?: number | null;
+    tempMaxima?: number | null;
+    tempMinima?: number | null;
+    fueLavado?: boolean | null;
 };
 
 export type TrazabilidadResumen = {

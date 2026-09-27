@@ -1,10 +1,6 @@
 // src/api/apiClient.ts
-import axios from "axios";
-
-import {
-  clearAuth,
-  getToken,
-} from "./authStorage";
+import axios, { type AxiosError } from "axios";
+import { getToken, clearSession } from "./auth";
 
 export const apiClient = axios.create({
   baseURL:
@@ -12,6 +8,8 @@ export const apiClient = axios.create({
     "http://localhost:4000/api",
 });
 
+// ─── Interceptor de REQUEST ──────────────────────────────────────────────────
+// Adjunta el token JWT en cada petición saliente.
 apiClient.interceptors.request.use(
   (config) => {
     const token = getToken();
@@ -25,50 +23,34 @@ apiClient.interceptors.request.use(
   (error) => Promise.reject(error),
 );
 
-let redirectingToLogin = false;
+// ─── Interceptor de RESPONSE ─────────────────────────────────────────────────
+// Si el servidor responde con 401 (token vencido o inválido), limpia la sesión
+// local y redirige al login automáticamente sin mostrar un error genérico.
+
+/** Evita múltiples redirects simultáneos cuando varias peticiones fallan. */
+let isRedirecting = false;
 
 apiClient.interceptors.response.use(
+  // Respuesta exitosa: la dejamos pasar sin cambios.
   (response) => response,
 
-  (error) => {
-    const status = error?.response?.status;
-    const code = error?.response?.data?.code;
-    const backendMessage =
-      error?.response?.data?.message;
+  // Error en la respuesta:
+  (error: AxiosError) => {
+    const status = error.response?.status;
 
-    const requestUrl = String(
-      error?.config?.url ?? "",
-    );
+    if (status === 401 && !isRedirecting) {
+      isRedirecting = true;
 
-    const isLoginRequest =
-      requestUrl.includes("/auth/login");
+      // 1. Elimina el token y datos de sesión del almacenamiento local.
+      clearSession();
 
-    if (
-      status === 401 &&
-      !isLoginRequest &&
-      !redirectingToLogin
-    ) {
-      redirectingToLogin = true;
-
-      clearAuth();
-
-      sessionStorage.setItem(
-        "authRedirectReason",
-        code === "TOKEN_EXPIRED"
-          ? "expired"
-          : "invalid",
-      );
-
-      if (backendMessage) {
-        sessionStorage.setItem(
-          "authRedirectMessage",
-          backendMessage,
-        );
-      }
-
-      window.location.replace("/login");
+      // 2. Redirige al login.
+      //    Usamos window.location para funcionar fuera del árbol de React.
+      window.location.href = "/login";
     }
 
+    // Para cualquier otro error, rechazamos la promesa normalmente
+    // para que cada componente pueda manejarlo como considere.
     return Promise.reject(error);
   },
 );

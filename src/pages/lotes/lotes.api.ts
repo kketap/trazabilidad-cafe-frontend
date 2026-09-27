@@ -30,6 +30,8 @@ export type Lote = {
     kilosActuales?: number | null;
     saldoTemporal?: number | null;
 
+    gradosBrix?: number | null;
+
     hectareas?: number | null;
     ubicacion?: string | null;
     observacion?: string | null;
@@ -61,6 +63,7 @@ export type CreateLoteDTO = {
     kilosIniciales?: number | null;
     kilosActuales?: number | null;
     saldoTemporal?: number | null;
+    gradosBrix?: number | null;
     hectareas?: number | null;
     ubicacion?: string | null;
     observacion?: string | null;

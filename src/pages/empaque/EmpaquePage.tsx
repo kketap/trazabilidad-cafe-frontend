@@ -5,8 +5,11 @@ import {
   Card,
   Col,
   DatePicker,
+  Descriptions,
+  Divider,
   Input,
   message,
+  Modal,
   Popconfirm,
   Row,
   Select,
@@ -14,12 +17,14 @@ import {
   Statistic,
   Table,
   Tag,
+  Tooltip,
   Typography,
   theme,
 } from "antd";
 import {
   DeleteOutlined,
   EditOutlined,
+  EyeOutlined,
   PlusOutlined,
   SearchOutlined,
   ReloadOutlined,
@@ -40,6 +45,9 @@ import {
 import type { Lote } from "../lotes/lotes.api";
 import { getLotesApi } from "../lotes/lotes.api";
 
+import type { Secado } from "../secado/secado.api";
+import { getSecadosApi } from "../secado/secado.api";
+
 import CrearEmpaqueModal from "../../components/empaque-modals/CrearEmpaqueModal";
 import EditarEmpaqueModal from "../../components/empaque-modals/EditarEmpaqueModal";
 import { formatEstadoEnum } from "../../utils/enumFormatters";
@@ -50,6 +58,7 @@ export default function EmpaquePage() {
   const { token } = theme.useToken();
   const [empaques, setEmpaques] = useState<Empaque[]>([]);
   const [lotes, setLotes] = useState<Lote[]>([]);
+  const [secados, setSecados] = useState<Secado[]>([]);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
 
@@ -62,16 +71,20 @@ export default function EmpaquePage() {
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [editingEmpaque, setEditingEmpaque] = useState<Empaque | null>(null);
+  const [viewingEmpaque, setViewingEmpaque] = useState<Empaque | null>(null);
+  const [isViewOpen, setIsViewOpen] = useState(false);
 
   const fetchData = async () => {
     setLoading(true);
     try {
-      const [empaquesData, lotesData] = await Promise.all([
+      const [empaquesData, lotesData, secadosData] = await Promise.all([
         getEmpaquesApi(),
         getLotesApi(),
+        getSecadosApi(),
       ]);
       setEmpaques(empaquesData);
       setLotes(lotesData);
+      setSecados(secadosData);
     } catch (error: any) {
       console.error("Error al cargar datos de empaque:", error);
       message.error(error?.response?.data?.message || "Error al cargar registros de empaque");
@@ -239,25 +252,32 @@ export default function EmpaquePage() {
       key: "acciones",
       align: "center",
       render: (_, record: Empaque) => (
-        <Space size="middle">
-          <Button
-            type="text"
-            icon={<EditOutlined style={{ color: "#1890ff" }} />}
-            onClick={() => {
-              setEditingEmpaque(record);
-              setIsEditOpen(true);
-            }}
-            title="Editar Empaque"
-          />
+        <Space size="small">
+          <Tooltip title="Ver detalle">
+            <Button
+              type="text"
+              icon={<EyeOutlined style={{ color: token.colorInfo }} />}
+              onClick={() => { setViewingEmpaque(record); setIsViewOpen(true); }}
+            />
+          </Tooltip>
+          <Tooltip title="Editar">
+            <Button
+              type="text"
+              icon={<EditOutlined style={{ color: "#1890ff" }} />}
+              onClick={() => { setEditingEmpaque(record); setIsEditOpen(true); }}
+            />
+          </Tooltip>
           <Popconfirm
-            title="¿Eliminar este registro de empaque?"
-            description="Esta acción eliminará el registro de empaque permanentemente."
+            title="Eliminar este registro de empaque?"
+            description="Esta accion eliminara el registro de empaque permanentemente."
             onConfirm={() => handleDelete(record.id)}
-            okText="Sí, eliminar"
+            okText="Si, eliminar"
             cancelText="Cancelar"
             okButtonProps={{ danger: true }}
           >
-            <Button type="text" danger icon={<DeleteOutlined />} title="Eliminar" />
+            <Tooltip title="Eliminar">
+              <Button type="text" danger icon={<DeleteOutlined />} />
+            </Tooltip>
           </Popconfirm>
         </Space>
       ),
@@ -393,20 +413,160 @@ export default function EmpaquePage() {
         onClose={() => setIsCreateOpen(false)}
         onSubmit={handleCreate}
         lotes={lotes}
+        secados={secados}
         loading={saving}
       />
 
       <EditarEmpaqueModal
         open={isEditOpen}
-        onClose={() => {
-          setIsEditOpen(false);
-          setEditingEmpaque(null);
-        }}
+        onClose={() => { setIsEditOpen(false); setEditingEmpaque(null); }}
         onSubmit={handleUpdate}
         empaque={editingEmpaque}
         lotes={lotes}
+        secados={secados}
         loading={saving}
       />
+
+      {/* Modal Detalle Empaque */}
+      <Modal
+        title={
+          <Space>
+            <Tag color="purple" style={{ fontWeight: "bold", fontSize: 14 }}>
+              EMP-{String(viewingEmpaque?.id ?? 0).padStart(3, "0")}
+            </Tag>
+            <Typography.Text type="secondary">Detalle del registro de almacen</Typography.Text>
+          </Space>
+        }
+        open={isViewOpen}
+        onCancel={() => { setIsViewOpen(false); setViewingEmpaque(null); }}
+        footer={[
+          <Button key="close" onClick={() => { setIsViewOpen(false); setViewingEmpaque(null); }}>
+            Cerrar
+          </Button>,
+        ]}
+        width="min(720px, 95vw)"
+        centered
+        destroyOnHidden
+      >
+        {viewingEmpaque && (
+          <>
+            <Descriptions bordered column={{ xs: 1, sm: 2, md: 2 }} size="middle" style={{ marginTop: 8 }}>
+              <Descriptions.Item label="Lote de origen">
+                <Space direction="vertical" size={0}>
+                  <Tag color="gold" style={{ fontWeight: "bold" }}>
+                    {viewingEmpaque.lote?.codigo || `Lote #${viewingEmpaque.loteId}`}
+                  </Tag>
+                  {viewingEmpaque.lote?.nombre && (
+                    <Typography.Text type="secondary" style={{ fontSize: 12 }}>
+                      {viewingEmpaque.lote.nombre}
+                    </Typography.Text>
+                  )}
+                </Space>
+              </Descriptions.Item>
+
+              <Descriptions.Item label="Estado">
+                <Tag color={viewingEmpaque.kilosResultantes ? "purple" : "blue"}>
+                  {viewingEmpaque.kilosResultantes ? "En Almacen" : "En Proceso"}
+                </Tag>
+              </Descriptions.Item>
+
+              <Descriptions.Item label="Proceso de Secado Vinculado">
+                {viewingEmpaque.secadoId ? (
+                  <Tag color="cyan">SEC-{viewingEmpaque.secadoId}</Tag>
+                ) : (
+                  <Typography.Text type="secondary">No vinculado</Typography.Text>
+                )}
+              </Descriptions.Item>
+
+              <Descriptions.Item label="Fecha inicio">
+                {dayjs(viewingEmpaque.fechaInicio).format("DD/MM/YYYY HH:mm")}
+              </Descriptions.Item>
+
+              <Descriptions.Item label="Fecha fin">
+                {viewingEmpaque.fechaFin
+                  ? dayjs(viewingEmpaque.fechaFin).format("DD/MM/YYYY HH:mm")
+                  : <Typography.Text type="secondary">En proceso</Typography.Text>}
+              </Descriptions.Item>
+
+              <Descriptions.Item label="Kg ingresados">
+                <strong>{viewingEmpaque.kilosIngresados?.toLocaleString("es-CL")} kg</strong>
+              </Descriptions.Item>
+
+              <Descriptions.Item label="Kg resultantes">
+                <strong style={{ color: token.colorPrimary }}>
+                  {viewingEmpaque.kilosResultantes?.toLocaleString("es-CL")} kg
+                </strong>
+              </Descriptions.Item>
+
+              <Descriptions.Item label="Merma">
+                {(() => {
+                  const pct = viewingEmpaque.kilosIngresados
+                    ? ((viewingEmpaque.merma / viewingEmpaque.kilosIngresados) * 100).toFixed(1) : "0";
+                  return <Tag color={viewingEmpaque.merma > 0 ? "warning" : "green"}>{viewingEmpaque.merma?.toLocaleString("es-CL")} kg ({pct}%)</Tag>;
+                })()}
+              </Descriptions.Item>
+
+              <Descriptions.Item label="Tipo de Empaque">
+                {viewingEmpaque.tipoEmpaque || <Typography.Text type="secondary">No especificado</Typography.Text>}
+              </Descriptions.Item>
+
+              <Descriptions.Item label="Cantidad (Bultos)">
+                {viewingEmpaque.cantidadEmpaques != null
+                  ? <strong>{viewingEmpaque.cantidadEmpaques} bultos</strong>
+                  : <Typography.Text type="secondary">No especificado</Typography.Text>}
+              </Descriptions.Item>
+
+              <Descriptions.Item label="Rendimiento (%)">
+                {viewingEmpaque.rendimiento != null
+                  ? <Tag color="geekblue">{viewingEmpaque.rendimiento}%</Tag>
+                  : <Typography.Text type="secondary">No calculado</Typography.Text>}
+              </Descriptions.Item>
+
+              <Descriptions.Item label="Fue catado">
+                <Tag color={viewingEmpaque.fueCatado ? "green" : "default"}>
+                  {viewingEmpaque.fueCatado ? "Si" : viewingEmpaque.fueCatado === false ? "No" : "No registrado"}
+                </Tag>
+              </Descriptions.Item>
+
+              <Descriptions.Item label="Humedad">
+                {viewingEmpaque.humedad != null
+                  ? <Tag color="blue">{viewingEmpaque.humedad}%</Tag>
+                  : <Typography.Text type="secondary">-</Typography.Text>}
+              </Descriptions.Item>
+
+              <Descriptions.Item label="Actividad de Agua (Aw)">
+                {viewingEmpaque.actividadAgua != null
+                  ? <Tag color="cyan">{viewingEmpaque.actividadAgua}</Tag>
+                  : <Typography.Text type="secondary">-</Typography.Text>}
+              </Descriptions.Item>
+
+              <Descriptions.Item label="Puntaje SCA" span={2}>
+                {viewingEmpaque.puntajeSca != null
+                  ? <Tag color="gold" style={{ fontSize: 14, fontWeight: "bold" }}>{viewingEmpaque.puntajeSca} pts</Tag>
+                  : <Typography.Text type="secondary">No registrado</Typography.Text>}
+              </Descriptions.Item>
+            </Descriptions>
+
+            {viewingEmpaque.perfilSensorial && (
+              <>
+                <Divider orientation="left" orientationMargin={0} style={{ marginTop: 20 }}>
+                  <Typography.Text strong style={{ fontSize: 13 }}>Perfil Sensorial</Typography.Text>
+                </Divider>
+                <Typography.Text type="secondary">{viewingEmpaque.perfilSensorial}</Typography.Text>
+              </>
+            )}
+
+            {viewingEmpaque.observaciones && (
+              <>
+                <Divider orientation="left" orientationMargin={0} style={{ marginTop: 20 }}>
+                  <Typography.Text strong style={{ fontSize: 13 }}>Observaciones</Typography.Text>
+                </Divider>
+                <Typography.Text type="secondary">{viewingEmpaque.observaciones}</Typography.Text>
+              </>
+            )}
+          </>
+        )}
+      </Modal>
     </div>
   );
 }

@@ -19,26 +19,36 @@ export type LoginResponse = {
   };
 };
 
-export type UsuarioPerfil = {
-  id: number;
-  email: string;
-  nombre: string;
-  rol: string;
-};
+export async function login(email: string, password: string): Promise<LoginResponse> {
+  const { data } = await apiClient.post<LoginResponse>("/auth/login", {
+    email,
+    password,
+  });
 
-export async function login(
-  email: string,
-  password: string,
-): Promise<LoginResponse> {
-  const response = await apiClient.post<LoginResponse>(
-    "/auth/login",
-    {
-      email,
-      password,
-    },
-  );
+  return data;
+}
 
-  return response.data;
+export function saveToken(token: string) {
+  localStorage.setItem(TOKEN_KEY, token);
+}
+
+export function getToken(): string | null {
+  return localStorage.getItem(TOKEN_KEY);
+}
+
+export function removeToken() {
+  localStorage.removeItem(TOKEN_KEY);
+  localStorage.removeItem(USER_NAME_KEY);
+}
+
+/**
+ * Limpia completamente la sesión del usuario:
+ * elimina el token y el nombre del almacenamiento local.
+ * Usar esta función como punto único de limpieza de sesión.
+ */
+export function clearSession() {
+  localStorage.removeItem(TOKEN_KEY);
+  localStorage.removeItem(USER_NAME_KEY);
 }
 
 /**
