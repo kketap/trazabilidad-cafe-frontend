@@ -138,7 +138,7 @@ export default function CrearEmpaqueModal({ open, onClose, onSubmit, lotes, seca
           </div>
         )}
 
-        <Divider orientation="left" orientationMargin={0}>
+        <Divider orientationMargin={0}>
           <Typography.Text strong style={{ fontSize: 13 }}>Detalles del Empaque</Typography.Text>
         </Divider>
 
@@ -166,7 +166,7 @@ export default function CrearEmpaqueModal({ open, onClose, onSubmit, lotes, seca
           </Col>
         </Row>
 
-        <Divider orientation="left" orientationMargin={0}>
+        <Divider orientationMargin={0}>
           <Typography.Text strong style={{ fontSize: 13 }}>Datos de Calidad (Opcional)</Typography.Text>
         </Divider>
 
@@ -200,7 +200,7 @@ export default function CrearEmpaqueModal({ open, onClose, onSubmit, lotes, seca
           <Input.TextArea rows={2} placeholder="Ej. Notas a chocolate, caramelo, frutos rojos. Acidez media, cuerpo alto." />
         </Form.Item>
 
-        <Divider orientation="left" orientationMargin={0}>
+        <Divider orientationMargin={0}>
           <Typography.Text strong style={{ fontSize: 13 }}>Observaciones</Typography.Text>
         </Divider>
 

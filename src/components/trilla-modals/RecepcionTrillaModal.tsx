@@ -280,7 +280,7 @@ export default function RecepcionTrillaModal({ open, onClose, onSubmit, orden, l
         </Form.Item>
 
         {/* ── Desglose de Subproductos ── */}
-        <Divider orientation={"left" as const} style={{ margin: "16px 0 12px" }}>
+        <Divider style={{ margin: "16px 0 12px" }}>
           <Space>
             <BarChartOutlined />
             <span style={{ fontSize: 13, fontWeight: 500 }}>

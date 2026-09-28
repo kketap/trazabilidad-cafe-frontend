@@ -58,9 +58,12 @@ export default function CargaMasivaModal({
   const [analyzing, setAnalyzing] = useState<boolean>(false);
   const [submitting, setSubmitting] = useState<boolean>(false);
 
-  const [nombreArchivo, setNombreArchivo] = useState<string>("");
-  const [previewData, setPreviewData] = useState<PreviewCargaMasivaResponse | null>(null);
-  const [filas, setFilas] = useState<FilaCosechaPreview[]>([]);
+  const [, setNombreArchivo] = useState<string>("");
+  const [, setPreviewData] =
+    useState<PreviewCargaMasivaResponse | null>(null);
+
+  const [filas, setFilas] =
+    useState<FilaCosechaPreview[]>([]);
 
   function resetState() {
     setCurrentStep(0);

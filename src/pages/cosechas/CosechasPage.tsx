@@ -35,12 +35,16 @@ import {
   UnorderedListOutlined,
   UserOutlined,
 } from "@ant-design/icons";
+
 import dayjs, { type Dayjs } from "dayjs";
+import utc from "dayjs/plugin/utc";
+
+dayjs.extend(utc);
 
 import CargaMasivaModal from "./CargaMasivaModal";
 import DashboardCosechas from "./DashboardCosechas";
 
-import type { Cosecha } from "./cosechas.api";
+import type { Cosecha, CreateCosechaDTO } from "./cosechas.api";
 import {
   createCosechaApi,
   deleteCosechaApi,
@@ -180,7 +184,7 @@ export default function CosechasPage() {
       );
 
     form.setFieldsValue({
-      fecha: dayjs(record.fecha),
+      fecha: dayjs.utc(record.fecha),
       kilosCosechados: record.kilosCosechados,
       totalHectareas: record.totalHectareas,
       loteIds: loteIdsFallback,
@@ -320,7 +324,7 @@ export default function CosechasPage() {
       }
 
       if (filtroFecha) {
-        const fechaCosecha = dayjs(cosecha.fecha);
+        const fechaCosecha = dayjs.utc(cosecha.fecha);
 
         if (
           fechaCosecha.isBefore(filtroFecha[0], "day") ||
@@ -372,8 +376,8 @@ export default function CosechasPage() {
       dataIndex: "fecha",
       key: "fecha",
       width: 130,
-      render: (text: string) => dayjs(text).format("DD/MM/YYYY"),
-      sorter: (a, b) => dayjs(a.fecha).unix() - dayjs(b.fecha).unix(),
+      render: (text: string) => dayjs.utc(text).format("DD/MM/YYYY"),
+      sorter: (a, b) => dayjs.utc(a.fecha).unix() - dayjs.utc(b.fecha).unix(),
     },
     {
       title: "Lotes",
@@ -822,7 +826,7 @@ export default function CosechasPage() {
                       </Descriptions.Item>
 
                       <Descriptions.Item label="Fecha">
-                        {dayjs(viewingCosecha.fecha).format("DD/MM/YYYY")}
+                        {dayjs.utc(viewingCosecha.fecha).format("DD/MM/YYYY")}
                       </Descriptions.Item>
 
                       <Descriptions.Item label="Tipo Cosecha">
@@ -832,22 +836,23 @@ export default function CosechasPage() {
                       </Descriptions.Item>
 
                       <Descriptions.Item label="Trabajadores">
-                        {viewingCosecha.cosechaTrabajadores &&
-                          viewingCosecha.cosechaTrabajadores.length > 0 ? (
+                        {viewingCosecha.cosechaTrabajadores.length > 0 ? (
                           <Space wrap>
-                            {viewingCosecha.cosechaTrabajadores.map((item) => (
-                              <Tag key={item.id} icon={<UserOutlined />} color="blue">
-                                {item.trabajador.nombres}
-                                {item.trabajador.apellidos
-                                  ? ` ${item.trabajador.apellidos}`
-                                  : ""}
-                              </Tag>
-                            ))}
+                            {viewingCosecha.cosechaTrabajadores.map(
+                              (item) => (
+                                <Tag
+                                  key={item.id}
+                                  icon={<UserOutlined />}
+                                  color="blue"
+                                >
+                                  {item.trabajador.nombres}
+                                  {item.trabajador.apellidos
+                                    ? ` ${item.trabajador.apellidos}`
+                                    : ""}
+                                </Tag>
+                              ),
+                            )}
                           </Space>
-                        ) : viewingCosecha.trabajador?.nombres ? (
-                          <Tag icon={<UserOutlined />} color="blue">
-                            {viewingCosecha.trabajador.nombres}
-                          </Tag>
                         ) : (
                           "Sin asignar"
                         )}
@@ -880,15 +885,11 @@ export default function CosechasPage() {
                       </Descriptions.Item>
 
                       <Descriptions.Item label="Observaciones">
-                        {viewingCosecha.observacion ||
-                          viewingCosecha.observaciones ||
-                          "-"}
+                        {viewingCosecha.observacion || "-"}
                       </Descriptions.Item>
 
                       <Descriptions.Item label="Varietales">
-                        {Array.isArray(viewingCosecha.varietal)
-                          ? viewingCosecha.varietal.join(", ")
-                          : viewingCosecha.varietal || "-"}
+                        {viewingCosecha.varietal || "-"}
                       </Descriptions.Item>
                     </Descriptions>
                   )}

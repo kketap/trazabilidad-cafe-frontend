@@ -36,7 +36,6 @@ import {
   AppstoreOutlined,
   BarChartOutlined,
   FilterOutlined,
-  TrophyOutlined,
   UserOutlined,
 } from "@ant-design/icons";
 import dayjs from "dayjs";
@@ -49,14 +48,14 @@ import { getLotesApi } from "../lotes/lotes.api";
 const { Title, Text } = Typography;
 
 // ─── Paleta ──────────────────────────────────────────────────────────────────
-const C_PRIMARY  = "#6366f1";
-const C_SUCCESS  = "#10b981";
-const C_WARNING  = "#f59e0b";
-const C_DANGER   = "#ef4444";
-const C_INFO     = "#06b6d4";
-const C_PROYECT  = "#94a3b8";
+const C_PRIMARY = "#6366f1";
+const C_SUCCESS = "#10b981";
+const C_WARNING = "#f59e0b";
+const C_DANGER = "#ef4444";
+const C_INFO = "#06b6d4";
+const C_PROYECT = "#94a3b8";
 
-const PIE_COLORS = ["#6366f1","#10b981","#f59e0b","#ef4444","#06b6d4","#8b5cf6","#f97316","#ec4899"];
+const PIE_COLORS = ["#6366f1", "#10b981", "#f59e0b", "#ef4444", "#06b6d4", "#8b5cf6", "#f97316", "#ec4899"];
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 function fmtKg(v: number | null | undefined) {
@@ -116,42 +115,65 @@ function PieLabel({ cx, cy, midAngle, innerRadius, outerRadius, percent }: any) 
 
 // ─── KPI Card ─────────────────────────────────────────────────────────────────
 function KpiCard({
-  title, value, suffix, color, icon, loading,
+  title,
+  value,
+  suffix,
+  color,
+  loading,
 }: {
-  title: string; value: string | number; suffix?: string;
-  color: string; icon: React.ReactNode; loading: boolean;
+  title: string;
+  value: string | number;
+  suffix?: string;
+  color: string;
+  loading: boolean;
 }) {
   return (
     <Card
       style={{
         borderRadius: 14,
-        background: `linear-gradient(135deg, ${color}15 0%, ${color}06 100%)`,
+        background: `linear-gradient(
+          135deg,
+          ${color}15 0%,
+          ${color}06 100%
+        )`,
         border: `1px solid ${color}28`,
         boxShadow: "0 2px 12px rgba(0,0,0,0.05)",
         height: "100%",
       }}
-      styles={{ body: { padding: "18px 20px" } }}
+      styles={{
+        body: {
+          padding: "18px 20px",
+        },
+      }}
     >
-      {loading ? <Skeleton active paragraph={{ rows: 1 }} /> : (
-        <div style={{ display: "flex", alignItems: "flex-start", gap: 14 }}>
-          <div style={{
-            width: 44, height: 44, borderRadius: 11,
-            background: `${color}18`, display: "flex",
-            alignItems: "center", justifyContent: "center",
-            fontSize: 20, color, flexShrink: 0,
-          }}>
-            {icon}
-          </div>
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <Text style={{ color: "#8c8c8c", fontSize: 11, fontWeight: 500, display: "block", marginBottom: 2 }}>
-              {title}
-            </Text>
-            <Statistic
-              value={value}
-              suffix={suffix}
-              valueStyle={{ fontSize: 20, fontWeight: 700, color: "#1a1a2e", lineHeight: 1.2 }}
-            />
-          </div>
+      {loading ? (
+        <Skeleton
+          active
+          paragraph={{ rows: 1 }}
+        />
+      ) : (
+        <div>
+          <Text
+            type="secondary"
+            style={{
+              fontSize: 11,
+              fontWeight: 500,
+              display: "block",
+              marginBottom: 6,
+            }}
+          >
+            {title}
+          </Text>
+
+          <Statistic
+            value={value}
+            suffix={suffix}
+            valueStyle={{
+              fontSize: 20,
+              fontWeight: 700,
+              lineHeight: 1.25,
+            }}
+          />
         </div>
       )}
     </Card>
@@ -477,44 +499,111 @@ export default function DashboardCosechas() {
       </Card>
 
       {/* ── KPIs ────────────────────────────────────────────────────────────── */}
-      <Row gutter={[14, 14]} style={{ marginBottom: 20 }}>
-        <Col xs={12} sm={12} md={6} lg={6} xl={6}>
-          <KpiCard title="Kilos Cosechados" value={Number(kpis.kilosTotales.toFixed(0)).toLocaleString("es-CL")}
-            suffix="kg" color={C_PRIMARY} icon="⚖️" loading={loading} />
+      <Row
+        gutter={[14, 14]}
+        style={{
+          marginBottom: 20,
+        }}
+      >
+        <Col xs={12} sm={12} md={6}>
+          <KpiCard
+            title="Kilos Cosechados"
+            value={Number(
+              kpis.kilosTotales.toFixed(0),
+            ).toLocaleString("es-CL")}
+            suffix="kg"
+            color={C_PRIMARY}
+            loading={loading}
+          />
         </Col>
-        <Col xs={12} sm={12} md={6} lg={6} xl={6}>
-          <KpiCard title="Total Hectáreas" value={Number(kpis.totalHectareas.toFixed(1)).toLocaleString("es-CL", { minimumFractionDigits: 1 })}
-            suffix="ha" color={C_SUCCESS} icon="🌿" loading={loading} />
+
+        <Col xs={12} sm={12} md={6}>
+          <KpiCard
+            title="Total Hectáreas"
+            value={Number(
+              kpis.totalHectareas.toFixed(1),
+            ).toLocaleString("es-CL", {
+              minimumFractionDigits: 1,
+            })}
+            suffix="ha"
+            color={C_SUCCESS}
+            loading={loading}
+          />
         </Col>
-        <Col xs={12} sm={12} md={6} lg={6} xl={6}>
-          <KpiCard title="Rendimiento" value={`${kpis.rendimiento.toLocaleString("es-CL", { maximumFractionDigits: 1 })} kg/ha`}
-            color={C_WARNING} icon="📈" loading={loading} />
+
+        <Col xs={12} sm={12} md={6}>
+          <KpiCard
+            title="Rendimiento"
+            value={`${kpis.rendimiento.toLocaleString(
+              "es-CL",
+              {
+                maximumFractionDigits: 1,
+              },
+            )} kg/ha`}
+            color={C_WARNING}
+            loading={loading}
+          />
         </Col>
-        <Col xs={12} sm={12} md={6} lg={6} xl={6}>
-          <KpiCard title="Registros" value={kpis.totalCosechas}
-            color={C_INFO} icon="☕" loading={loading} />
+
+        <Col xs={12} sm={12} md={6}>
+          <KpiCard
+            title="Registros"
+            value={kpis.totalCosechas}
+            color={C_INFO}
+            loading={loading}
+          />
         </Col>
-        <Col xs={12} sm={12} md={6} lg={6} xl={6}>
-          <KpiCard title="Mejor Cosechador"
-            value={mejorCosechador?.nombre ?? "—"}
-            suffix={mejorCosechador ? `· ${fmtKg(mejorCosechador.kilos)}` : ""}
-            color={C_DANGER} icon={<TrophyOutlined />} loading={loading} />
+
+        <Col xs={12} sm={12} md={6}>
+          <KpiCard
+            title="Mejor Cosechador"
+            value={
+              mejorCosechador?.nombre ?? "—"
+            }
+            suffix={
+              mejorCosechador
+                ? `· ${fmtKg(
+                  mejorCosechador.kilos,
+                )}`
+                : ""
+            }
+            color={C_DANGER}
+            loading={loading}
+          />
         </Col>
-        <Col xs={12} sm={12} md={6} lg={6} xl={6}>
-          <KpiCard title="Mejor Lote"
-            value={mejorLote?.etiqueta ?? "—"}
-            suffix={mejorLote ? `· ${fmtKg(mejorLote.real)}` : ""}
-            color="#8b5cf6" icon={<AppstoreOutlined />} loading={loading} />
+
+        <Col xs={12} sm={12} md={6}>
+          <KpiCard
+            title="Mejor Lote"
+            value={
+              mejorLote?.etiqueta ?? "—"
+            }
+            suffix={
+              mejorLote
+                ? `· ${fmtKg(mejorLote.real)}`
+                : ""
+            }
+            color="#8b5cf6"
+            loading={loading}
+          />
         </Col>
-        <Col xs={12} sm={12} md={6} lg={6} xl={6}>
-          <KpiCard title="Total Varietales"
+
+        <Col xs={12} sm={12} md={6}>
+          <KpiCard
+            title="Total Varietales"
             value={datosVarietal.length}
-            color="#f97316" icon="🍃" loading={loading} />
+            color="#f97316"
+            loading={loading}
+          />
         </Col>
-        <Col xs={12} sm={12} md={6} lg={6} xl={6}>
-          <KpiCard title="Cosechadores Activos"
+
+        <Col xs={12} sm={12} md={6}>
+          <KpiCard
+            title="Cosechadores Activos"
             value={datosCosechador.length}
-            color="#ec4899" icon={<UserOutlined />} loading={loading} />
+            color="#ec4899"
+            loading={loading}
+          />
         </Col>
       </Row>
 
@@ -641,13 +730,13 @@ export default function DashboardCosechas() {
                       ))}
                     </Pie>
                     <ReTooltip
-                      formatter={(v: number) => fmtKg(v)}
-                      contentStyle={{
-                        borderRadius: 10,
-                        background: "rgba(15,15,30,0.92)",
-                        border: "none",
-                        color: "#fff",
-                      }}
+                      formatter={(value) =>
+                        fmtKg(
+                          typeof value === "number"
+                            ? value
+                            : Number(value ?? 0),
+                        )
+                      }
                     />
                   </PieChart>
                 </ResponsiveContainer>
@@ -734,7 +823,8 @@ export default function DashboardCosechas() {
                 maxBarSize={24}
                 label={{
                   position: "right",
-                  formatter: (v: number) => fmtKg(v),
+                  formatter: (value) =>
+                    fmtKg(Number(value ?? 0)),
                   fontSize: 11,
                   fill: "#6b7280",
                 }}
@@ -744,9 +834,9 @@ export default function DashboardCosechas() {
                     key={i}
                     fill={
                       i === 0 ? C_PRIMARY
-                      : i === 1 ? C_SUCCESS
-                      : i === 2 ? C_WARNING
-                      : "#cbd5e1"
+                        : i === 1 ? C_SUCCESS
+                          : i === 2 ? C_WARNING
+                            : "#cbd5e1"
                     }
                   />
                 ))}

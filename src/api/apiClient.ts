@@ -1,21 +1,54 @@
 // src/api/apiClient.ts
-import axios, { type AxiosError } from "axios";
-import { getToken, clearSession } from "./auth";
+import axios, {
+  type AxiosError,
+  type InternalAxiosRequestConfig,
+} from "axios";
+
+import {
+  clearAuth,
+  getToken,
+  saveToken,
+} from "./authStorage";
+
+const baseURL =
+  import.meta.env.VITE_API_URL ||
+  "http://localhost:4000/api";
 
 export const apiClient = axios.create({
-  baseURL:
-    import.meta.env.VITE_API_URL ||
-    "http://localhost:4000/api",
+  baseURL,
+  withCredentials: true,
 });
 
-// ─── Interceptor de REQUEST ──────────────────────────────────────────────────
-// Adjunta el token JWT en cada petición saliente.
+/**
+ * Cliente separado para renovar el access token.
+ * Se usa para evitar que el interceptor principal
+ * entre en un ciclo infinito.
+ */
+const refreshClient = axios.create({
+  baseURL,
+  withCredentials: true,
+});
+
+type RetryConfig =
+  InternalAxiosRequestConfig & {
+    _retry?: boolean;
+  };
+
+type RefreshResponse = {
+  ok: boolean;
+  token: string;
+};
+
+/**
+ * Adjunta el access token JWT a cada petición.
+ */
 apiClient.interceptors.request.use(
   (config) => {
     const token = getToken();
 
     if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
+      config.headers.Authorization =
+        `Bearer ${token}`;
     }
 
     return config;
@@ -23,34 +56,162 @@ apiClient.interceptors.request.use(
   (error) => Promise.reject(error),
 );
 
-// ─── Interceptor de RESPONSE ─────────────────────────────────────────────────
-// Si el servidor responde con 401 (token vencido o inválido), limpia la sesión
-// local y redirige al login automáticamente sin mostrar un error genérico.
+/**
+ * Si varias peticiones reciben 401 al mismo tiempo,
+ * reutilizamos una única petición de refresh.
+ */
+let refreshPromise:
+  Promise<string> | null = null;
 
-/** Evita múltiples redirects simultáneos cuando varias peticiones fallan. */
+async function refreshAccessToken(): Promise<string> {
+  if (!refreshPromise) {
+    refreshPromise = refreshClient
+      .post<RefreshResponse>(
+        "/auth/refresh",
+      )
+      .then((response) => {
+        const nuevoToken =
+          response.data.token;
+
+        saveToken(nuevoToken);
+
+        return nuevoToken;
+      })
+      .finally(() => {
+        refreshPromise = null;
+      });
+  }
+
+  return refreshPromise;
+}
+
 let isRedirecting = false;
 
+function redirectToLogin(
+  reason: "expired" | "invalid",
+  message?: string,
+) {
+  if (isRedirecting) {
+    return;
+  }
+
+  isRedirecting = true;
+
+  clearAuth();
+
+  sessionStorage.setItem(
+    "authRedirectReason",
+    reason,
+  );
+
+  if (message) {
+    sessionStorage.setItem(
+      "authRedirectMessage",
+      message,
+    );
+  }
+
+  window.location.replace("/login");
+}
+
+/**
+ * Interceptor de respuestas.
+ *
+ * Si el access token expira:
+ * 1. intenta renovarlo;
+ * 2. guarda el nuevo token;
+ * 3. repite la petición original.
+ *
+ * Si el refresh token también falla,
+ * se limpia la sesión y se redirige al login.
+ */
 apiClient.interceptors.response.use(
-  // Respuesta exitosa: la dejamos pasar sin cambios.
   (response) => response,
 
-  // Error en la respuesta:
-  (error: AxiosError) => {
-    const status = error.response?.status;
+  async (
+    error: AxiosError<{
+      code?: string;
+      message?: string;
+    }>,
+  ) => {
+    const originalRequest =
+      error.config as
+      | RetryConfig
+      | undefined;
 
-    if (status === 401 && !isRedirecting) {
-      isRedirecting = true;
+    const status =
+      error.response?.status;
 
-      // 1. Elimina el token y datos de sesión del almacenamiento local.
-      clearSession();
+    const code =
+      error.response?.data?.code;
 
-      // 2. Redirige al login.
-      //    Usamos window.location para funcionar fuera del árbol de React.
-      window.location.href = "/login";
+    const requestUrl = String(
+      originalRequest?.url ?? "",
+    );
+
+    const isLoginRequest =
+      requestUrl.includes(
+        "/auth/login",
+      );
+
+    const isRefreshRequest =
+      requestUrl.includes(
+        "/auth/refresh",
+      );
+
+    const isLogoutRequest =
+      requestUrl.includes(
+        "/auth/logout",
+      );
+
+    const isAuthRequest =
+      isLoginRequest ||
+      isRefreshRequest ||
+      isLogoutRequest;
+
+    if (
+      status === 401 &&
+      !isAuthRequest &&
+      originalRequest &&
+      !originalRequest._retry
+    ) {
+      originalRequest._retry = true;
+
+      try {
+        const nuevoToken =
+          await refreshAccessToken();
+
+        originalRequest.headers.Authorization =
+          `Bearer ${nuevoToken}`;
+
+        return apiClient(
+          originalRequest,
+        );
+      } catch (refreshError) {
+        const refreshAxiosError =
+          refreshError as AxiosError<{
+            code?: string;
+            message?: string;
+          }>;
+
+        const refreshMessage =
+          refreshAxiosError.response?.data
+            ?.message;
+
+        redirectToLogin(
+          code === "TOKEN_EXPIRED"
+            ? "expired"
+            : "invalid",
+          refreshMessage ||
+          "Tu sesión ha finalizado. Inicia sesión nuevamente.",
+        );
+
+        return Promise.reject(
+          refreshError,
+        );
+      }
     }
 
-    // Para cualquier otro error, rechazamos la promesa normalmente
-    // para que cada componente pueda manejarlo como considere.
     return Promise.reject(error);
   },
 );

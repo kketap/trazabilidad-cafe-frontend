@@ -38,9 +38,37 @@ export default function EditarSecadoModal({ open, onClose, onSubmit, secado, lot
   const tempMaxima = Form.useWatch("tempMaxima", form);
 
   // Kilos reales disponibles del lote seleccionado
-  const kilosDisponibles =
+  const saldoActualLote =
     loteSeleccionado != null
-      ? (loteSeleccionado.kilosActuales ?? loteSeleccionado.kilosIniciales ?? null)
+      ? (
+        loteSeleccionado.kilosActuales ??
+        loteSeleccionado.kilosIniciales ??
+        null
+      )
+      : null;
+
+  const esLoteOriginal =
+    loteSeleccionado != null &&
+    secado != null &&
+    loteSeleccionado.id === secado.loteId;
+
+  const kilosOriginalesProceso =
+    esLoteOriginal
+      ? Number(secado?.kilosIngresados ?? 0)
+      : 0;
+
+  /**
+   * Si estamos editando sobre el mismo lote,
+   * reincorporamos temporalmente los kilos que
+   * este mismo proceso había descontado.
+   *
+   * Si el usuario cambia de lote, solamente puede
+   * utilizar el saldo real del nuevo lote.
+   */
+  const kilosDisponiblesEdicion =
+    saldoActualLote != null
+      ? saldoActualLote +
+      kilosOriginalesProceso
       : null;
 
   useEffect(() => {
@@ -66,7 +94,7 @@ export default function EditarSecadoModal({ open, onClose, onSubmit, secado, lot
 
   const mermaCalculada =
     kilosIngresados !== undefined && kilosIngresados !== null &&
-    kilosResultantes !== undefined && kilosResultantes !== null
+      kilosResultantes !== undefined && kilosResultantes !== null
       ? Number(kilosIngresados) - Number(kilosResultantes)
       : null;
 
@@ -152,23 +180,66 @@ export default function EditarSecadoModal({ open, onClose, onSubmit, secado, lot
         </Form.Item>
 
         {/* Saldo disponible del lote seleccionado */}
-        {loteSeleccionado && kilosDisponibles != null && (
-          <Alert
-            type="info"
-            icon={<InfoCircleOutlined />}
-            showIcon
-            style={{ marginBottom: 16, borderRadius: 6 }}
-            message={
-              <span>
-                Saldo disponible en lote{" "}
-                <strong>{loteSeleccionado.codigo}</strong>:{" "}
-                <Tag color="blue" style={{ fontSize: 13 }}>
-                  {kilosDisponibles.toLocaleString("es-AR", { minimumFractionDigits: 2 })} kg
-                </Tag>
-              </span>
-            }
-          />
-        )}
+        {loteSeleccionado &&
+          saldoActualLote != null && (
+            <Alert
+              type="info"
+              icon={<InfoCircleOutlined />}
+              showIcon
+              style={{
+                marginBottom: 16,
+                borderRadius: 6,
+              }}
+              message={
+                <span>
+                  Saldo actual en lote{" "}
+                  <strong>
+                    {loteSeleccionado.codigo}
+                  </strong>
+                  :{" "}
+                  <Tag
+                    color="blue"
+                    style={{
+                      fontSize: 13,
+                    }}
+                  >
+                    {saldoActualLote.toLocaleString(
+                      "es-AR",
+                      {
+                        minimumFractionDigits: 2,
+                      },
+                    )}{" "}
+                    kg
+                  </Tag>
+
+                  {esLoteOriginal && (
+                    <>
+                      {" "}
+                      · Disponible para esta
+                      edición:{" "}
+                      <Tag
+                        color="green"
+                        style={{
+                          fontSize: 13,
+                        }}
+                      >
+                        {(
+                          kilosDisponiblesEdicion ??
+                          0
+                        ).toLocaleString(
+                          "es-AR",
+                          {
+                            minimumFractionDigits: 2,
+                          },
+                        )}{" "}
+                        kg
+                      </Tag>
+                    </>
+                  )}
+                </span>
+              }
+            />
+          )}
 
         {/* ── Fechas ── */}
         <Row gutter={16}>
@@ -195,31 +266,51 @@ export default function EditarSecadoModal({ open, onClose, onSubmit, secado, lot
               name="kilosIngresados"
               label="Kilos Ingresados"
               rules={[
-                { required: true, message: "Kilos ingresados requeridos" },
+                {
+                  required: true,
+                  message:
+                    "Kilos ingresados requeridos",
+                },
                 {
                   type: "number",
                   min: 0.01,
-                  message: "Debe ser mayor a 0",
+                  message:
+                    "Debe ser mayor a 0",
                 },
                 {
                   validator: (_, value) => {
-                    if (value && kilosDisponibles != null && Number(value) > kilosDisponibles) {
+                    if (
+                      value != null &&
+                      kilosDisponiblesEdicion != null &&
+                      Number(value) >
+                      kilosDisponiblesEdicion
+                    ) {
                       return Promise.reject(
                         new Error(
-                          `No puede superar los ${kilosDisponibles.toLocaleString("es-AR", {
-                            minimumFractionDigits: 2,
-                          })} kg disponibles`
-                        )
+                          `No puede superar los ${kilosDisponiblesEdicion.toLocaleString(
+                            "es-AR",
+                            {
+                              minimumFractionDigits: 2,
+                            },
+                          )} kg disponibles para esta edición`,
+                        ),
                       );
                     }
+
                     return Promise.resolve();
                   },
                 },
               ]}
             >
               <InputNumber
-                style={{ width: "100%" }}
+                style={{
+                  width: "100%",
+                }}
                 min={0.01}
+                max={
+                  kilosDisponiblesEdicion ??
+                  undefined
+                }
                 precision={2}
                 addonAfter="kg"
               />
@@ -229,10 +320,44 @@ export default function EditarSecadoModal({ open, onClose, onSubmit, secado, lot
             <Form.Item
               name="kilosResultantes"
               label="Kilos Resultantes (Secos)"
-              rules={[{ required: true, message: "Kilos resultantes requeridos" }]}
+              dependencies={[
+                "kilosIngresados",
+              ]}
+              rules={[
+                {
+                  required: true,
+                  message:
+                    "Kilos resultantes requeridos",
+                },
+                {
+                  validator: (_, value) => {
+                    const ingresados =
+                      form.getFieldValue(
+                        "kilosIngresados",
+                      );
+
+                    if (
+                      value != null &&
+                      ingresados != null &&
+                      Number(value) >
+                      Number(ingresados)
+                    ) {
+                      return Promise.reject(
+                        new Error(
+                          "Los kilos resultantes no pueden superar los kilos ingresados",
+                        ),
+                      );
+                    }
+
+                    return Promise.resolve();
+                  },
+                },
+              ]}
             >
               <InputNumber
-                style={{ width: "100%" }}
+                style={{
+                  width: "100%",
+                }}
                 min={0}
                 precision={2}
                 addonAfter="kg"

@@ -1,6 +1,13 @@
 // src/components/trazabilidad-modals/EditarProcesoModal.tsx
-import { useEffect, useMemo, useState } from "react";
+
 import {
+    useEffect,
+    useMemo,
+    useState,
+} from "react";
+
+import {
+    Alert,
     Button,
     Col,
     DatePicker,
@@ -11,12 +18,16 @@ import {
     Modal,
     Row,
     Select,
-    Space,
     Switch,
     Typography,
+    theme,
 } from "antd";
+
 import dayjs from "dayjs";
+import utc from "dayjs/plugin/utc";
 import type { Dayjs } from "dayjs";
+
+dayjs.extend(utc);
 
 import type { Cosecha } from "../../pages/cosechas/cosechas.api";
 import type { Lote } from "../../pages/lotes/lotes.api";
@@ -29,128 +40,414 @@ const { Text } = Typography;
 
 type EditarProcesoModalProps = {
     open: boolean;
-    proceso: ProcesoTrazabilidad | null;
+
+    proceso:
+    | ProcesoTrazabilidad
+    | null;
+
     cosechas: Cosecha[];
+
     lotes: Lote[];
+
     saving?: boolean;
+
     onClose: () => void;
-    onSubmit: (id: number, values: ProcesoFormValues) => Promise<void> | void;
+
+    onSubmit: (
+        id: number,
+        values: ProcesoFormValues,
+    ) => Promise<void> | void;
 };
 
 const ETAPA_OPTIONS = [
-    { value: "Despulpado", label: "Despulpado" },
-    { value: "Lavado", label: "Lavado" },
-    { value: "Secado", label: "Secado" },
-    { value: "Trilla", label: "Trilla" },
-    { value: "Clasificación", label: "Clasificación" },
+    {
+        value: "Despulpado",
+        label: "Despulpado",
+    },
+    {
+        value: "Lavado",
+        label: "Lavado",
+    },
+    {
+        value: "Secado",
+        label: "Secado",
+    },
+    {
+        value: "Trilla",
+        label: "Trilla",
+    },
+    {
+        value: "Clasificación",
+        label: "Clasificación",
+    },
 ];
+
+function calcularDuracionHoras(
+    inicio?: Dayjs | null,
+    fin?: Dayjs | null,
+): number | undefined {
+    if (!inicio || !fin) {
+        return undefined;
+    }
+
+    const diferenciaMs =
+        fin.valueOf() - inicio.valueOf();
+
+    if (diferenciaMs <= 0) {
+        return undefined;
+    }
+
+    const horas =
+        diferenciaMs /
+        (1000 * 60 * 60);
+
+    return Number(
+        horas.toFixed(2),
+    );
+}
 
 export default function EditarProcesoModal({
     open,
     proceso,
     cosechas,
     lotes,
+
     saving = false,
+
     onClose,
     onSubmit,
 }: EditarProcesoModalProps) {
-    const [form] = Form.useForm<ProcesoFormValues>();
+    const [form] =
+        Form.useForm<ProcesoFormValues>();
 
-    const [loteSeleccionadoId, setLoteSeleccionadoId] =
-        useState<number | null>(null);
+    const { token } =
+        theme.useToken();
+
+    const [
+        loteSeleccionadoId,
+        setLoteSeleccionadoId,
+    ] = useState<number | null>(null);
 
     const lotesDisponibles = useMemo(() => {
-        return (lotes ?? []).filter((lote) => {
-            const esLoteActual = lote.id === proceso?.loteId;
-            return lote.activo || esLoteActual;
-        });
-    }, [lotes, proceso?.loteId]);
+        return (lotes ?? []).filter(
+            (lote) => {
+                const esLoteActual =
+                    lote.id === proceso?.loteId;
 
-    const loteSeleccionado = useMemo(() => {
-        return (
-            lotesDisponibles.find((lote) => lote.id === loteSeleccionadoId) ??
-            null
+                return (
+                    lote.activo ||
+                    esLoteActual
+                );
+            },
         );
-    }, [lotesDisponibles, loteSeleccionadoId]);
+    }, [
+        lotes,
+        proceso?.loteId,
+    ]);
+
+    const loteSeleccionado =
+        useMemo(() => {
+            return (
+                lotesDisponibles.find(
+                    (lote) =>
+                        lote.id ===
+                        loteSeleccionadoId,
+                ) ?? null
+            );
+        }, [
+            lotesDisponibles,
+            loteSeleccionadoId,
+        ]);
 
     const loteOptions = useMemo(() => {
-        return lotesDisponibles.map((lote) => ({
-            value: lote.id,
-            label: `${lote.codigo}${lote.nombre ? ` - ${lote.nombre}` : ""}`,
-        }));
+        return lotesDisponibles.map(
+            (lote) => ({
+                value: lote.id,
+
+                label: `${lote.codigo}${lote.nombre
+                    ? ` - ${lote.nombre}`
+                    : ""
+                    }`,
+            }),
+        );
     }, [lotesDisponibles]);
 
     const cosechaOptions = useMemo(() => {
-        return (cosechas ?? []).map((cosecha) => ({
-            value: cosecha.id,
-            label: `COS-${String(cosecha.id).padStart(3, "0")} | Lote: ${cosecha.lotes || "N/A"
-                } | ${cosecha.fecha ? String(cosecha.fecha).slice(0, 10) : ""
-                } | ${(cosecha.kilosCosechados ?? 0).toLocaleString("es-CL")} kg`,
-        }));
+        return (cosechas ?? []).map(
+            (cosecha) => ({
+                value: cosecha.id,
+
+                label:
+                    `COS-${String(
+                        cosecha.id,
+                    ).padStart(3, "0")}` +
+                    ` | Lote: ${cosecha.lotes || "N/A"
+                    }` +
+                    ` | ${cosecha.fecha
+                        ? String(
+                            cosecha.fecha,
+                        ).slice(0, 10)
+                        : ""
+                    }` +
+                    ` | ${(
+                        cosecha.kilosCosechados ?? 0
+                    ).toLocaleString(
+                        "es-CL",
+                    )} kg`,
+            }),
+        );
     }, [cosechas]);
 
     useEffect(() => {
         if (open && proceso) {
-            form.setFieldsValue({
-                fecha: dayjs(proceso.fecha),
-                inicioFermentacion: proceso.inicioFermentacion
+            const inicio =
+                proceso.inicioFermentacion
                     ? dayjs(proceso.inicioFermentacion)
-                    : undefined,
-                finFermentacion: proceso.finFermentacion
+                        .second(0)
+                        .millisecond(0)
+                    : undefined;
+
+            const fin =
+                proceso.finFermentacion
                     ? dayjs(proceso.finFermentacion)
-                    : undefined,
-                duracionHoras: proceso.duracionHoras ?? undefined,
-                loteId: proceso.loteId ?? null,
-                cosechaId: proceso.cosechaId ?? null,
-                etapa: proceso.etapa ?? undefined,
-                kilosIngresados: proceso.kilosIngresados,
-                kilosResultantes: proceso.kilosResultantes ?? undefined,
-                // Campos de fermentación
-                fueDespulpado: proceso.fueDespulpado ?? false,
-                tanqueFermentacion: proceso.tanqueFermentacion ?? undefined,
-                nivelPh: proceso.nivelPh ?? undefined,
-                tempMaxima: proceso.tempMaxima ?? undefined,
-                tempMinima: proceso.tempMinima ?? undefined,
-                fueLavado: proceso.fueLavado ?? false,
+                        .second(0)
+                        .millisecond(0)
+                    : undefined;
+
+            const duracionCalculada =
+                calcularDuracionHoras(
+                    inicio,
+                    fin,
+                );
+
+            form.setFieldsValue({
+                fecha:
+                    dayjs.utc(proceso.fecha),
+
+                inicioFermentacion:
+                    inicio,
+
+                finFermentacion:
+                    fin,
+
+                /*
+                 * Siempre priorizamos el cálculo
+                 * obtenido desde las fechas.
+                 *
+                 * El valor guardado en BD queda como
+                 * fallback para registros históricos
+                 * que todavía no tengan ambas fechas.
+                 */
+                duracionHoras:
+                    duracionCalculada ??
+                    proceso.duracionHoras ??
+                    undefined,
+
+                loteId:
+                    proceso.loteId ?? null,
+
+                cosechaId:
+                    proceso.cosechaId ??
+                    null,
+
+                etapa:
+                    proceso.etapa ??
+                    undefined,
+
+                kilosIngresados:
+                    proceso.kilosIngresados,
+
+                kilosResultantes:
+                    proceso.kilosResultantes ??
+                    undefined,
+
+                fueDespulpado:
+                    proceso.fueDespulpado ??
+                    false,
+
+                tanqueFermentacion:
+                    proceso.tanqueFermentacion ??
+                    undefined,
+
+                nivelPh:
+                    proceso.nivelPh ??
+                    undefined,
+
+                tempMaxima:
+                    proceso.tempMaxima ??
+                    undefined,
+
+                tempMinima:
+                    proceso.tempMinima ??
+                    undefined,
+
+                fueLavado:
+                    proceso.fueLavado ??
+                    false,
             });
 
-            setLoteSeleccionadoId(proceso.loteId ?? null);
+            setLoteSeleccionadoId(
+                proceso.loteId ?? null,
+            );
         }
 
         if (!open) {
             form.resetFields();
-            setLoteSeleccionadoId(null);
-        }
-    }, [open, proceso, form]);
 
-    function handleFechaChange(_value: Dayjs | null) {
+            setLoteSeleccionadoId(
+                null,
+            );
+        }
+    }, [
+        open,
+        proceso,
+        form,
+    ]);
+
+    function actualizarDuracion(
+        inicio?: Dayjs | null,
+        fin?: Dayjs | null,
+    ) {
+        const duracion =
+            calcularDuracionHoras(
+                inicio,
+                fin,
+            );
+
+        form.setFieldValue(
+            "duracionHoras",
+            duracion,
+        );
+    }
+
+    function handleInicioFermentacionChange(
+        value: Dayjs | null,
+    ) {
+        const inicio = value
+            ? value.second(0).millisecond(0)
+            : null;
+
+        form.setFieldValue(
+            "inicioFermentacion",
+            inicio,
+        );
+
+        const fin =
+            form.getFieldValue(
+                "finFermentacion",
+            );
+
+        actualizarDuracion(
+            inicio,
+            fin,
+        );
+
+        if (fin) {
+            void form.validateFields([
+                "finFermentacion",
+            ]);
+        }
+    }
+
+    function handleFinFermentacionChange(
+        value: Dayjs | null,
+    ) {
+        const fin = value
+            ? value.second(0).millisecond(0)
+            : null;
+
+        form.setFieldValue(
+            "finFermentacion",
+            fin,
+        );
+
+        const inicio =
+            form.getFieldValue(
+                "inicioFermentacion",
+            );
+
+        actualizarDuracion(
+            inicio,
+            fin,
+        );
+
+        if (inicio && fin) {
+            void form.validateFields([
+                "finFermentacion",
+            ]);
+        }
+    }
+
+    function handleFechaChange(
+        _value: Dayjs | null,
+    ) {
         form.resetFields([
             "loteId",
             "cosechaId",
             "kilosIngresados",
             "kilosResultantes",
         ]);
+
         setLoteSeleccionadoId(null);
     }
 
-    function handleLoteChange(value: number | null) {
+    function handleLoteChange(
+        value: number | null,
+    ) {
         setLoteSeleccionadoId(value);
-        form.resetFields(["kilosIngresados", "kilosResultantes"]);
+
+        form.resetFields([
+            "kilosIngresados",
+            "kilosResultantes",
+        ]);
     }
 
-    const handleFinish = async (values: ProcesoFormValues) => {
-        if (!proceso) return;
-        await onSubmit(proceso.id, values);
+    const handleFinish = async (
+        values: ProcesoFormValues,
+    ) => {
+        if (!proceso) {
+            return;
+        }
+
+        const duracionCalculada =
+            calcularDuracionHoras(
+                values.inicioFermentacion,
+                values.finFermentacion,
+            );
+
+        if (
+            duracionCalculada === undefined
+        ) {
+            return;
+        }
+
+        const valuesFinales: ProcesoFormValues =
+        {
+            ...values,
+
+            duracionHoras:
+                duracionCalculada,
+        };
+
+        await onSubmit(
+            proceso.id,
+            valuesFinales,
+        );
     };
 
     const handleCancel = () => {
         form.resetFields();
-        setLoteSeleccionadoId(null);
+
+        setLoteSeleccionadoId(
+            null,
+        );
+
         onClose();
     };
 
     const kilosDisponibles =
-        loteSeleccionado?.kilosActuales ?? loteSeleccionado?.kilosIniciales;
+        loteSeleccionado?.kilosActuales ??
+        loteSeleccionado?.kilosIniciales;
 
     return (
         <Modal
@@ -160,12 +457,14 @@ export default function EditarProcesoModal({
             footer={null}
             destroyOnHidden
             centered
-            width="min(900px, 96vw)"
+            width="min(920px, 96vw)"
             styles={{
                 body: {
-                    maxHeight: "75vh",
+                    maxHeight: "78vh",
                     overflowY: "auto",
-                    paddingRight: 8,
+                    overflowX: "hidden",
+                    paddingRight: 12,
+                    paddingBottom: 8,
                 },
             }}
         >
@@ -176,64 +475,126 @@ export default function EditarProcesoModal({
                 autoComplete="off"
             >
                 {/* ── SECCIÓN: Datos generales ── */}
-                <Divider orientation="left" orientationMargin={0}>
-                    <Text strong style={{ fontSize: 13 }}>Datos generales</Text>
+
+                <Divider
+                    orientationMargin={0}
+                    style={{
+                        margin:
+                            "18px 0 16px",
+                    }}
+                >
+                    <Text
+                        strong
+                        style={{
+                            fontSize: 13,
+                            color:
+                                token.colorTextHeading,
+                        }}
+                    >
+                        Datos generales
+                    </Text>
                 </Divider>
 
                 <Row gutter={[16, 0]}>
-                    <Col xs={24} md={12}>
+                    <Col
+                        xs={24}
+                        md={12}
+                    >
                         <Form.Item
                             label="Fecha del proceso"
                             name="fecha"
-                            rules={[{ required: true, message: "La fecha es obligatoria" }]}
+                            rules={[
+                                {
+                                    required: true,
+                                    message:
+                                        "La fecha es obligatoria",
+                                },
+                            ]}
                         >
                             <DatePicker
-                                style={{ width: "100%" }}
+                                style={{
+                                    width: "100%",
+                                }}
                                 locale={esES}
                                 format="DD/MM/YYYY"
                                 placeholder="Seleccione una fecha"
-                                onChange={handleFechaChange}
+                                onChange={
+                                    handleFechaChange
+                                }
                             />
                         </Form.Item>
                     </Col>
 
-                    <Col xs={24} md={12}>
+                    <Col
+                        xs={24}
+                        md={12}
+                    >
                         <Form.Item
                             label="Lote de origen"
                             name="loteId"
-                            rules={[{ required: true, message: "Seleccione el lote asociado al proceso" }]}
+                            rules={[
+                                {
+                                    required: true,
+                                    message:
+                                        "Seleccione el lote asociado al proceso",
+                                },
+                            ]}
                         >
                             <Select
                                 placeholder="Seleccione un lote"
-                                options={loteOptions}
+                                options={
+                                    loteOptions
+                                }
                                 showSearch
                                 optionFilterProp="label"
-                                onChange={handleLoteChange}
+                                onChange={
+                                    handleLoteChange
+                                }
                             />
                         </Form.Item>
                     </Col>
 
                     {loteSeleccionado && (
                         <Col xs={24}>
-                            <div style={{ background: "#f6ffed", border: "1px solid #b7eb8f", borderRadius: 6, padding: "8px 12px", marginBottom: 16 }}>
-                                <Text type="secondary" style={{ fontSize: 12 }}>
-                                    Kg disponibles en lote:{" "}
-                                    <Text strong style={{ color: "#52c41a" }}>
-                                        {(kilosDisponibles ?? 0).toLocaleString("es-CL")} kg
-                                    </Text>
-                                </Text>
-                            </div>
+                            <Alert
+                                className="proceso-alert-disponible"
+                                type="success"
+                                showIcon
+                                message={
+                                    <span>
+                                        Kg disponibles en
+                                        lote:{" "}
+                                        <strong>
+                                            {(
+                                                kilosDisponibles ??
+                                                0
+                                            ).toLocaleString(
+                                                "es-CL",
+                                            )}{" "}
+                                            kg
+                                        </strong>
+                                    </span>
+                                }
+                                style={{
+                                    marginBottom: 16,
+                                }}
+                            />
                         </Col>
                     )}
 
-                    <Col xs={24} md={12}>
+                    <Col
+                        xs={24}
+                        md={12}
+                    >
                         <Form.Item
                             label="Cosecha relacionada"
                             name="cosechaId"
                         >
                             <Select
                                 placeholder="Seleccione una cosecha (opcional)"
-                                options={cosechaOptions}
+                                options={
+                                    cosechaOptions
+                                }
                                 showSearch
                                 optionFilterProp="label"
                                 allowClear
@@ -241,30 +602,58 @@ export default function EditarProcesoModal({
                         </Form.Item>
                     </Col>
 
-                    <Col xs={24} md={12}>
+                    <Col
+                        xs={24}
+                        md={12}
+                    >
                         <Form.Item
                             label="Etapa"
                             name="etapa"
-                            rules={[{ required: true, message: "Seleccione la etapa" }]}
+                            rules={[
+                                {
+                                    required: true,
+                                    message:
+                                        "Seleccione la etapa",
+                                },
+                            ]}
                         >
                             <Select
                                 placeholder="Seleccione una etapa"
-                                options={ETAPA_OPTIONS}
+                                options={
+                                    ETAPA_OPTIONS
+                                }
                             />
                         </Form.Item>
                     </Col>
 
-                    <Col xs={24} md={12}>
+                    <Col
+                        xs={24}
+                        md={12}
+                    >
                         <Form.Item
                             label="Kilos ingresados"
                             name="kilosIngresados"
                             rules={[
-                                { required: true, message: "Los kilos ingresados son obligatorios" },
                                 {
-                                    validator: async (_, value) => {
-                                        if (kilosDisponibles != null && Number(value) > kilosDisponibles) {
+                                    required: true,
+                                    message:
+                                        "Los kilos ingresados son obligatorios",
+                                },
+                                {
+                                    validator: async (
+                                        _,
+                                        value,
+                                    ) => {
+                                        if (
+                                            kilosDisponibles !=
+                                            null &&
+                                            Number(value) >
+                                            kilosDisponibles
+                                        ) {
                                             throw new Error(
-                                                `El lote solamente tiene ${kilosDisponibles.toLocaleString("es-CL")} kg disponibles`,
+                                                `El lote solamente tiene ${kilosDisponibles.toLocaleString(
+                                                    "es-CL",
+                                                )} kg disponibles`,
                                             );
                                         }
                                     },
@@ -272,9 +661,14 @@ export default function EditarProcesoModal({
                             ]}
                         >
                             <InputNumber
-                                style={{ width: "100%" }}
+                                style={{
+                                    width: "100%",
+                                }}
                                 min={0.01}
-                                max={kilosDisponibles ?? undefined}
+                                max={
+                                    kilosDisponibles ??
+                                    undefined
+                                }
                                 precision={2}
                                 addonAfter="kg"
                                 placeholder="Ej: 180"
@@ -282,24 +676,49 @@ export default function EditarProcesoModal({
                         </Form.Item>
                     </Col>
 
-                    <Col xs={24} md={12}>
+                    <Col
+                        xs={24}
+                        md={12}
+                    >
                         <Form.Item
                             label="Kilos resultantes"
                             name="kilosResultantes"
                             rules={[
-                                { required: true, message: "Los kilos resultantes son obligatorios" },
                                 {
-                                    validator: async (_, value) => {
-                                        const kilosIngresados = form.getFieldValue("kilosIngresados");
-                                        if (kilosIngresados != null && Number(value) > Number(kilosIngresados)) {
-                                            throw new Error("Los kilos resultantes no pueden superar los kilos ingresados");
+                                    required: true,
+                                    message:
+                                        "Los kilos resultantes son obligatorios",
+                                },
+                                {
+                                    validator: async (
+                                        _,
+                                        value,
+                                    ) => {
+                                        const kilosIngresados =
+                                            form.getFieldValue(
+                                                "kilosIngresados",
+                                            );
+
+                                        if (
+                                            kilosIngresados !=
+                                            null &&
+                                            Number(value) >
+                                            Number(
+                                                kilosIngresados,
+                                            )
+                                        ) {
+                                            throw new Error(
+                                                "Los kilos resultantes no pueden superar los kilos ingresados",
+                                            );
                                         }
                                     },
                                 },
                             ]}
                         >
                             <InputNumber
-                                style={{ width: "100%" }}
+                                style={{
+                                    width: "100%",
+                                }}
                                 min={0}
                                 precision={2}
                                 addonAfter="kg"
@@ -310,82 +729,197 @@ export default function EditarProcesoModal({
                 </Row>
 
                 {/* ── SECCIÓN: Fermentación ── */}
-                <Divider orientation="left" orientationMargin={0}>
-                    <Text strong style={{ fontSize: 13 }}>Fermentación</Text>
+
+                <Divider
+                    orientationMargin={0}
+                >
+                    <Text
+                        strong
+                        style={{
+                            fontSize: 13,
+                        }}
+                    >
+                        Fermentación
+                    </Text>
                 </Divider>
 
                 <Row gutter={[16, 0]}>
-                    <Col xs={24} md={12}>
+                    <Col
+                        xs={24}
+                        md={12}
+                    >
                         <Form.Item
                             label="Inicio de fermentación"
                             name="inicioFermentacion"
-                            rules={[{ required: true, message: "Ingrese la fecha y hora de inicio" }]}
+                            rules={[
+                                {
+                                    required: true,
+                                    message:
+                                        "Ingrese la fecha y hora de inicio",
+                                },
+                            ]}
                         >
                             <DatePicker
-                                style={{ width: "100%" }}
+                                style={{
+                                    width: "100%",
+                                }}
                                 locale={esES}
-                                showTime={{ format: "HH:mm" }}
+                                showTime={{
+                                    format: "HH:mm",
+                                }}
                                 format="DD/MM/YYYY HH:mm"
                                 placeholder="Fecha y hora de inicio"
+                                onChange={
+                                    handleInicioFermentacionChange
+                                }
                             />
                         </Form.Item>
                     </Col>
 
-                    <Col xs={24} md={12}>
+                    <Col
+                        xs={24}
+                        md={12}
+                    >
                         <Form.Item
                             label="Fin de fermentación"
                             name="finFermentacion"
-                            rules={[{ required: true, message: "Ingrese la fecha y hora de fin" }]}
+                            dependencies={[
+                                "inicioFermentacion",
+                            ]}
+                            rules={[
+                                {
+                                    required: true,
+                                    message:
+                                        "Ingrese la fecha y hora de fin",
+                                },
+                                {
+                                    validator: async (
+                                        _,
+                                        value,
+                                    ) => {
+                                        if (!value) {
+                                            return;
+                                        }
+
+                                        const inicio =
+                                            form.getFieldValue(
+                                                "inicioFermentacion",
+                                            );
+
+                                        if (!inicio) {
+                                            return;
+                                        }
+
+                                        if (
+                                            value.isSame(
+                                                inicio,
+                                            ) ||
+                                            value.isBefore(
+                                                inicio,
+                                            )
+                                        ) {
+                                            throw new Error(
+                                                "El fin de fermentación debe ser posterior al inicio",
+                                            );
+                                        }
+                                    },
+                                },
+                            ]}
                         >
                             <DatePicker
-                                style={{ width: "100%" }}
+                                style={{
+                                    width: "100%",
+                                }}
                                 locale={esES}
-                                showTime={{ format: "HH:mm" }}
+                                showTime={{
+                                    format: "HH:mm",
+                                }}
                                 format="DD/MM/YYYY HH:mm"
                                 placeholder="Fecha y hora de fin"
+                                onChange={
+                                    handleFinFermentacionChange
+                                }
                             />
                         </Form.Item>
                     </Col>
 
-                    <Col xs={24} md={12}>
+                    <Col
+                        xs={24}
+                        md={12}
+                    >
                         <Form.Item
                             label="Duración del proceso"
                             name="duracionHoras"
                             rules={[
-                                { required: true, message: "Ingrese la duración del proceso" },
-                                { type: "number", min: 0.01, message: "La duración debe ser mayor que cero" },
+                                {
+                                    required: true,
+                                    message:
+                                        "Seleccione el inicio y fin de fermentación",
+                                },
+                                {
+                                    type: "number",
+                                    min: 0.01,
+                                    message:
+                                        "La duración debe ser mayor que cero",
+                                },
                             ]}
                         >
                             <InputNumber
-                                style={{ width: "100%" }}
-                                min={0.01}
+                                style={{
+                                    width: "100%",
+                                }}
                                 precision={2}
                                 addonAfter="horas"
-                                placeholder="Ej: 12"
+                                readOnly
+                                controls={false}
+                                placeholder="Se calcula automáticamente"
                             />
                         </Form.Item>
                     </Col>
 
-                    <Col xs={24} md={12}>
+                    <Col
+                        xs={24}
+                        md={12}
+                    >
                         <Form.Item
                             label="Posa / Tanque de fermentación"
                             name="tanqueFermentacion"
                         >
-                            <Input placeholder="Ej: Tanque A, Posa 3" />
+                            <Input
+                                placeholder="Ej: Tanque A, Posa 3"
+                            />
                         </Form.Item>
                     </Col>
                 </Row>
 
                 {/* ── SECCIÓN: Temperaturas y pH ── */}
-                <Divider orientation="left" orientationMargin={0}>
-                    <Text strong style={{ fontSize: 13 }}>Temperaturas y pH</Text>
+
+                <Divider
+                    orientationMargin={0}
+                >
+                    <Text
+                        strong
+                        style={{
+                            fontSize: 13,
+                        }}
+                    >
+                        Temperaturas y pH
+                    </Text>
                 </Divider>
 
                 <Row gutter={[16, 0]}>
-                    <Col xs={24} md={8}>
-                        <Form.Item label="Temperatura máxima" name="tempMaxima">
+                    <Col
+                        xs={24}
+                        md={8}
+                    >
+                        <Form.Item
+                            label="Temperatura máxima"
+                            name="tempMaxima"
+                        >
                             <InputNumber
-                                style={{ width: "100%" }}
+                                style={{
+                                    width: "100%",
+                                }}
                                 precision={1}
                                 addonAfter="°C"
                                 placeholder="Ej: 28.5"
@@ -393,10 +927,18 @@ export default function EditarProcesoModal({
                         </Form.Item>
                     </Col>
 
-                    <Col xs={24} md={8}>
-                        <Form.Item label="Temperatura mínima" name="tempMinima">
+                    <Col
+                        xs={24}
+                        md={8}
+                    >
+                        <Form.Item
+                            label="Temperatura mínima"
+                            name="tempMinima"
+                        >
                             <InputNumber
-                                style={{ width: "100%" }}
+                                style={{
+                                    width: "100%",
+                                }}
                                 precision={1}
                                 addonAfter="°C"
                                 placeholder="Ej: 18.0"
@@ -404,10 +946,18 @@ export default function EditarProcesoModal({
                         </Form.Item>
                     </Col>
 
-                    <Col xs={24} md={8}>
-                        <Form.Item label="pH de salida" name="nivelPh">
+                    <Col
+                        xs={24}
+                        md={8}
+                    >
+                        <Form.Item
+                            label="pH de salida"
+                            name="nivelPh"
+                        >
                             <InputNumber
-                                style={{ width: "100%" }}
+                                style={{
+                                    width: "100%",
+                                }}
                                 min={0}
                                 max={14}
                                 step={0.1}
@@ -419,39 +969,86 @@ export default function EditarProcesoModal({
                 </Row>
 
                 {/* ── SECCIÓN: Procesos aplicados ── */}
-                <Divider orientation="left" orientationMargin={0}>
-                    <Text strong style={{ fontSize: 13 }}>Procesos aplicados</Text>
+
+                <Divider
+                    orientationMargin={0}
+                >
+                    <Text
+                        strong
+                        style={{
+                            fontSize: 13,
+                        }}
+                    >
+                        Procesos aplicados
+                    </Text>
                 </Divider>
 
                 <Row gutter={[16, 0]}>
-                    <Col xs={24} md={12}>
+                    <Col
+                        xs={24}
+                        md={12}
+                    >
                         <Form.Item
                             label="¿Se despulpó?"
                             name="fueDespulpado"
                             valuePropName="checked"
                         >
-                            <Switch checkedChildren="Sí" unCheckedChildren="No" />
+                            <Switch
+                                checkedChildren="Sí"
+                                unCheckedChildren="No"
+                            />
                         </Form.Item>
                     </Col>
 
-                    <Col xs={24} md={12}>
+                    <Col
+                        xs={24}
+                        md={12}
+                    >
                         <Form.Item
                             label="¿Se lavó?"
                             name="fueLavado"
                             valuePropName="checked"
                         >
-                            <Switch checkedChildren="Sí" unCheckedChildren="No" />
+                            <Switch
+                                checkedChildren="Sí"
+                                unCheckedChildren="No"
+                            />
                         </Form.Item>
                     </Col>
                 </Row>
 
-                <Form.Item style={{ marginBottom: 0, paddingTop: 8 }}>
-                    <Space>
-                        <Button type="primary" htmlType="submit" loading={saving}>
+                <Form.Item
+                    style={{
+                        marginBottom: 0,
+                        paddingTop: 16,
+                        marginTop: 8,
+
+                        borderTop:
+                            `1px solid ${token.colorBorderSecondary}`,
+                    }}
+                >
+                    <div
+                        style={{
+                            display: "flex",
+                            justifyContent:
+                                "flex-end",
+                            gap: 8,
+                        }}
+                    >
+                        <Button
+                            onClick={handleCancel}
+                        >
+                            Cancelar
+                        </Button>
+
+                        <Button
+                            type="primary"
+                            htmlType="submit"
+                            loading={saving}
+                        >
                             Actualizar
                         </Button>
-                        <Button onClick={handleCancel}>Cancelar</Button>
-                    </Space>
+                    </div>
                 </Form.Item>
             </Form>
         </Modal>

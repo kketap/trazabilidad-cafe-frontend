@@ -45,10 +45,13 @@ import {
 
 import type { Dayjs } from "dayjs";
 import dayjs from "dayjs";
+import utc from "dayjs/plugin/utc";
 import "dayjs/locale/es";
-import esES from "antd/es/date-picker/locale/es_ES";
 
+dayjs.extend(utc);
 dayjs.locale("es");
+
+import esES from "antd/es/date-picker/locale/es_ES";
 
 type ProcesoRow = ProcesoTrazabilidad & {
     lote?: Lote | null;
@@ -449,7 +452,7 @@ export default function TrazabilidadPage() {
 
     const procesosFiltrados = useMemo(() => {
         const filtrados = procesos.filter((proceso) => {
-            const fecha = dayjs(proceso.fecha);
+            const fecha = dayjs.utc(proceso.fecha);
 
             const cumpleMes = filtroMes
                 ? fecha.month() === filtroMes.month() &&
@@ -487,8 +490,10 @@ export default function TrazabilidadPage() {
 
             switch (ordenCampo) {
                 case "fecha":
-                    valorA = dayjs(a.fecha).valueOf();
-                    valorB = dayjs(b.fecha).valueOf();
+                    valorA = dayjs.utc(a.fecha).valueOf();
+
+                    valorB = dayjs.utc(b.fecha).valueOf();
+
                     break;
 
                 case "kilosIngresados":
@@ -605,8 +610,15 @@ export default function TrazabilidadPage() {
             dataIndex: "fecha",
             key: "fecha",
             width: 120,
-            render: (fecha: string) => dayjs(fecha).format("DD/MM/YYYY"),
-            sorter: (a, b) => dayjs(a.fecha).valueOf() - dayjs(b.fecha).valueOf(),
+
+            render: (fecha: string) =>
+                dayjs
+                    .utc(fecha)
+                    .format("DD/MM/YYYY"),
+
+            sorter: (a, b) =>
+                dayjs.utc(a.fecha).valueOf() -
+                dayjs.utc(b.fecha).valueOf(),
         },
         {
             title: "Lote Origen",
@@ -967,7 +979,7 @@ export default function TrazabilidadPage() {
                         </Descriptions.Item>
 
                         <Descriptions.Item label="Fecha">
-                            {dayjs(selectedProceso.fecha).format("DD/MM/YYYY")}
+                            {dayjs.utc(selectedProceso.fecha).format("DD/MM/YYYY")}
                         </Descriptions.Item>
 
                         <Descriptions.Item label="Lote Origen">
@@ -1043,7 +1055,7 @@ export default function TrazabilidadPage() {
 
                         <Descriptions.Item label="pH de salida">
                             {selectedProceso.nivelPh != null ? (
-                                <Tag orientation="horizontal" color="geekblue">{selectedProceso.nivelPh} pH</Tag>
+                                <Tag color="geekblue">{selectedProceso.nivelPh} pH</Tag>
                             ) : (
                                 "No registrado"
                             )}

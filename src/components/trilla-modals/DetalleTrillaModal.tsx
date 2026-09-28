@@ -232,7 +232,7 @@ export default function DetalleTrillaModal({ open, onClose, orden }: Props) {
         </Descriptions>
 
         {/* Desglose de Subproductos */}
-        <Divider orientation="left" style={{ margin: "8px 0 4px" }}>
+        <Divider  style={{ margin: "8px 0 4px" }}>
           <Space>
             <BarChartOutlined style={{ color: "#722ed1" }} />
             <span style={{ fontSize: 13, fontWeight: 600 }}>
