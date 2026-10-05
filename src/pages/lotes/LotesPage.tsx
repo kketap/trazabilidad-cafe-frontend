@@ -856,7 +856,7 @@ export default function LotesPage() {
 
             {viewingLote.cosechaLotes && viewingLote.cosechaLotes.length > 0 && (
               <>
-                <Divider orientation="left" orientationMargin={0} style={{ marginTop: 20 }}>
+                <Divider titlePlacement="left" orientationMargin={0} style={{ marginTop: 20 }}>
                   <Typography.Text strong style={{ fontSize: 13 }}>Cosechas asociadas</Typography.Text>
                 </Divider>
                 <Space wrap>
@@ -871,7 +871,7 @@ export default function LotesPage() {
 
             {viewingLote.observacion && (
               <>
-                <Divider orientation="left" orientationMargin={0} style={{ marginTop: 20 }}>
+                <Divider titlePlacement="left" orientationMargin={0} style={{ marginTop: 20 }}>
                   <Typography.Text strong style={{ fontSize: 13 }}>Observaciones</Typography.Text>
                 </Divider>
                 <Typography.Text type="secondary">{viewingLote.observacion}</Typography.Text>

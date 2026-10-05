@@ -549,7 +549,7 @@ export default function EmpaquePage() {
 
             {viewingEmpaque.perfilSensorial && (
               <>
-                <Divider orientation="left" orientationMargin={0} style={{ marginTop: 20 }}>
+                <Divider titlePlacement="left" orientationMargin={0} style={{ marginTop: 20 }}>
                   <Typography.Text strong style={{ fontSize: 13 }}>Perfil Sensorial</Typography.Text>
                 </Divider>
                 <Typography.Text type="secondary">{viewingEmpaque.perfilSensorial}</Typography.Text>
@@ -558,7 +558,7 @@ export default function EmpaquePage() {
 
             {viewingEmpaque.observaciones && (
               <>
-                <Divider orientation="left" orientationMargin={0} style={{ marginTop: 20 }}>
+                <Divider titlePlacement="left" orientationMargin={0} style={{ marginTop: 20 }}>
                   <Typography.Text strong style={{ fontSize: 13 }}>Observaciones</Typography.Text>
                 </Divider>
                 <Typography.Text type="secondary">{viewingEmpaque.observaciones}</Typography.Text>

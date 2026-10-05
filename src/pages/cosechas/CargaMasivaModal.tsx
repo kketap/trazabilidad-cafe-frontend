@@ -34,7 +34,6 @@ import {
 
 import type {
   FilaCosechaPreview,
-  PreviewCargaMasivaResponse,
 } from "./cosechas.api";
 import {
   confirmarCargaMasivaApi,
@@ -57,17 +56,12 @@ export default function CargaMasivaModal({
   const [currentStep, setCurrentStep] = useState<number>(0);
   const [analyzing, setAnalyzing] = useState<boolean>(false);
   const [submitting, setSubmitting] = useState<boolean>(false);
-
-  const [nombreArchivo, setNombreArchivo] = useState<string>("");
-  const [previewData, setPreviewData] = useState<PreviewCargaMasivaResponse | null>(null);
   const [filas, setFilas] = useState<FilaCosechaPreview[]>([]);
 
   function resetState() {
     setCurrentStep(0);
     setAnalyzing(false);
     setSubmitting(false);
-    setNombreArchivo("");
-    setPreviewData(null);
     setFilas([]);
   }
 
@@ -78,7 +72,6 @@ export default function CargaMasivaModal({
   }
 
   async function handleFileSelect(file: File) {
-    setNombreArchivo(file.name);
     setAnalyzing(true);
 
     const hideLoading = message.loading({
@@ -91,7 +84,6 @@ export default function CargaMasivaModal({
       const data = await previewCargaMasivaApi(file);
       hideLoading();
 
-      setPreviewData(data);
       setFilas(data.filas);
       setCurrentStep(1); // Pasar al paso de previsualización
     } catch (error: any) {

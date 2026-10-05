@@ -323,7 +323,7 @@ export default function EnviarATrillaModal({ open, onClose, onSubmit, lotes, loa
         </Row>
 
         {/* ── Desglose de Subproductos ── */}
-        <Divider orientation={"left" as const} style={{ margin: "16px 0 12px" }}>
+        <Divider titlePlacement="left" style={{ margin: "16px 0 12px" }}>
           <Space>
             <BarChartOutlined />
             <span style={{ fontSize: 13, fontWeight: 500 }}>

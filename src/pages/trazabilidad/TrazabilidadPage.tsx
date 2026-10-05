@@ -1042,7 +1042,7 @@ export default function TrazabilidadPage() {
 
                         <Descriptions.Item label="pH de salida">
                             {selectedProceso.nivelPh != null ? (
-                                <Tag orientation="horizontal" color="geekblue">{selectedProceso.nivelPh} pH</Tag>
+                                <Tag color="geekblue">{selectedProceso.nivelPh} pH</Tag>
                             ) : (
                                 "No registrado"
                             )}

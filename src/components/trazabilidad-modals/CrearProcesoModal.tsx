@@ -161,7 +161,7 @@ export default function CrearProcesoModal({
                 initialValues={{ fueDespulpado: false, fueLavado: false }}
             >
                 {/* ── SECCIÓN: Datos generales ── */}
-                <Divider orientation="left" orientationMargin={0}>
+                <Divider titlePlacement="left" orientationMargin={0}>
                     <Text strong style={{ fontSize: 13 }}>Datos generales</Text>
                 </Divider>
 
@@ -299,7 +299,7 @@ export default function CrearProcesoModal({
                 </Row>
 
                 {/* ── SECCIÓN: Fermentación ── */}
-                <Divider orientation="left" orientationMargin={0}>
+                <Divider titlePlacement="left" orientationMargin={0}>
                     <Text strong style={{ fontSize: 13 }}>Fermentación</Text>
                 </Divider>
 
@@ -366,7 +366,7 @@ export default function CrearProcesoModal({
                 </Row>
 
                 {/* ── SECCIÓN: Temperaturas y pH ── */}
-                <Divider orientation="left" orientationMargin={0}>
+                <Divider titlePlacement="left" orientationMargin={0}>
                     <Text strong style={{ fontSize: 13 }}>Temperaturas y pH</Text>
                 </Divider>
 
@@ -408,7 +408,7 @@ export default function CrearProcesoModal({
                 </Row>
 
                 {/* ── SECCIÓN: Procesos aplicados ── */}
-                <Divider orientation="left" orientationMargin={0}>
+                <Divider titlePlacement="left" orientationMargin={0}>
                     <Text strong style={{ fontSize: 13 }}>Procesos aplicados</Text>
                 </Divider>
 
