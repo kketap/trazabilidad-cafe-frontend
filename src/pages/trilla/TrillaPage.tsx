@@ -245,7 +245,15 @@ export default function TrillaPage() {
       key: "lotes",
       render: (_, record: OrdenTrilla) => (
         <Space wrap size={4}>
-          {record.lotes && record.lotes.length > 0
+          {record.ordenLotes && record.ordenLotes.length > 0
+            ? record.ordenLotes.map((ol: any) => (
+                <Tooltip key={ol.id} title={`${Number(ol.kilosDescontados || 0).toFixed(1)} kg${ol.sacos ? ` · ${ol.sacos} sacos` : ""}`}>
+                  <Tag color="gold" style={{ fontSize: 12 }}>
+                    {ol.lote?.codigo || `Lote #${ol.loteId}`} ({Number(ol.kilosDescontados || 0).toFixed(0)} kg)
+                  </Tag>
+                </Tooltip>
+              ))
+            : record.lotes && record.lotes.length > 0
             ? record.lotes.map((l: any) => (
                 <Tag key={l.id} color="gold" style={{ fontSize: 12 }}>
                   {l.codigo}
@@ -385,6 +393,40 @@ export default function TrillaPage() {
               Ver desglose
             </Tag>
           </Popover>
+        );
+      },
+    },
+    {
+      title: "Rendimiento",
+      key: "rendimiento",
+      align: "center",
+      render: (_: unknown, record: OrdenTrilla) => {
+        const baseKilos = record.metricasRendimiento?.baseKilos ?? Number(record.kilosNetos ?? record.kilosEnviados ?? 0);
+        const expPct = record.metricasRendimiento?.exportablePct ?? (baseKilos > 0 && record.exportable != null ? (Number(record.exportable) / baseKilos) * 100 : null);
+        const recPct = record.metricasRendimiento?.recuperadoPct ?? (baseKilos > 0 && record.recuperado != null ? (Number(record.recuperado) / baseKilos) * 100 : null);
+        const restoPct = record.metricasRendimiento?.restoPct ?? null;
+
+        const hasAny = (expPct != null && expPct > 0) || (recPct != null && recPct > 0) || (restoPct != null && restoPct > 0);
+        if (!hasAny) return <Text type="secondary">—</Text>;
+
+        return (
+          <Space direction="vertical" size={2}>
+            {expPct != null && expPct > 0 && (
+              <Tag color="green" style={{ fontSize: 11, margin: 0 }}>
+                Exp: {expPct.toFixed(1)}%
+              </Tag>
+            )}
+            {recPct != null && recPct > 0 && (
+              <Tag color="blue" style={{ fontSize: 11, margin: 0 }}>
+                Rec: {recPct.toFixed(1)}%
+              </Tag>
+            )}
+            {restoPct != null && restoPct > 0 && (
+              <Tag color="orange" style={{ fontSize: 11, margin: 0 }}>
+                Resto: {restoPct.toFixed(1)}%
+              </Tag>
+            )}
+          </Space>
         );
       },
     },

@@ -67,7 +67,7 @@ const ETAPA_OPTIONS = [
 
 export default function CrearProcesoModal({
     open,
-    cosechas,
+    cosechas: _cosechas,
     lotes,
     loading = false,
     saving = false,
@@ -97,14 +97,6 @@ export default function CrearProcesoModal({
         }));
     }, [lotesDisponibles]);
 
-    const cosechaOptions = useMemo(() => {
-        return (cosechas ?? []).map((cosecha) => ({
-            value: cosecha.id,
-            label: `COS-${String(cosecha.id).padStart(3, "0")} | Lote: ${cosecha.lotes || "N/A"
-                } | ${cosecha.fecha ? String(cosecha.fecha).slice(0, 10) : ""
-                } | ${(cosecha.kilosCosechados ?? 0).toLocaleString("es-CL")} kg`,
-        }));
-    }, [cosechas]);
 
     function handleFechaChange(_value: Dayjs | null) {
         form.resetFields([
@@ -213,22 +205,7 @@ export default function CrearProcesoModal({
                         </Col>
                     )}
 
-                    <Col xs={24} md={12}>
-                        <Form.Item
-                            label="Cosecha relacionada"
-                            name="cosechaId"
-                        >
-                            <Select
-                                placeholder="Seleccione una cosecha (opcional)"
-                                options={cosechaOptions}
-                                showSearch
-                                optionFilterProp="label"
-                                allowClear
-                                loading={loading}
-                                disabled={loading || cosechas.length === 0}
-                            />
-                        </Form.Item>
-                    </Col>
+
 
                     <Col xs={24} md={12}>
                         <Form.Item

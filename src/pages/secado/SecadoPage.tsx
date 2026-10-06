@@ -187,17 +187,30 @@ export default function SecadoPage() {
       ),
     },
     {
-      title: "Código del Lote",
-      dataIndex: ["lote", "codigo"],
+      title: "Lote(s) de Café",
       key: "loteCodigo",
-      render: (codigo: string, record: Secado) => (
-        <Space direction="vertical" size={2}>
-          <Tag color="blue" style={{ fontSize: 13, fontWeight: "bold" }}>
-            {codigo || `Lote #${record.loteId}`}
-          </Tag>
-          {record.lote?.nombre ? <Text type="secondary" style={{ fontSize: 12 }}>{record.lote.nombre}</Text> : null}
-        </Space>
-      ),
+      render: (_: unknown, record: Secado) => {
+        if (record.secadoLotes && record.secadoLotes.length > 0) {
+          return (
+            <Space wrap size={[4, 4]}>
+              {record.secadoLotes.map((sl) => (
+                <Tag key={sl.id} color="blue">
+                  {sl.lote.codigo}
+                  {sl.kilosUsados ? ` (${sl.kilosUsados} kg)` : ""}
+                </Tag>
+              ))}
+            </Space>
+          );
+        }
+        return (
+          <Space direction="vertical" size={2}>
+            <Tag color="blue" style={{ fontSize: 13, fontWeight: "bold" }}>
+              {record.lote?.codigo || `Lote #${record.loteId}`}
+            </Tag>
+            {record.lote?.nombre ? <Text type="secondary" style={{ fontSize: 12 }}>{record.lote.nombre}</Text> : null}
+          </Space>
+        );
+      },
     },
     {
       title: "Fecha de Inicio",
@@ -477,17 +490,28 @@ export default function SecadoPage() {
                 </Tag>
               </Descriptions.Item>
 
-              <Descriptions.Item label="Lote de origen">
-                <Space direction="vertical" size={0}>
-                  <Tag color="blue" style={{ fontWeight: "bold" }}>
-                    {viewingSecado.lote?.codigo || `Lote #${viewingSecado.loteId}`}
-                  </Tag>
-                  {viewingSecado.lote?.nombre && (
-                    <Typography.Text type="secondary" style={{ fontSize: 12 }}>
-                      {viewingSecado.lote.nombre}
-                    </Typography.Text>
-                  )}
-                </Space>
+              <Descriptions.Item label="Lote(s) de origen">
+                {viewingSecado.secadoLotes && viewingSecado.secadoLotes.length > 0 ? (
+                  <Space wrap>
+                    {viewingSecado.secadoLotes.map((sl) => (
+                      <Tag key={sl.id} color="blue">
+                        {sl.lote.codigo}
+                        {sl.kilosUsados ? ` (${sl.kilosUsados} kg)` : ""}
+                      </Tag>
+                    ))}
+                  </Space>
+                ) : (
+                  <Space direction="vertical" size={0}>
+                    <Tag color="blue" style={{ fontWeight: "bold" }}>
+                      {viewingSecado.lote?.codigo || `Lote #${viewingSecado.loteId}`}
+                    </Tag>
+                    {viewingSecado.lote?.nombre && (
+                      <Typography.Text type="secondary" style={{ fontSize: 12 }}>
+                        {viewingSecado.lote.nombre}
+                      </Typography.Text>
+                    )}
+                  </Space>
+                )}
               </Descriptions.Item>
 
               <Descriptions.Item label="Perfil de proceso">

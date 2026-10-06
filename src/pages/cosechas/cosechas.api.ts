@@ -24,6 +24,15 @@ export type CosechaTrabajador = {
   trabajador: Trabajador;
 };
 
+import type { LoteFisico } from "./fundos.api";
+
+export type CosechaLoteFisico = {
+  id: number;
+  cosechaId: number;
+  loteFisicoId: number;
+  loteFisico: LoteFisico;
+};
+
 export type Cosecha = {
   id: number;
   fecha: string;
@@ -39,6 +48,11 @@ export type Cosecha = {
 
   cosechaLotes?: CosechaLote[];
   cosechaTrabajadores?: CosechaTrabajador[];
+  cosechasLotesFisicos?: CosechaLoteFisico[];
+
+  saldoKilos?: number;
+  kilosUsados?: number;
+  tieneSaldo?: boolean;
 
   // Compatibilidad con datos antiguos si todavía llegan desde el backend
   trabajadorId?: number | null;
@@ -65,6 +79,7 @@ export type CreateCosechaDTO = {
 
   lotes?: string;
   loteIds?: number[];
+  loteFisicoIds?: number[];
 
   tipoCosecha: string;
   varietal?: string | string[] | null;
@@ -145,6 +160,36 @@ export async function getCosechasApi(): Promise<Cosecha[]> {
   );
 
   return unwrapResponse(response.data) ?? [];
+}
+
+export type CosechasConSaldoResponse = {
+  totalCosechas: number;
+  totalKilosSaldo: number;
+  tienePendientes: boolean;
+  cosechas: Cosecha[];
+};
+
+export async function getCosechasConSaldoApi(): Promise<CosechasConSaldoResponse> {
+  const response = await apiClient.get<ApiResponse<any> | any>(
+    "/cosechas/con-saldo",
+  );
+
+  const raw = unwrapResponse(response.data);
+  if (Array.isArray(raw)) {
+    return {
+      totalCosechas: raw.length,
+      totalKilosSaldo: raw.reduce((acc: number, c: any) => acc + (c.saldoKilos || 0), 0),
+      tienePendientes: raw.length > 0,
+      cosechas: raw,
+    };
+  }
+
+  return {
+    totalCosechas: raw?.totalCosechas ?? (raw?.cosechas?.length || 0),
+    totalKilosSaldo: raw?.totalKilosSaldo ?? 0,
+    tienePendientes: Boolean(raw?.tienePendientes),
+    cosechas: Array.isArray(raw?.cosechas) ? raw.cosechas : [],
+  };
 }
 
 export async function createCosechaApi(

@@ -10,6 +10,7 @@ export type CosechaFormValues = {
     lotes: string;
     totalHectareas: number;
     tipoCosecha: string;
+    loteFisicoIds?: number[];
 };
 
 type CrearCosechaModalProps = {

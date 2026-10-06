@@ -22,10 +22,19 @@ export type Secado = {
   createdAt?: string;
   updatedAt?: string;
   lote?: Lote;
+  secadoLotes?: {
+    id: number;
+    secadoId: number;
+    loteId: number;
+    kilosUsados?: number | null;
+    lote: Lote;
+  }[];
 };
 
 export type CreateSecadoDTO = {
-  loteId: number;
+  codigo?: string | null;
+  loteId?: number;
+  lotes?: { loteId: number; kilosUsados: number }[];
   fechaInicio: string;
   fechaFin?: string | null;
   kilosIngresados: number;

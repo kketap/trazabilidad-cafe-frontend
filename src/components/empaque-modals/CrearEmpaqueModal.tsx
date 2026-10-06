@@ -39,13 +39,21 @@ export default function CrearEmpaqueModal({ open, onClose, onSubmit, lotes, seca
       : null;
 
   const handleFinish = async (values: any) => {
+    const secadoIds: number[] = Array.isArray(values.secadoIds)
+      ? values.secadoIds
+      : values.secadoId
+        ? [values.secadoId]
+        : [];
+
     const payload: CreateEmpaqueDTO = {
+      codigo: values.codigo?.trim() || null,
       loteId: values.loteId,
       fechaInicio: values.fechaInicio ? dayjs(values.fechaInicio).toISOString() : new Date().toISOString(),
       fechaFin: values.fechaFin ? dayjs(values.fechaFin).toISOString() : null,
       kilosIngresados: Number(values.kilosIngresados),
       kilosResultantes: Number(values.kilosResultantes),
-      secadoId: values.secadoId || null,
+      secadoId: secadoIds[0] || null,
+      secadoIds,
       tipoEmpaque: values.tipoEmpaque || null,
       cantidadEmpaques: values.cantidadEmpaques != null ? Number(values.cantidadEmpaques) : null,
       rendimiento: values.rendimiento != null ? Number(values.rendimiento) : null,
@@ -60,43 +68,78 @@ export default function CrearEmpaqueModal({ open, onClose, onSubmit, lotes, seca
     form.resetFields();
   };
 
+  const handleSecadosChange = (ids: number[]) => {
+    // Sumar los kilosResultantes de los secados seleccionados
+    const totalSecados = ids.reduce((acc, id) => {
+      const s = secados.find((item) => item.id === id);
+      return acc + Number(s?.kilosResultantes || 0);
+    }, 0);
+    if (totalSecados > 0) {
+      form.setFieldsValue({ kilosIngresados: totalSecados });
+    }
+  };
+
   return (
     <Modal
-      title="Registrar — Almacén Pergamino"
+      title="Registrar — Empaque / Almacén Pergamino"
       open={open}
       onCancel={() => { form.resetFields(); onClose(); }}
       onOk={() => form.submit()}
       confirmLoading={loading}
-      okText="Registrar"
+      okText="Registrar Empaque"
       cancelText="Cancelar"
-      width={680}
+      width={720}
     >
       <Form form={form} layout="vertical" onFinish={handleFinish} initialValues={{ fechaInicio: dayjs(), fueCatado: false }}>
 
-        <Form.Item name="loteId" label="Lote de Café" rules={[{ required: true, message: "Por favor seleccione un lote" }]} extra="Lotes priorizados en estado EN_SECADO">
-          <Select placeholder="Seleccione un lote" onChange={handleLoteChange} showSearch optionFilterProp="label">
-            {lotesOrdenados.map((lote) => (
-              <Select.Option key={lote.id} value={lote.id} label={`${lote.codigo} ${lote.nombre ? `- ${lote.nombre}` : ""}`}>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                  <span><strong>{lote.codigo}</strong> {lote.nombre ? `(${lote.nombre})` : ""}</span>
-                  <Space>
-                    {lote.kilosActuales ? <Tag color="blue">{lote.kilosActuales} kg</Tag> : null}
-                    <Tag color={lote.estado === "EN_SECADO" ? "gold" : "default"}>{lote.estado || "SIN ESTADO"}</Tag>
-                  </Space>
-                </div>
-              </Select.Option>
-            ))}
-          </Select>
-        </Form.Item>
+        <Row gutter={16}>
+          <Col span={12}>
+            <Form.Item
+              name="codigo"
+              label="Código de Empaque"
+              tooltip="Código identificador propio (autogenerado EMP-xxx si se deja vacío, o editable)"
+            >
+              <Input placeholder="Ej. EMP-001" style={{ fontWeight: "bold" }} />
+            </Form.Item>
+          </Col>
+          <Col span={12}>
+            <Form.Item name="loteId" label="Lote de Café" rules={[{ required: true, message: "Por favor seleccione un lote" }]} extra="Lotes priorizados en estado EN_SECADO">
+              <Select placeholder="Seleccione un lote" onChange={handleLoteChange} showSearch optionFilterProp="label">
+                {lotesOrdenados.map((lote) => (
+                  <Select.Option key={lote.id} value={lote.id} label={`${lote.codigo} ${lote.nombre ? `- ${lote.nombre}` : ""}`}>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                      <span><strong>{lote.codigo}</strong> {lote.nombre ? `(${lote.nombre})` : ""}</span>
+                      <Space>
+                        {lote.kilosActuales ? <Tag color="blue">{lote.kilosActuales} kg</Tag> : null}
+                        <Tag color={lote.estado === "EN_SECADO" ? "gold" : "default"}>{lote.estado || "SIN ESTADO"}</Tag>
+                      </Space>
+                    </div>
+                  </Select.Option>
+                ))}
+              </Select>
+            </Form.Item>
+          </Col>
+        </Row>
 
-        <Form.Item name="secadoId" label="Proceso de Secado Vinculado" extra="Opcional. Si vincula, se tomarán los datos del secado.">
-          <Select placeholder="Seleccione un proceso de secado" showSearch optionFilterProp="label" allowClear>
+        <Form.Item
+          name="secadoIds"
+          label="Proceso(s) de Secado Vinculados (Agrupa múltiples secados)"
+          extra="Puede seleccionar múltiples códigos de secado para consolidar"
+        >
+          <Select
+            mode="multiple"
+            placeholder="Seleccione procesos de secado a consolidar"
+            showSearch
+            optionFilterProp="label"
+            allowClear
+            onChange={handleSecadosChange}
+          >
             {secados.map((secado) => (
               <Select.Option key={secado.id} value={secado.id} label={secado.codigo || `SEC-${secado.id}`}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                   <span><strong>{secado.codigo || `SEC-${secado.id}`}</strong> - Lote: {secado.lote?.codigo}</span>
                   <Space>
-                    <Tag color="cyan">{secado.kilosResultantes} kg resultantes</Tag>
+                    <Tag color="cyan">{secado.kilosResultantes} kg pergamino</Tag>
                   </Space>
                 </div>
               </Select.Option>
@@ -106,12 +149,12 @@ export default function CrearEmpaqueModal({ open, onClose, onSubmit, lotes, seca
 
         <Row gutter={16}>
           <Col span={12}>
-            <Form.Item name="fechaInicio" label="Fecha de Inicio" rules={[{ required: true, message: "Requerida" }]}>
+            <Form.Item name="fechaInicio" label="Fecha de Ingreso" rules={[{ required: true, message: "Requerida" }]}>
               <DatePicker style={{ width: "100%" }} format="YYYY-MM-DD HH:mm" showTime />
             </Form.Item>
           </Col>
           <Col span={12}>
-            <Form.Item name="fechaFin" label="Fecha de Fin (Opcional)">
+            <Form.Item name="fechaFin" label="Fecha de Salida (Opcional)">
               <DatePicker style={{ width: "100%" }} format="YYYY-MM-DD HH:mm" showTime />
             </Form.Item>
           </Col>
@@ -119,12 +162,12 @@ export default function CrearEmpaqueModal({ open, onClose, onSubmit, lotes, seca
 
         <Row gutter={16}>
           <Col span={12}>
-            <Form.Item name="kilosIngresados" label="Kilos Ingresados" rules={[{ required: true, message: "Requerido" }]}>
+            <Form.Item name="kilosIngresados" label="Kilos Ingresados (Secado)" rules={[{ required: true, message: "Requerido" }]}>
               <InputNumber style={{ width: "100%" }} min={0.1} precision={2} placeholder="Ej. 420" addonAfter="kg" />
             </Form.Item>
           </Col>
           <Col span={12}>
-            <Form.Item name="kilosResultantes" label="Kilos Resultantes" rules={[{ required: true, message: "Requerido" }]}>
+            <Form.Item name="kilosResultantes" label="Kg Pergamino Seco" rules={[{ required: true, message: "Requerido" }]}>
               <InputNumber style={{ width: "100%" }} min={0} precision={2} placeholder="Ej. 400" addonAfter="kg" />
             </Form.Item>
           </Col>
@@ -139,7 +182,7 @@ export default function CrearEmpaqueModal({ open, onClose, onSubmit, lotes, seca
         )}
 
         <Divider titlePlacement="left" orientationMargin={0}>
-          <Typography.Text strong style={{ fontSize: 13 }}>Detalles del Empaque</Typography.Text>
+          <Typography.Text strong style={{ fontSize: 13 }}>Detalles del Empaque y Sacos</Typography.Text>
         </Divider>
 
         <Row gutter={16}>
@@ -155,8 +198,8 @@ export default function CrearEmpaqueModal({ open, onClose, onSubmit, lotes, seca
             </Form.Item>
           </Col>
           <Col span={8}>
-            <Form.Item name="cantidadEmpaques" label="Cantidad (bultos)">
-              <InputNumber style={{ width: "100%" }} min={0} placeholder="Ej. 10" />
+            <Form.Item name="cantidadEmpaques" label="N° de Sacos (Bultos)">
+              <InputNumber style={{ width: "100%" }} min={0} placeholder="Ej. 10" addonAfter="sacos" />
             </Form.Item>
           </Col>
           <Col span={8}>

@@ -15,6 +15,31 @@ export type SubproductosTrilla = {
   cascarilla?: number | null;
 };
 
+export type DescuentoLoteInput = {
+  loteId: number;
+  kilosDescontados: number;
+  sacos?: number | null;
+};
+
+export type OrdenTrillaLote = {
+  id: number;
+  ordenId: string;
+  loteId: number;
+  kilosDescontados: number;
+  sacos?: number | null;
+  lote?: Lote;
+};
+
+export type MetricasRendimientoTrilla = {
+  baseKilos: number;
+  exportableKg: number;
+  exportablePct: number;
+  recuperadoKg: number;
+  recuperadoPct: number;
+  restoKg: number;
+  restoPct: number;
+};
+
 export type OrdenTrilla = {
   id: string;
   codigoTrilla: string;
@@ -40,10 +65,13 @@ export type OrdenTrilla = {
   createdAt?: string;
   updatedAt?: string;
   lotes?: Lote[];
+  ordenLotes?: OrdenTrillaLote[];
+  metricasRendimiento?: MetricasRendimientoTrilla;
 };
 
 export type CreateOrdenTrillaDTO = {
   loteIds: number[];
+  descuentosPorLote?: DescuentoLoteInput[];
   kilosEnviados: number;
   sacosEnviados?: number | null;
   fechaDespacho?: string;
@@ -71,6 +99,7 @@ export type UpdateOrdenTrillaDTO = {
   kilosEnviados?: number;
   kilosNetos?: number | null;
   loteIds?: number[];
+  descuentosPorLote?: DescuentoLoteInput[];
   numeroGuia?: string | null;
   // Subproductos
   exportable?: number | null;

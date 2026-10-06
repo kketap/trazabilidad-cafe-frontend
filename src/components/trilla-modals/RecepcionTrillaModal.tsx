@@ -279,6 +279,79 @@ export default function RecepcionTrillaModal({ open, onClose, onSubmit, orden, l
           />
         </Form.Item>
 
+        {/* ── Panel KPI en tiempo real: % Exportable, % Recuperado y % Resto ── */}
+        {(() => {
+          const baseKilos = Number(kilosNetos || orden?.kilosNetos || orden?.kilosEnviados || 0);
+          const expVal = Number(allValues?.exportable ?? orden?.exportable ?? 0);
+          const recVal = Number(allValues?.recuperado ?? orden?.recuperado ?? 0);
+          const otrosSubproductos =
+            Number(allValues?.malla13 ?? orden?.malla13 ?? 0) +
+            Number(allValues?.segundaBuena ?? orden?.segundaBuena ?? 0) +
+            Number(allValues?.segundaMala ?? orden?.segundaMala ?? 0) +
+            Number(allValues?.sucioEscojo ?? orden?.sucioEscojo ?? 0) +
+            Number(allValues?.cisco ?? orden?.cisco ?? 0) +
+            Number(allValues?.descarteMaquina ?? orden?.descarteMaquina ?? 0) +
+            Number(allValues?.cascarilla ?? orden?.cascarilla ?? 0);
+
+          const pctExportable = baseKilos > 0 ? (expVal / baseKilos) * 100 : 0;
+          const pctRecuperado = baseKilos > 0 ? (recVal / baseKilos) * 100 : 0;
+          const restoKilos = otrosSubproductos > 0
+            ? otrosSubproductos
+            : Math.max(0, baseKilos - (expVal + recVal));
+          const pctResto = baseKilos > 0 ? (restoKilos / baseKilos) * 100 : 0;
+
+          return (
+            <div style={{ margin: "16px 0", padding: "12px 16px", background: "#fcfaf6", borderRadius: 8, border: "1px solid #ebd9c3" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
+                <Space>
+                  <BarChartOutlined style={{ color: "#8c6b3e" }} />
+                  <Text strong style={{ color: "#614725", fontSize: 13 }}>
+                    Rendimiento de Trilla en Tiempo Real (% sobre {kilosNetos ? "kilos netos" : "base"})
+                  </Text>
+                </Space>
+                {baseKilos > 0 && (
+                  <Tag color="gold">Base: {baseKilos.toFixed(2)} kg</Tag>
+                )}
+              </div>
+              <Row gutter={[12, 8]}>
+                <Col xs={24} sm={8}>
+                  <div style={{ padding: "8px 12px", background: "#f6ffed", border: "1px solid #b7eb8f", borderRadius: 6, textAlign: "center" }}>
+                    <Text style={{ fontSize: 12, color: "#389e0d", display: "block", fontWeight: 600 }}>% Exportable</Text>
+                    <span style={{ fontSize: 20, fontWeight: 700, color: "#389e0d" }}>
+                      {pctExportable.toFixed(1)}%
+                    </span>
+                    <Text type="secondary" style={{ fontSize: 11, display: "block" }}>
+                      {expVal.toFixed(1)} kg
+                    </Text>
+                  </div>
+                </Col>
+                <Col xs={24} sm={8}>
+                  <div style={{ padding: "8px 12px", background: "#e6f7ff", border: "1px solid #91d5ff", borderRadius: 6, textAlign: "center" }}>
+                    <Text style={{ fontSize: 12, color: "#096dd9", display: "block", fontWeight: 600 }}>% Recuperado</Text>
+                    <span style={{ fontSize: 20, fontWeight: 700, color: "#096dd9" }}>
+                      {pctRecuperado.toFixed(1)}%
+                    </span>
+                    <Text type="secondary" style={{ fontSize: 11, display: "block" }}>
+                      {recVal.toFixed(1)} kg
+                    </Text>
+                  </div>
+                </Col>
+                <Col xs={24} sm={8}>
+                  <div style={{ padding: "8px 12px", background: "#fff7e6", border: "1px solid #ffd591", borderRadius: 6, textAlign: "center" }}>
+                    <Text style={{ fontSize: 12, color: "#d46b08", display: "block", fontWeight: 600 }}>% Resto</Text>
+                    <span style={{ fontSize: 20, fontWeight: 700, color: "#d46b08" }}>
+                      {pctResto.toFixed(1)}%
+                    </span>
+                    <Text type="secondary" style={{ fontSize: 11, display: "block" }}>
+                      {restoKilos.toFixed(1)} kg
+                    </Text>
+                  </div>
+                </Col>
+              </Row>
+            </div>
+          );
+        })()}
+
         {/* ── Desglose de Subproductos ── */}
         <Divider titlePlacement="left" style={{ margin: "16px 0 12px" }}>
           <Space>

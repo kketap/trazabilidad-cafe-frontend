@@ -42,6 +42,7 @@ export type Lote = {
         id: number;
         cosechaId: number;
         loteId: number;
+        kilosUsados?: number | null;
         cosecha: {
             id: number;
             fecha: string;
@@ -68,6 +69,8 @@ export type CreateLoteDTO = {
     ubicacion?: string | null;
     observacion?: string | null;
     activo?: boolean;
+    cosechas?: { cosechaId: number; kilosUsados: number }[];
+    cosechaIds?: number[];
 };
 
 export type UpdateLoteDTO = Partial<CreateLoteDTO>;

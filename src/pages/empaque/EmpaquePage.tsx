@@ -182,6 +182,16 @@ export default function EmpaquePage() {
 
   const columns: ColumnsType<Empaque> = [
     {
+      title: "Código Empaque",
+      key: "codigo",
+      width: 140,
+      render: (_: unknown, record: Empaque) => (
+        <Tag color="cyan" style={{ fontSize: 13, fontWeight: "bold" }}>
+          {record.codigo || `EMP-${String(record.id).padStart(3, "0")}`}
+        </Tag>
+      ),
+    },
+    {
       title: "Código del Lote",
       dataIndex: ["lote", "codigo"],
       key: "loteCodigo",
@@ -195,24 +205,59 @@ export default function EmpaquePage() {
       ),
     },
     {
-      title: "Fecha de Inicio",
+      title: "Secado(s)",
+      key: "secados",
+      render: (_: unknown, record: Empaque) => {
+        if (record.empaqueSecados && record.empaqueSecados.length > 0) {
+          return (
+            <Space wrap size={[4, 4]}>
+              {record.empaqueSecados.map((es) => (
+                <Tag key={es.id} color="purple">
+                  {es.secado?.codigo || `SEC-${es.secadoId}`}
+                </Tag>
+              ))}
+            </Space>
+          );
+        }
+        if (record.secadoId) {
+          return <Tag color="purple">SEC-{record.secadoId}</Tag>;
+        }
+        return <Text type="secondary">-</Text>;
+      },
+    },
+    {
+      title: "Fecha de Ingreso",
       dataIndex: "fechaInicio",
       key: "fechaInicio",
       render: (fecha: string) => (fecha ? dayjs(fecha).format("DD/MM/YYYY HH:mm") : "-"),
     },
     {
-      title: "Kilos Ingresados",
-      dataIndex: "kilosIngresados",
-      key: "kilosIngresados",
-      align: "right",
-      render: (val: number) => <strong>{val?.toLocaleString() ?? 0} kg</strong>,
-    },
-    {
-      title: "Kilos Resultantes",
+      title: "Kg Pergamino Seco",
       dataIndex: "kilosResultantes",
       key: "kilosResultantes",
       align: "right",
       render: (val: number) => <strong style={{ color: token.colorPrimary }}>{val?.toLocaleString() ?? 0} kg</strong>,
+    },
+    {
+      title: "N° Sacos",
+      dataIndex: "cantidadEmpaques",
+      key: "cantidadEmpaques",
+      align: "right",
+      render: (val?: number | null) => (val != null ? <Tag color="blue">{val} sacos</Tag> : "-"),
+    },
+    {
+      title: "Calidad",
+      key: "calidad",
+      render: (_: unknown, record: Empaque) => (
+        <Space direction="vertical" size={1}>
+          {record.humedad != null && <Text style={{ fontSize: 11 }}>Hum: {record.humedad}%</Text>}
+          {record.actividadAgua != null && <Text style={{ fontSize: 11 }}>Aw: {record.actividadAgua}</Text>}
+          {record.puntajeSca != null && <Tag color="gold" style={{ fontSize: 11 }}>SCA: {record.puntajeSca}</Tag>}
+          {record.humedad == null && record.actividadAgua == null && record.puntajeSca == null && (
+            <Text type="secondary" style={{ fontSize: 11 }}>-</Text>
+          )}
+        </Space>
+      ),
     },
     {
       title: "Merma",
@@ -432,9 +477,9 @@ export default function EmpaquePage() {
         title={
           <Space>
             <Tag color="purple" style={{ fontWeight: "bold", fontSize: 14 }}>
-              EMP-{String(viewingEmpaque?.id ?? 0).padStart(3, "0")}
+              {viewingEmpaque?.codigo || `EMP-${String(viewingEmpaque?.id ?? 0).padStart(3, "0")}`}
             </Tag>
-            <Typography.Text type="secondary">Detalle del registro de almacen</Typography.Text>
+            <Typography.Text type="secondary">Detalle del registro de almacén</Typography.Text>
           </Space>
         }
         open={isViewOpen}
@@ -451,6 +496,12 @@ export default function EmpaquePage() {
         {viewingEmpaque && (
           <>
             <Descriptions bordered column={{ xs: 1, sm: 2, md: 2 }} size="middle" style={{ marginTop: 8 }}>
+              <Descriptions.Item label="Código Empaque">
+                <Tag color="purple" style={{ fontWeight: "bold", fontSize: 13 }}>
+                  {viewingEmpaque.codigo || `EMP-${String(viewingEmpaque.id).padStart(3, "0")}`}
+                </Tag>
+              </Descriptions.Item>
+
               <Descriptions.Item label="Lote de origen">
                 <Space direction="vertical" size={0}>
                   <Tag color="gold" style={{ fontWeight: "bold" }}>
@@ -466,13 +517,23 @@ export default function EmpaquePage() {
 
               <Descriptions.Item label="Estado">
                 <Tag color={viewingEmpaque.kilosResultantes ? "purple" : "blue"}>
-                  {viewingEmpaque.kilosResultantes ? "En Almacen" : "En Proceso"}
+                  {viewingEmpaque.kilosResultantes ? "En Almacén" : "En Proceso"}
                 </Tag>
               </Descriptions.Item>
 
-              <Descriptions.Item label="Proceso de Secado Vinculado">
-                {viewingEmpaque.secadoId ? (
-                  <Tag color="cyan">SEC-{viewingEmpaque.secadoId}</Tag>
+              <Descriptions.Item label="Secado(s) Vinculado(s)">
+                {viewingEmpaque.empaqueSecados && viewingEmpaque.empaqueSecados.length > 0 ? (
+                  <Space wrap size={4}>
+                    {viewingEmpaque.empaqueSecados.map((es) => (
+                      <Tag key={es.id} color="cyan">
+                        {es.secado?.codigo || `SEC-${es.secadoId}`}
+                      </Tag>
+                    ))}
+                  </Space>
+                ) : viewingEmpaque.secadoId ? (
+                  <Tag color="cyan">
+                    {viewingEmpaque.secado?.codigo || `SEC-${viewingEmpaque.secadoId}`}
+                  </Tag>
                 ) : (
                   <Typography.Text type="secondary">No vinculado</Typography.Text>
                 )}
@@ -492,7 +553,7 @@ export default function EmpaquePage() {
                 <strong>{viewingEmpaque.kilosIngresados?.toLocaleString("es-CL")} kg</strong>
               </Descriptions.Item>
 
-              <Descriptions.Item label="Kg resultantes">
+              <Descriptions.Item label="Kg Pergamino Seco (Resultantes)">
                 <strong style={{ color: token.colorPrimary }}>
                   {viewingEmpaque.kilosResultantes?.toLocaleString("es-CL")} kg
                 </strong>

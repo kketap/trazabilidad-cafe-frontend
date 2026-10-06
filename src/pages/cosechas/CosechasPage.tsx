@@ -1,6 +1,7 @@
 // src/pages/cosechas/CosechasPage.tsx
 import { useEffect, useMemo, useState } from "react";
 import {
+  Alert,
   Button,
   Card,
   Col,
@@ -53,6 +54,8 @@ import { getTrabajadoresApi } from "../../pages/trabajadores/trabajadores.api";
 
 import type { Lote } from "../lotes/lotes.api";
 import { getLotesApi } from "../lotes/lotes.api";
+
+import { getFundosApi, type Fundo } from "./fundos.api";
 
 import { formatEstadoEnum } from "../../utils/enumFormatters";
 
@@ -126,6 +129,7 @@ export default function CosechasPage() {
   const [cosechas, setCosechas] = useState<CosechaRow[]>([]);
   const [trabajadores, setTrabajadores] = useState<Trabajador[]>([]);
   const [lotesList, setLotesList] = useState<Lote[]>([]);
+  const [fundos, setFundos] = useState<Fundo[]>([]);
   const [loading, setLoading] = useState(false);
 
   const [searchText, setSearchText] = useState("");
@@ -134,6 +138,7 @@ export default function CosechasPage() {
     undefined,
   );
   const [filtroTipo, setFiltroTipo] = useState<string | undefined>(undefined);
+  const [filtroSoloSaldo, setFiltroSoloSaldo] = useState(false);
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingCosecha, setEditingCosecha] = useState<CosechaRow | null>(null);
@@ -164,16 +169,18 @@ export default function CosechasPage() {
 
   async function fetchTrabajadoresYLotes() {
     try {
-      const [trabData, lotesData] = await Promise.all([
+      const [trabData, lotesData, fundosData] = await Promise.all([
         getTrabajadoresApi(),
         getLotesApi(),
+        getFundosApi().catch(() => [] as Fundo[]),
       ]);
 
       setTrabajadores(trabData);
       setLotesList(lotesData);
+      setFundos(fundosData);
     } catch (error) {
-      console.error("Error al cargar trabajadores/lotes:", error);
-      message.error("No se pudieron cargar trabajadores o lotes.");
+      console.error("Error al cargar trabajadores/lotes/fundos:", error);
+      message.error("No se pudieron cargar trabajadores, lotes o fundos.");
     }
   }
 
@@ -192,6 +199,7 @@ export default function CosechasPage() {
       totalHectareas: 1,
       trabajadorIds: [],
       loteIds: [],
+      loteFisicoIds: [],
     });
 
     setIsModalOpen(true);
@@ -214,6 +222,9 @@ export default function CosechasPage() {
           )
           .map((lote) => lote.id);
 
+    const loteFisicoIdsRelacion =
+      record.cosechasLotesFisicos?.map((item) => item.loteFisicoId) ?? [];
+
     const trabajadorIdsRelacion =
       record.cosechaTrabajadores?.map((item) => item.trabajadorId) ?? [];
 
@@ -231,6 +242,7 @@ export default function CosechasPage() {
       kilosCosechados: record.kilosCosechados,
       totalHectareas: record.totalHectareas,
       loteIds: loteIdsFallback,
+      loteFisicoIds: loteFisicoIdsRelacion,
       trabajadorIds: trabajadorIdsFallback,
       observacion: record.observacion || record.observaciones || "",
       tipoCosecha: getTipoCosecha(record),
@@ -288,6 +300,7 @@ export default function CosechasPage() {
         lotes: lotesSeleccionadosTexto,
 
         loteIds,
+        loteFisicoIds: Array.isArray(values.loteFisicoIds) ? values.loteFisicoIds : [],
 
         trabajadores: trabajadorIds.map((trabajadorId) => ({
           trabajadorId,
@@ -321,10 +334,30 @@ export default function CosechasPage() {
     setFiltroFecha(null);
     setFiltroTrabajador(undefined);
     setFiltroTipo(undefined);
+    setFiltroSoloSaldo(false);
   }
+
+  const { cosechasConSaldo, totalSaldoDisponible } = useMemo(() => {
+    const conSaldo = cosechas.filter((c) => {
+      const saldo = Number(c.saldoKilos ?? (c.kilosCosechados - (c.kilosUsados ?? 0)));
+      return saldo > 0;
+    });
+    const total = conSaldo.reduce((acc, c) => {
+      const saldo = Number(c.saldoKilos ?? (c.kilosCosechados - (c.kilosUsados ?? 0)));
+      return acc + saldo;
+    }, 0);
+    return { cosechasConSaldo: conSaldo, totalSaldoDisponible: total };
+  }, [cosechas]);
 
   const filteredData = useMemo(() => {
     return cosechas.filter((cosecha) => {
+      if (filtroSoloSaldo) {
+        const saldo = Number(cosecha.saldoKilos ?? (cosecha.kilosCosechados - (cosecha.kilosUsados ?? 0)));
+        if (saldo <= 0) {
+          return false;
+        }
+      }
+
       if (searchText) {
         const term = searchText.toLowerCase();
         const codigo = `COS-${String(cosecha.id).padStart(3, "0")}`.toLowerCase();
@@ -335,6 +368,9 @@ export default function CosechasPage() {
           cosecha.lotes?.toLowerCase().includes(term) ||
           cosecha.cosechaLotes?.some((item) =>
             item.lote.codigo.toLowerCase().includes(term),
+          ) ||
+          cosecha.cosechasLotesFisicos?.some((item) =>
+            item.loteFisico.codigo.toLowerCase().includes(term),
           );
 
         const matchesTrabajador =
@@ -386,7 +422,7 @@ export default function CosechasPage() {
 
       return true;
     });
-  }, [cosechas, searchText, filtroFecha, filtroTrabajador, filtroTipo]);
+  }, [cosechas, searchText, filtroFecha, filtroTrabajador, filtroTipo, filtroSoloSaldo]);
 
   const columns: ColumnsType<CosechaRow> = [
     {
@@ -413,20 +449,26 @@ export default function CosechasPage() {
       sorter: (a, b) => dayjs(a.fecha).unix() - dayjs(b.fecha).unix(),
     },
     {
-      title: "Lotes",
+      title: "Lotes / Cuarteles",
       key: "lotes",
-      width: 220,
+      width: 240,
       render: (_: unknown, record) => {
         const lotesCosecha = record.cosechaLotes ?? [];
+        const lotesFisicos = record.cosechasLotesFisicos ?? [];
 
-        if (lotesCosecha.length === 0) {
+        if (lotesCosecha.length === 0 && lotesFisicos.length === 0) {
           return record.lotes || "-";
         }
 
         return (
-          <Space wrap>
+          <Space wrap size={[4, 4]}>
+            {lotesFisicos.map((item) => (
+              <Tag key={`lf-${item.id}`} color="cyan" style={{ fontSize: 11 }}>
+                {item.loteFisico.codigo}
+              </Tag>
+            ))}
             {lotesCosecha.map((item) => (
-              <Tag key={item.id} icon={<AppstoreOutlined />} color="gold">
+              <Tag key={`l-${item.id}`} icon={<AppstoreOutlined />} color="gold" style={{ fontSize: 11 }}>
                 {item.lote.codigo}
               </Tag>
             ))}
@@ -486,10 +528,42 @@ export default function CosechasPage() {
       title: "Kilos Cosechados",
       dataIndex: "kilosCosechados",
       key: "kilosCosechados",
-      width: 160,
+      width: 150,
       align: "right",
       render: (value: number) => formatKg(value),
       sorter: (a, b) => a.kilosCosechados - b.kilosCosechados,
+    },
+    {
+      title: "Saldo Disponible",
+      key: "saldoDisponible",
+      width: 170,
+      align: "right",
+      render: (_: unknown, record: CosechaRow) => {
+        const saldo = Number(record.saldoKilos ?? (record.kilosCosechados - (record.kilosUsados ?? 0)));
+        const usado = Number(record.kilosUsados ?? 0);
+
+        return saldo > 0 ? (
+          <div>
+            <Tag color="green" style={{ fontWeight: "bold", fontSize: 12 }}>
+              {formatKg(saldo)}
+            </Tag>
+            {usado > 0 && (
+              <div style={{ fontSize: 11, color: token.colorTextSecondary }}>
+                ({formatKg(usado)} usados)
+              </div>
+            )}
+          </div>
+        ) : (
+          <Tag color="default" style={{ fontSize: 11 }}>
+            Agotado ({formatKg(record.kilosCosechados)})
+          </Tag>
+        );
+      },
+      sorter: (a, b) => {
+        const saldoA = Number(a.saldoKilos ?? (a.kilosCosechados - (a.kilosUsados ?? 0)));
+        const saldoB = Number(b.saldoKilos ?? (b.kilosCosechados - (b.kilosUsados ?? 0)));
+        return saldoA - saldoB;
+      },
     },
     {
       title: "Hectáreas",
@@ -598,6 +672,36 @@ export default function CosechasPage() {
                     </Button>
                   </Space>
                 </div>
+
+                {cosechasConSaldo.length > 0 && (
+                  <Alert
+                    type="info"
+                    showIcon
+                    style={{ borderRadius: 12 }}
+                    message={
+                      <div
+                        style={{
+                          display: "flex",
+                          justifyContent: "space-between",
+                          alignItems: "center",
+                          flexWrap: "wrap",
+                          gap: 8,
+                        }}
+                      >
+                        <span>
+                          Hay <strong>{cosechasConSaldo.length}</strong> {cosechasConSaldo.length === 1 ? "cosecha" : "cosechas"} con saldo pendiente disponible para agrupar en Lotes de Proceso (Total disponible: <strong>{formatKg(totalSaldoDisponible)}</strong>).
+                        </span>
+                        <Button
+                          size="small"
+                          type={filtroSoloSaldo ? "primary" : "default"}
+                          onClick={() => setFiltroSoloSaldo((prev) => !prev)}
+                        >
+                          {filtroSoloSaldo ? "Ver todas las cosechas" : "Filtrar cosechas con saldo"}
+                        </Button>
+                      </div>
+                    }
+                  />
+                )}
 
                 <Card
                   style={{
@@ -812,19 +916,15 @@ export default function CosechasPage() {
 
                     <Form.Item
                       name="loteIds"
-                      label="Lotes de Origen"
-                      rules={[
-                        {
-                          required: true,
-                          message: "Seleccione al menos un lote de origen",
-                        },
-                      ]}
+                      label="Lotes de Proceso (Opcional)"
+                      tooltip="Lotes de proceso a los que se asocia directamente esta cosecha"
                     >
                       <Select
                         mode="multiple"
-                        placeholder="Seleccione los lotes de origen..."
+                        placeholder="Seleccione los lotes de proceso..."
                         showSearch
                         optionFilterProp="label"
+                        allowClear
                         options={lotesList
                           .filter((lote) => lote.activo)
                           .map((lote) => ({
@@ -832,6 +932,28 @@ export default function CosechasPage() {
                             label: `${lote.codigo}${lote.nombre ? ` - ${lote.nombre}` : ""
                               }`,
                           }))}
+                      />
+                    </Form.Item>
+
+                    <Form.Item
+                      name="loteFisicoIds"
+                      label="Cuarteles / Lotes Físicos de Origen (Fundos)"
+                      tooltip="Cuarteles físicos de recolección: FSC 1..45, FSS 1..36, FDS 1..7"
+                    >
+                      <Select
+                        mode="multiple"
+                        placeholder="Seleccione cuarteles físicos (ej. FSC-1, FSS-12...)"
+                        showSearch
+                        optionFilterProp="label"
+                        options={fundos.map((fundo) => ({
+                          label: `${fundo.codigo} - ${fundo.nombre || fundo.codigo}`,
+                          options: (fundo.lotesFisicos || [])
+                            .filter((lf) => lf.activo)
+                            .map((lf) => ({
+                              value: lf.id,
+                              label: `${lf.codigo} (${fundo.codigo} N°${lf.numero})`,
+                            })),
+                        }))}
                       />
                     </Form.Item>
 
@@ -900,7 +1022,27 @@ export default function CosechasPage() {
                       </Descriptions.Item>
 
                       <Descriptions.Item label="Kilos Cosechados">
-                        {formatKg(viewingCosecha.kilosCosechados)}
+                        <strong>{formatKg(viewingCosecha.kilosCosechados)}</strong>
+                      </Descriptions.Item>
+
+                      <Descriptions.Item label="Saldo Disponible">
+                        {(() => {
+                          const saldo = Number(
+                            viewingCosecha.saldoKilos ??
+                            (viewingCosecha.kilosCosechados - (viewingCosecha.kilosUsados ?? 0))
+                          );
+                          return saldo > 0 ? (
+                            <Tag color="green" style={{ fontWeight: "bold" }}>
+                              {formatKg(saldo)} disponible
+                            </Tag>
+                          ) : (
+                            <Tag color="default">0 kg (Agotado)</Tag>
+                          );
+                        })()}
+                      </Descriptions.Item>
+
+                      <Descriptions.Item label="Kilos Usados en Lotes">
+                        {formatKg(viewingCosecha.kilosUsados ?? 0)}
                       </Descriptions.Item>
 
                       <Descriptions.Item label="Total Hectáreas">
@@ -910,7 +1052,22 @@ export default function CosechasPage() {
                         ha
                       </Descriptions.Item>
 
-                      <Descriptions.Item label="Lotes de Origen">
+                      <Descriptions.Item label="Cuarteles Físicos (Fundos)">
+                        {viewingCosecha.cosechasLotesFisicos &&
+                          viewingCosecha.cosechasLotesFisicos.length > 0 ? (
+                          <Space wrap>
+                            {viewingCosecha.cosechasLotesFisicos.map((item) => (
+                              <Tag key={item.id} color="cyan">
+                                {item.loteFisico.codigo}
+                              </Tag>
+                            ))}
+                          </Space>
+                        ) : (
+                          "Sin cuarteles físicos asignados"
+                        )}
+                      </Descriptions.Item>
+
+                      <Descriptions.Item label="Lotes de Proceso">
                         {viewingCosecha.cosechaLotes &&
                           viewingCosecha.cosechaLotes.length > 0 ? (
                           <Space wrap>

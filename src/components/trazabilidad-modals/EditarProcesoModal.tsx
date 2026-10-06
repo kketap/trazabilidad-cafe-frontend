@@ -48,7 +48,7 @@ const ETAPA_OPTIONS = [
 export default function EditarProcesoModal({
     open,
     proceso,
-    cosechas,
+    cosechas: _cosechas,
     lotes,
     saving = false,
     onClose,
@@ -80,14 +80,6 @@ export default function EditarProcesoModal({
         }));
     }, [lotesDisponibles]);
 
-    const cosechaOptions = useMemo(() => {
-        return (cosechas ?? []).map((cosecha) => ({
-            value: cosecha.id,
-            label: `COS-${String(cosecha.id).padStart(3, "0")} | Lote: ${cosecha.lotes || "N/A"
-                } | ${cosecha.fecha ? String(cosecha.fecha).slice(0, 10) : ""
-                } | ${(cosecha.kilosCosechados ?? 0).toLocaleString("es-CL")} kg`,
-        }));
-    }, [cosechas]);
 
     useEffect(() => {
         if (open && proceso) {
@@ -226,20 +218,7 @@ export default function EditarProcesoModal({
                         </Col>
                     )}
 
-                    <Col xs={24} md={12}>
-                        <Form.Item
-                            label="Cosecha relacionada"
-                            name="cosechaId"
-                        >
-                            <Select
-                                placeholder="Seleccione una cosecha (opcional)"
-                                options={cosechaOptions}
-                                showSearch
-                                optionFilterProp="label"
-                                allowClear
-                            />
-                        </Form.Item>
-                    </Col>
+
 
                     <Col xs={24} md={12}>
                         <Form.Item

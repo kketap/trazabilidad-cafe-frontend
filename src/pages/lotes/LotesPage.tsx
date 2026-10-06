@@ -45,6 +45,8 @@ import {
   updateLoteApi,
 } from "./lotes.api";
 
+import { getCosechasConSaldoApi, type Cosecha } from "../cosechas/cosechas.api";
+
 import { formatEstadoEnum } from "../../utils/enumFormatters";
 
 type TipoCafeUi = "comercial" | "especial";
@@ -133,6 +135,10 @@ export default function LotesPage() {
   const [editingLote, setEditingLote] = useState<Lote | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
+  const [cosechasConSaldo, setCosechasConSaldo] = useState<Cosecha[]>([]);
+  const [selectedCosechaIds, setSelectedCosechaIds] = useState<number[]>([]);
+  const [kilosPorCosecha, setKilosPorCosecha] = useState<Record<number, number>>({});
+
   const [viewingLote, setViewingLote] = useState<Lote | null>(null);
   const [isViewModalOpen, setIsViewModalOpen] = useState(false);
 
@@ -166,12 +172,22 @@ export default function LotesPage() {
     }
   }, [tipoCafeWatch, isModalOpen, editingLote, lotes, form]);
 
-  function handleOpenCreateModal() {
+  async function handleOpenCreateModal() {
     const tipoInicial: TipoCafeUi = "comercial";
     const codigoInicial = generarCodigoPreview(tipoInicial, lotes);
 
     setEditingLote(null);
     form.resetFields();
+    setSelectedCosechaIds([]);
+    setKilosPorCosecha({});
+
+    try {
+      const data = await getCosechasConSaldoApi();
+      setCosechasConSaldo(data.cosechas || []);
+    } catch (err) {
+      console.error("Error al cargar cosechas con saldo:", err);
+      setCosechasConSaldo([]);
+    }
 
     form.setFieldsValue({
       tipoCafe: tipoInicial,
@@ -185,6 +201,8 @@ export default function LotesPage() {
 
   function handleOpenEditModal(record: Lote) {
     setEditingLote(record);
+    setSelectedCosechaIds([]);
+    setKilosPorCosecha({});
 
     form.setFieldsValue({
       tipoCafe: mapTipoCodigoToTipoCafe(record.tipoCodigo),
@@ -228,6 +246,15 @@ export default function LotesPage() {
           ? values.kilosActuales
           : values.kilosIniciales;
 
+      const cosechasPayload = !editingLote
+        ? selectedCosechaIds
+            .map((id) => ({
+              cosechaId: id,
+              kilosUsados: Number(kilosPorCosecha[id] || 0),
+            }))
+            .filter((item) => item.kilosUsados > 0)
+        : undefined;
+
       const payload = {
         codigo: values.codigo,
         nombre: values.nombre?.trim() || null,
@@ -247,6 +274,7 @@ export default function LotesPage() {
             : null,
         observacion: values.observacion?.trim() || null,
         activo: values.activo ?? true,
+        cosechas: cosechasPayload && cosechasPayload.length > 0 ? cosechasPayload : undefined,
       };
 
       if (editingLote) {
@@ -259,6 +287,8 @@ export default function LotesPage() {
 
       setIsModalOpen(false);
       setEditingLote(null);
+      setSelectedCosechaIds([]);
+      setKilosPorCosecha({});
       form.resetFields();
       fetchLotes();
     } catch (error: any) {
@@ -273,6 +303,8 @@ export default function LotesPage() {
   function handleCloseModal() {
     setIsModalOpen(false);
     setEditingLote(null);
+    setSelectedCosechaIds([]);
+    setKilosPorCosecha({});
     form.resetFields();
   }
 
@@ -673,6 +705,115 @@ export default function LotesPage() {
             <Input placeholder="Ej: Café comercial julio / Geisha Finca Alta" />
           </Form.Item>
 
+          {!editingLote && (
+            <div
+              style={{
+                background: token.colorFillAlter,
+                border: `1px solid ${token.colorBorderSecondary}`,
+                padding: 16,
+                borderRadius: 8,
+                marginBottom: 20,
+              }}
+            >
+              <Typography.Text strong style={{ display: "block", marginBottom: 4, fontSize: 14 }}>
+                Agrupar Cosechas con Saldo (Lote de Proceso)
+              </Typography.Text>
+              <Typography.Text type="secondary" style={{ fontSize: 12, display: "block", marginBottom: 12 }}>
+                Seleccione cosechas disponibles e indique los kilos parciales a tomar de cada una. Se autocalcularán los kilos iniciales.
+              </Typography.Text>
+
+              <Select
+                mode="multiple"
+                style={{ width: "100%", marginBottom: 12 }}
+                placeholder="Seleccionar cosechas con saldo disponible..."
+                value={selectedCosechaIds}
+                onChange={(ids) => {
+                  setSelectedCosechaIds(ids);
+                  const newMap = { ...kilosPorCosecha };
+                  ids.forEach((id) => {
+                    if (newMap[id] === undefined) {
+                      const cos = cosechasConSaldo.find((c) => c.id === id);
+                      const saldo = Number(cos?.saldoKilos ?? (cos ? cos.kilosCosechados - (cos.kilosUsados ?? 0) : 0));
+                      newMap[id] = saldo;
+                    }
+                  });
+                  setKilosPorCosecha(newMap);
+                  const total = ids.reduce((acc, id) => acc + (newMap[id] || 0), 0);
+                  if (total > 0) {
+                    form.setFieldsValue({ kilosIniciales: total, kilosActuales: total });
+                  }
+                }}
+                options={cosechasConSaldo.map((c) => {
+                  const saldo = Number(c.saldoKilos ?? (c.kilosCosechados - (c.kilosUsados ?? 0)));
+                  return {
+                    value: c.id,
+                    label: `COS-${String(c.id).padStart(3, "0")} · Saldo: ${formatKg(saldo)} · Fecha: ${dayjs(c.fecha).format("DD/MM/YYYY")}`,
+                  };
+                })}
+              />
+
+              {selectedCosechaIds.length > 0 && (
+                <Table
+                  size="small"
+                  pagination={false}
+                  dataSource={selectedCosechaIds.map((id) => {
+                    const c = cosechasConSaldo.find((item) => item.id === id);
+                    const saldo = Number(c?.saldoKilos ?? (c ? c.kilosCosechados - (c.kilosUsados ?? 0) : 0));
+                    return {
+                      id,
+                      codigo: `COS-${String(id).padStart(3, "0")}`,
+                      saldo,
+                      fecha: c?.fecha,
+                    };
+                  })}
+                  rowKey="id"
+                  columns={[
+                    {
+                      title: "Cosecha",
+                      dataIndex: "codigo",
+                      key: "codigo",
+                      render: (text: string, row: any) => (
+                        <Space direction="vertical" size={0}>
+                          <Tag color="blue">{text}</Tag>
+                          <span style={{ fontSize: 11, color: token.colorTextSecondary }}>
+                            {row.fecha ? dayjs(row.fecha).format("DD/MM/YYYY") : ""}
+                          </span>
+                        </Space>
+                      ),
+                    },
+                    {
+                      title: "Saldo Disp.",
+                      dataIndex: "saldo",
+                      key: "saldo",
+                      render: (saldo: number) => <Tag color="green">{formatKg(saldo)}</Tag>,
+                    },
+                    {
+                      title: "Kilos a Tomar",
+                      key: "kilosUsados",
+                      render: (_: unknown, row: any) => (
+                        <InputNumber
+                          min={0.1}
+                          max={row.saldo}
+                          precision={2}
+                          addonAfter="kg"
+                          style={{ width: "100%" }}
+                          value={kilosPorCosecha[row.id]}
+                          placeholder={`Máx ${row.saldo}`}
+                          onChange={(val) => {
+                            const newMap = { ...kilosPorCosecha, [row.id]: Number(val ?? 0) };
+                            setKilosPorCosecha(newMap);
+                            const total = selectedCosechaIds.reduce((acc, id) => acc + (newMap[id] || 0), 0);
+                            form.setFieldsValue({ kilosIniciales: total, kilosActuales: total });
+                          }}
+                        />
+                      ),
+                    },
+                  ]}
+                />
+              )}
+            </div>
+          )}
+
           <Row gutter={16}>
             <Col xs={24} sm={12}>
               <Form.Item
@@ -861,8 +1002,10 @@ export default function LotesPage() {
                 </Divider>
                 <Space wrap>
                   {viewingLote.cosechaLotes.map((item) => (
-                    <Tag key={item.id} icon={<AppstoreOutlined />} color="blue">
-                      COS-{String(item.cosechaId).padStart(3, "0")} · {item.cosecha.fecha ? dayjs(item.cosecha.fecha).format("DD/MM/YYYY") : ""}
+                    <Tag key={item.id} icon={<AppstoreOutlined />} color="blue" style={{ fontSize: 12, padding: "3px 8px" }}>
+                      COS-{String(item.cosechaId).padStart(3, "0")}
+                      {item.kilosUsados != null ? ` · ${formatKg(item.kilosUsados)} tomados` : ""}
+                      {item.cosecha.fecha ? ` (${dayjs(item.cosecha.fecha).format("DD/MM/YYYY")})` : ""}
                     </Tag>
                   ))}
                 </Space>
