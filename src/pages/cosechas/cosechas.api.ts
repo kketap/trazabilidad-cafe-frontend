@@ -87,7 +87,6 @@ export type CreateCosechaDTO = {
   kilosCosechados: number;
   totalHectareas: number;
 
-  loteIds: number[];
   lotes?: string;
   loteIds?: number[];
   loteFisicoIds?: number[];

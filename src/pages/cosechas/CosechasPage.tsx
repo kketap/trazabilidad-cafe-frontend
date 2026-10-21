@@ -170,9 +170,10 @@ export default function CosechasPage() {
   function handleOpenEditModal(record: Cosecha) {
     setEditingCosecha(record);
 
-    const loteIdsRelacion = record.cosechaLotes.map(
-      (item) => item.loteId,
-    );
+    const loteIdsRelacion =
+      (record.cosechaLotes ?? []).map(
+        (item) => item.loteId,
+      );
 
     const loteIdsFallback =
       loteIdsRelacion.length > 0
@@ -181,35 +182,74 @@ export default function CosechasPage() {
           .filter((lote) =>
             record.lotes
               .split(",")
-              .map((codigo) => codigo.trim())
-              .includes(lote.codigo),
+              .map((codigo) =>
+                codigo.trim(),
+              )
+              .includes(
+                lote.codigo,
+              ),
           )
-          .map((lote) => lote.id);
+          .map(
+            (lote) => lote.id,
+          );
 
     const loteFisicoIdsRelacion =
-      record.cosechasLotesFisicos?.map((item) => item.loteFisicoId) ?? [];
+      (
+        record.cosechasLotesFisicos ??
+        []
+      ).map(
+        (item) =>
+          item.loteFisicoId,
+      );
 
     const trabajadorIdsRelacion =
-      record.cosechaTrabajadores.map(
-        (item) => item.trabajadorId,
+      (
+        record.cosechaTrabajadores ??
+        []
+      ).map(
+        (item) =>
+          item.trabajadorId,
       );
 
     form.setFieldsValue({
-      fecha: dayjs.utc(record.fecha),
-      kilosCosechados: record.kilosCosechados,
-      totalHectareas: record.totalHectareas,
-      loteIds: loteIdsFallback,
-      loteFisicoIds: loteFisicoIdsRelacion,
-      trabajadorIds: trabajadorIdsFallback,
-      observacion: record.observacion || record.observaciones || "",
-      tipoCosecha: getTipoCosecha(record),
+      fecha:
+        dayjs.utc(
+          record.fecha,
+        ),
 
-      varietal: record.varietal
-        ? record.varietal
-          .split(",")
-          .map((item: string) => item.trim())
-          .filter(Boolean)
-        : [],
+      kilosCosechados:
+        record.kilosCosechados,
+
+      totalHectareas:
+        record.totalHectareas,
+
+      loteIds:
+        loteIdsFallback,
+
+      loteFisicoIds:
+        loteFisicoIdsRelacion,
+
+      trabajadorIds:
+        trabajadorIdsRelacion,
+
+      observacion:
+        record.observacion || "",
+
+      tipoCosecha:
+        getTipoCosecha(
+          record,
+        ),
+
+      varietal:
+        record.varietal
+          ? record.varietal
+            .split(",")
+            .map(
+              (item: string) =>
+                item.trim(),
+            )
+            .filter(Boolean)
+          : [],
     });
 
     setIsModalOpen(true);
@@ -345,8 +385,12 @@ export default function CosechasPage() {
           );
 
         const matchesTrabajador =
-          cosecha.cosechaTrabajadores.some((item) =>
-            `${item.trabajador.nombres} ${item.trabajador.apellidos ?? ""
+          (
+            cosecha.cosechaTrabajadores ??
+            []
+          ).some((item) =>
+            `${item.trabajador.nombres} ${item.trabajador.apellidos ??
+              ""
               }`
               .toLowerCase()
               .includes(term),
@@ -371,9 +415,15 @@ export default function CosechasPage() {
       }
 
       if (filtroTrabajador !== undefined) {
-        const tieneTrabajador = cosecha.cosechaTrabajadores.some(
-          (item) => item.trabajadorId === filtroTrabajador,
-        );
+        const tieneTrabajador =
+          (
+            cosecha.cosechaTrabajadores ??
+            []
+          ).some(
+            (item) =>
+              item.trabajadorId ===
+              filtroTrabajador,
+          );
 
         if (!tieneTrabajador) {
           return false;
@@ -496,7 +546,7 @@ export default function CosechasPage() {
       key: "saldoDisponible",
       width: 170,
       align: "right",
-      render: (_: unknown, record: CosechaRow) => {
+      render: (_: unknown, record: Cosecha) => {
         const saldo = Number(record.saldoKilos ?? (record.kilosCosechados - (record.kilosUsados ?? 0)));
         const usado = Number(record.kilosUsados ?? 0);
 
@@ -958,26 +1008,41 @@ export default function CosechasPage() {
                       </Descriptions.Item>
 
                       <Descriptions.Item label="Trabajadores">
-                        {viewingCosecha.cosechaTrabajadores.length > 0 ? (
-                          <Space wrap>
-                            {viewingCosecha.cosechaTrabajadores.map(
-                              (item) => (
-                                <Tag
-                                  key={item.id}
-                                  icon={<UserOutlined />}
-                                  color="blue"
-                                >
-                                  {item.trabajador.nombres}
-                                  {item.trabajador.apellidos
-                                    ? ` ${item.trabajador.apellidos}`
-                                    : ""}
-                                </Tag>
-                              ),
-                            )}
-                          </Space>
-                        ) : (
-                          "Sin asignar"
-                        )}
+                        <Descriptions.Item label="Trabajadores">
+                          {(
+                            viewingCosecha.cosechaTrabajadores ??
+                            []
+                          ).length > 0 ? (
+                            <Space wrap>
+                              {(
+                                viewingCosecha.cosechaTrabajadores ??
+                                []
+                              ).map(
+                                (item) => (
+                                  <Tag
+                                    key={item.id}
+                                    icon={
+                                      <UserOutlined />
+                                    }
+                                    color="blue"
+                                  >
+                                    {
+                                      item.trabajador
+                                        .nombres
+                                    }
+
+                                    {item.trabajador
+                                      .apellidos
+                                      ? ` ${item.trabajador.apellidos}`
+                                      : ""}
+                                  </Tag>
+                                ),
+                              )}
+                            </Space>
+                          ) : (
+                            "Sin asignar"
+                          )}
+                        </Descriptions.Item>
                       </Descriptions.Item>
 
                       <Descriptions.Item label="Kilos Cosechados">

@@ -54,8 +54,8 @@ export default function DetalleTrillaModal({ open, onClose, orden }: Props) {
     orden.kilosNetos != null
       ? { text: "Recibido", color: "success" as const }
       : orden.fechaIngreso
-      ? { text: "En Trilla", color: "processing" as const }
-      : { text: "Despachado", color: "warning" as const };
+        ? { text: "En Trilla", color: "processing" as const }
+        : { text: "Despachado", color: "warning" as const };
 
   // Subproductos registrados y suma
   const subproductosList = SUBPRODUCTO_LABELS.map((item) => ({
@@ -111,14 +111,15 @@ export default function DetalleTrillaModal({ open, onClose, orden }: Props) {
           Cerrar
         </Button>,
       ]}
-      width={720}
+      width="min(760px, 96vw)"
+      centered
       destroyOnClose
     >
       <div style={{ display: "flex", flexDirection: "column", gap: 16, marginTop: 12 }}>
         {/* Tarjetas de Resumen Numérico */}
         <Row gutter={[12, 12]}>
           <Col xs={24} sm={8}>
-            <Card size="small" style={{ borderRadius: 8, background: "#fafafa" }}>
+            <Card size="small" className="trilla-summary-card">
               <Statistic
                 title="Kilos Enviados"
                 value={orden.kilosEnviados ?? 0}
@@ -130,7 +131,7 @@ export default function DetalleTrillaModal({ open, onClose, orden }: Props) {
             </Card>
           </Col>
           <Col xs={24} sm={8}>
-            <Card size="small" style={{ borderRadius: 8, background: "#fafafa" }}>
+            <Card size="small" className="trilla-summary-card">
               <Statistic
                 title="Kilos Netos (Resultantes)"
                 value={orden.kilosNetos ?? 0}
@@ -142,7 +143,7 @@ export default function DetalleTrillaModal({ open, onClose, orden }: Props) {
             </Card>
           </Col>
           <Col xs={24} sm={8}>
-            <Card size="small" style={{ borderRadius: 8, background: "#fafafa" }}>
+            <Card size="small" className="trilla-summary-card">
               <Statistic
                 title="Rendimiento Trilla"
                 value={rendimiento ? `${rendimiento}%` : "—"}
@@ -257,43 +258,53 @@ export default function DetalleTrillaModal({ open, onClose, orden }: Props) {
           const pctResto = orden.metricasRendimiento?.restoPct ?? (baseKilos > 0 ? (restoKilos / baseKilos) * 100 : 0);
 
           return (
-            <div style={{ padding: "12px 16px", background: "#fcfaf6", borderRadius: 8, border: "1px solid #ebd9c3" }}>
+            <div className="trilla-kpi-panel">
               <Space style={{ marginBottom: 10 }}>
-                <BarChartOutlined style={{ color: "#8c6b3e" }} />
-                <Text strong style={{ color: "#614725", fontSize: 13 }}>
-                  Métricas de Rendimiento (% sobre {orden.kilosNetos ? "kilos netos" : "kilos enviados"})
+                <BarChartOutlined />
+                <Text strong style={{ fontSize: 13 }}>
+                  Métricas de Rendimiento (% sobre{" "}
+                  {orden.kilosNetos ? "kilos netos" : "kilos enviados"})
                 </Text>
               </Space>
+
               <Row gutter={[12, 8]}>
                 <Col xs={24} sm={8}>
-                  <div style={{ padding: "8px 12px", background: "#f6ffed", border: "1px solid #b7eb8f", borderRadius: 6, textAlign: "center" }}>
-                    <Text style={{ fontSize: 12, color: "#389e0d", display: "block", fontWeight: 600 }}>% Exportable</Text>
-                    <span style={{ fontSize: 20, fontWeight: 700, color: "#389e0d" }}>
+                  <div className="trilla-kpi-card trilla-kpi-card-exportable">
+                    <Text className="trilla-kpi-label trilla-kpi-label-exportable">
+                      % Exportable
+                    </Text>
+                    <span className="trilla-kpi-value trilla-kpi-value-exportable">
                       {Number(pctExportable).toFixed(1)}%
                     </span>
-                    <Text type="secondary" style={{ fontSize: 11, display: "block" }}>
+                    <Text className="trilla-kpi-secondary">
                       {Number(expVal).toFixed(1)} kg
                     </Text>
                   </div>
                 </Col>
+
                 <Col xs={24} sm={8}>
-                  <div style={{ padding: "8px 12px", background: "#e6f7ff", border: "1px solid #91d5ff", borderRadius: 6, textAlign: "center" }}>
-                    <Text style={{ fontSize: 12, color: "#096dd9", display: "block", fontWeight: 600 }}>% Recuperado</Text>
-                    <span style={{ fontSize: 20, fontWeight: 700, color: "#096dd9" }}>
+                  <div className="trilla-kpi-card trilla-kpi-card-recuperado">
+                    <Text className="trilla-kpi-label trilla-kpi-label-recuperado">
+                      % Recuperado
+                    </Text>
+                    <span className="trilla-kpi-value trilla-kpi-value-recuperado">
                       {Number(pctRecuperado).toFixed(1)}%
                     </span>
-                    <Text type="secondary" style={{ fontSize: 11, display: "block" }}>
+                    <Text className="trilla-kpi-secondary">
                       {Number(recVal).toFixed(1)} kg
                     </Text>
                   </div>
                 </Col>
+
                 <Col xs={24} sm={8}>
-                  <div style={{ padding: "8px 12px", background: "#fff7e6", border: "1px solid #ffd591", borderRadius: 6, textAlign: "center" }}>
-                    <Text style={{ fontSize: 12, color: "#d46b08", display: "block", fontWeight: 600 }}>% Resto</Text>
-                    <span style={{ fontSize: 20, fontWeight: 700, color: "#d46b08" }}>
+                  <div className="trilla-kpi-card trilla-kpi-card-resto">
+                    <Text className="trilla-kpi-label trilla-kpi-label-resto">
+                      % Resto
+                    </Text>
+                    <span className="trilla-kpi-value trilla-kpi-value-resto">
                       {Number(pctResto).toFixed(1)}%
                     </span>
-                    <Text type="secondary" style={{ fontSize: 11, display: "block" }}>
+                    <Text className="trilla-kpi-secondary">
                       {Number(restoKilos).toFixed(1)} kg
                     </Text>
                   </div>
@@ -323,12 +334,11 @@ export default function DetalleTrillaModal({ open, onClose, orden }: Props) {
             {subproductosList.map((item) => (
               <Col xs={12} sm={8} key={item.label}>
                 <div
-                  style={{
-                    padding: "8px 12px",
-                    borderRadius: 6,
-                    background: item.value != null ? "#f9f0ff" : "#fafafa",
-                    border: `1px solid ${item.value != null ? "#d3adf7" : "#f0f0f0"}`,
-                  }}
+                  className={
+                    item.value != null
+                      ? "trilla-subproducto-card trilla-subproducto-card-active"
+                      : "trilla-subproducto-card"
+                  }
                 >
                   <Text
                     type={item.value != null ? undefined : "secondary"}
@@ -336,16 +346,12 @@ export default function DetalleTrillaModal({ open, onClose, orden }: Props) {
                   >
                     {item.label}
                   </Text>
-                  <strong
-                    style={{
-                      fontSize: 14,
-                      color: item.value != null ? "#531dab" : "#bfbfbf",
-                    }}
-                  >
+
+                  <strong style={{ fontSize: 14 }}>
                     {item.value != null
                       ? `${Number(item.value).toLocaleString("es-AR", {
-                          minimumFractionDigits: 2,
-                        })} kg`
+                        minimumFractionDigits: 2,
+                      })} kg`
                       : "—"}
                   </strong>
                 </div>
@@ -353,15 +359,7 @@ export default function DetalleTrillaModal({ open, onClose, orden }: Props) {
             ))}
           </Row>
         ) : (
-          <div
-            style={{
-              padding: "16px",
-              textAlign: "center",
-              background: "#fafafa",
-              borderRadius: 6,
-              border: "1px dashed #d9d9d9",
-            }}
-          >
+          <div className="trilla-empty-panel">
             <Text type="secondary">
               No se han registrado subproductos en esta orden de trilla.
             </Text>

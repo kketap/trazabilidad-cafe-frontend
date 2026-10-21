@@ -44,7 +44,7 @@ export default function CrearSecadoModal({ open, onClose, onSubmit, lotes, loadi
   // Merma calculada en tiempo real
   const mermaCalculada =
     kilosIngresados !== undefined && kilosIngresados !== null &&
-    kilosResultantes !== undefined && kilosResultantes !== null
+      kilosResultantes !== undefined && kilosResultantes !== null
       ? Number(kilosIngresados) - Number(kilosResultantes)
       : null;
 
@@ -122,7 +122,10 @@ export default function CrearSecadoModal({ open, onClose, onSubmit, lotes, loadi
       confirmLoading={loading}
       okText="Registrar Secado"
       cancelText="Cancelar"
-      width={720}
+      width="min(860px, 96vw)"
+      centered
+      destroyOnHidden
+      className="secado-modal"
     >
       <Form
         form={form}
@@ -132,7 +135,7 @@ export default function CrearSecadoModal({ open, onClose, onSubmit, lotes, loadi
       >
         {/* ── Perfil de proceso + Código ── */}
         <Row gutter={16}>
-          <Col span={12}>
+          <Col xs={24} md={12}>
             <Form.Item
               name="perfilProceso"
               label="Perfil de Proceso"
@@ -158,7 +161,7 @@ export default function CrearSecadoModal({ open, onClose, onSubmit, lotes, loadi
               </Select>
             </Form.Item>
           </Col>
-          <Col span={12}>
+          <Col xs={24} md={12}>
             <Form.Item
               name="codigo"
               label="Código de Secado"
@@ -222,53 +225,216 @@ export default function CrearSecadoModal({ open, onClose, onSubmit, lotes, loadi
         </Form.Item>
 
         {/* Tabla de kilos por lote cuando hay selección múltiple */}
+        {/* Tabla de distribución de kilos por lote */}
         {selectedLoteIds.length > 0 && (
-          <div style={{ marginBottom: 16, background: "#f8f9fa", padding: 12, borderRadius: 6 }}>
-            <Typography.Text strong style={{ fontSize: 13, display: "block", marginBottom: 8 }}>
-              Kilos a descontar por lote:
-            </Typography.Text>
+          <div className="secado-lotes-distribucion">
+            <div className="secado-lotes-distribucion-header">
+              <div>
+                <Typography.Text strong>
+                  Distribución de kilos por lote
+                </Typography.Text>
+
+                <Typography.Text
+                  type="secondary"
+                  style={{
+                    display: "block",
+                    fontSize: 12,
+                    marginTop: 2,
+                  }}
+                >
+                  Indique cuántos kilos de cada lote serán utilizados en este secado.
+                </Typography.Text>
+              </div>
+
+              <Tag color="gold">
+                {selectedLoteIds.length}{" "}
+                {selectedLoteIds.length === 1
+                  ? "lote seleccionado"
+                  : "lotes seleccionados"}
+              </Tag>
+            </div>
+
             <Table
+              className="secado-lotes-table"
               size="small"
               pagination={false}
+              scroll={{
+                x: 560,
+              }}
               dataSource={selectedLoteIds.map((id) => {
-                const l = lotes.find((item) => item.id === id);
+                const lote = lotes.find(
+                  (item) => item.id === id,
+                );
+
                 return {
                   id,
-                  codigo: l?.codigo || `Lote #${id}`,
-                  disponible: Number(l?.kilosActuales ?? l?.kilosIniciales ?? 0),
+                  codigo:
+                    lote?.codigo ||
+                    `Lote #${id}`,
+
+                  nombre:
+                    lote?.nombre ??
+                    null,
+
+                  disponible:
+                    Number(
+                      lote?.kilosActuales ??
+                      lote?.kilosIniciales ??
+                      0,
+                    ),
                 };
               })}
               rowKey="id"
               columns={[
                 {
                   title: "Lote",
-                  dataIndex: "codigo",
-                  key: "codigo",
-                  render: (c: string) => <Tag color="blue">{c}</Tag>,
+                  key: "lote",
+                  width: 190,
+                  render: (
+                    _: unknown,
+                    row: any,
+                  ) => (
+                    <Space
+                      direction="vertical"
+                      size={0}
+                    >
+                      <Tag color="blue">
+                        {row.codigo}
+                      </Tag>
+
+                      {row.nombre && (
+                        <Typography.Text
+                          type="secondary"
+                          style={{
+                            fontSize: 11,
+                          }}
+                        >
+                          {row.nombre}
+                        </Typography.Text>
+                      )}
+                    </Space>
+                  ),
                 },
+
                 {
                   title: "Disponible",
-                  dataIndex: "disponible",
+                  dataIndex:
+                    "disponible",
                   key: "disponible",
-                  render: (d: number) => `${d.toLocaleString()} kg`,
+                  width: 150,
+                  render: (
+                    disponible: number,
+                  ) => (
+                    <Typography.Text
+                      strong
+                      type={
+                        disponible <= 0
+                          ? "danger"
+                          : undefined
+                      }
+                    >
+                      {disponible.toLocaleString(
+                        "es-CL",
+                        {
+                          minimumFractionDigits:
+                            2,
+                          maximumFractionDigits:
+                            2,
+                        },
+                      )}{" "}
+                      kg
+                    </Typography.Text>
+                  ),
                 },
+
                 {
-                  title: "Kilos para Secado",
+                  title:
+                    "Kilos para Secado",
                   key: "kilos",
-                  render: (_: unknown, row: any) => (
+                  width: 220,
+                  render: (
+                    _: unknown,
+                    row: any,
+                  ) => (
                     <InputNumber
-                      min={0.1}
-                      max={row.disponible}
+                      min={0}
+                      max={
+                        row.disponible
+                      }
                       precision={2}
                       addonAfter="kg"
-                      style={{ width: "100%" }}
-                      value={kilosPorLote[row.id]}
-                      placeholder={`Máx ${row.disponible}`}
-                      onChange={(val) => {
-                        const newMap = { ...kilosPorLote, [row.id]: Number(val ?? 0) };
-                        setKilosPorLote(newMap);
-                        const sum = selectedLoteIds.reduce((acc, id) => acc + (newMap[id] || 0), 0);
-                        form.setFieldsValue({ kilosIngresados: sum });
+                      style={{
+                        width: "100%",
+                      }}
+                      value={
+                        kilosPorLote[
+                        row.id
+                        ] ?? 0
+                      }
+                      disabled={
+                        row.disponible <=
+                        0
+                      }
+                      status={
+                        (
+                          kilosPorLote[
+                          row.id
+                          ] ?? 0
+                        ) >
+                          row.disponible
+                          ? "error"
+                          : undefined
+                      }
+                      placeholder={`Máx. ${row.disponible.toLocaleString(
+                        "es-CL",
+                      )}`}
+                      onChange={(
+                        value,
+                      ) => {
+                        const nuevoMapa = {
+                          ...kilosPorLote,
+
+                          [row.id]:
+                            Number(
+                              value ??
+                              0,
+                            ),
+                        };
+
+                        setKilosPorLote(
+                          nuevoMapa,
+                        );
+
+                        const total =
+                          selectedLoteIds.reduce(
+                            (
+                              acumulado,
+                              loteId,
+                            ) =>
+                              acumulado +
+                              (
+                                nuevoMapa[
+                                loteId
+                                ] ?? 0
+                              ),
+                            0,
+                          );
+
+                        form.setFieldsValue(
+                          {
+                            kilosIngresados:
+                              total,
+                          },
+                        );
+
+                        form.validateFields(
+                          [
+                            "kilosIngresados",
+                          ],
+                        ).catch(
+                          () =>
+                            undefined,
+                        );
                       }}
                     />
                   ),
@@ -280,7 +446,7 @@ export default function CrearSecadoModal({ open, onClose, onSubmit, lotes, loadi
 
         {/* ── Fechas ── */}
         <Row gutter={16}>
-          <Col span={12}>
+          <Col xs={24} md={12}>
             <Form.Item
               name="fechaInicio"
               label="Fecha de Inicio"
@@ -289,7 +455,7 @@ export default function CrearSecadoModal({ open, onClose, onSubmit, lotes, loadi
               <DatePicker style={{ width: "100%" }} format="YYYY-MM-DD HH:mm" showTime />
             </Form.Item>
           </Col>
-          <Col span={12}>
+          <Col xs={24} md={12}>
             <Form.Item name="fechaFin" label="Fecha de Fin (Opcional)">
               <DatePicker style={{ width: "100%" }} format="YYYY-MM-DD HH:mm" showTime />
             </Form.Item>
@@ -298,7 +464,7 @@ export default function CrearSecadoModal({ open, onClose, onSubmit, lotes, loadi
 
         {/* ── Kilos ── */}
         <Row gutter={16}>
-          <Col span={12}>
+          <Col xs={24} md={12}>
             <Form.Item
               name="kilosIngresados"
               label="Kilos Ingresados"
@@ -334,7 +500,7 @@ export default function CrearSecadoModal({ open, onClose, onSubmit, lotes, loadi
               />
             </Form.Item>
           </Col>
-          <Col span={12}>
+          <Col xs={24} md={12}>
             <Form.Item
               name="kilosResultantes"
               label="Kilos Resultantes (Secos)"
@@ -384,7 +550,7 @@ export default function CrearSecadoModal({ open, onClose, onSubmit, lotes, loadi
 
         {/* ── Temperaturas ── */}
         <Row gutter={16}>
-          <Col span={12}>
+          <Col xs={24} md={12}>
             <Form.Item
               name="tempMinima"
               label="Temperatura Mínima (Opcional)"
@@ -417,7 +583,7 @@ export default function CrearSecadoModal({ open, onClose, onSubmit, lotes, loadi
               />
             </Form.Item>
           </Col>
-          <Col span={12}>
+          <Col xs={24} md={12}>
             <Form.Item
               name="tempMaxima"
               label="Temperatura Máxima (Opcional)"

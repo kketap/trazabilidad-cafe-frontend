@@ -46,20 +46,22 @@ const TIPO_SACO_OPTIONS = [
 ];
 
 /** Definición centralizada de los 9 subproductos */
-const SUBPRODUCTOS: { name: keyof Pick<OrdenTrilla,
-  "exportable" | "recuperado" | "malla13" | "segundaBuena" | "segundaMala" |
-  "sucioEscojo" | "cisco" | "descarteMaquina" | "cascarilla"
->; label: string }[] = [
-  { name: "exportable", label: "Exportable" },
-  { name: "recuperado", label: "Recuperado" },
-  { name: "malla13", label: "Malla 13" },
-  { name: "segundaBuena", label: "Segunda Buena" },
-  { name: "segundaMala", label: "Segunda Mala" },
-  { name: "sucioEscojo", label: "Sucio / Escojo" },
-  { name: "cisco", label: "Cisco" },
-  { name: "descarteMaquina", label: "Descarte Máquina" },
-  { name: "cascarilla", label: "Cascarilla" },
-];
+const SUBPRODUCTOS: {
+  name: keyof Pick<OrdenTrilla,
+    "exportable" | "recuperado" | "malla13" | "segundaBuena" | "segundaMala" |
+    "sucioEscojo" | "cisco" | "descarteMaquina" | "cascarilla"
+  >; label: string
+}[] = [
+    { name: "exportable", label: "Exportable" },
+    { name: "recuperado", label: "Recuperado" },
+    { name: "malla13", label: "Malla 13" },
+    { name: "segundaBuena", label: "Segunda Buena" },
+    { name: "segundaMala", label: "Segunda Mala" },
+    { name: "sucioEscojo", label: "Sucio / Escojo" },
+    { name: "cisco", label: "Cisco" },
+    { name: "descarteMaquina", label: "Descarte Máquina" },
+    { name: "cascarilla", label: "Cascarilla" },
+  ];
 
 /** Extrae el valor numérico de un campo, retorna null si vacío/undefined */
 function toNumberOrNull(val: any): number | null {
@@ -146,7 +148,8 @@ export default function RecepcionTrillaModal({ open, onClose, onSubmit, orden, l
       okText="Guardar Recepción"
       cancelText="Cancelar"
       confirmLoading={loading}
-      width={720}
+      width="min(760px, 96vw)"
+      centered
       destroyOnClose
     >
       {/* Resumen de la orden */}
@@ -168,10 +171,10 @@ export default function RecepcionTrillaModal({ open, onClose, onSubmit, orden, l
               <Space wrap>
                 {orden.lotes && orden.lotes.length > 0
                   ? orden.lotes.map((l: any) => (
-                      <Tag key={l.id} color="gold">
-                        {l.codigo}
-                      </Tag>
-                    ))
+                    <Tag key={l.id} color="gold">
+                      {l.codigo}
+                    </Tag>
+                  ))
                   : "-"}
               </Space>
             </Descriptions.Item>
@@ -235,7 +238,7 @@ export default function RecepcionTrillaModal({ open, onClose, onSubmit, orden, l
 
         {/* ── Calidad + Tipo saco + Kilos netos ── */}
         <Row gutter={16}>
-          <Col span={12}>
+          <Col xs={24} md={12}>
             <Form.Item label="Calidad del café resultante" name="calidad">
               <Select
                 placeholder="Seleccionar calidad..."
@@ -244,7 +247,7 @@ export default function RecepcionTrillaModal({ open, onClose, onSubmit, orden, l
               />
             </Form.Item>
           </Col>
-          <Col span={12}>
+          <Col xs={24} md={12}>
             <Form.Item label="Tipo de Saco" name="tipoSaco">
               <Select
                 placeholder="Seleccionar tipo de saco..."
@@ -301,48 +304,68 @@ export default function RecepcionTrillaModal({ open, onClose, onSubmit, orden, l
           const pctResto = baseKilos > 0 ? (restoKilos / baseKilos) * 100 : 0;
 
           return (
-            <div style={{ margin: "16px 0", padding: "12px 16px", background: "#fcfaf6", borderRadius: 8, border: "1px solid #ebd9c3" }}>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
+            <div className="trilla-kpi-panel">
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                  gap: 12,
+                  flexWrap: "wrap",
+                  marginBottom: 10,
+                }}
+              >
                 <Space>
-                  <BarChartOutlined style={{ color: "#8c6b3e" }} />
-                  <Text strong style={{ color: "#614725", fontSize: 13 }}>
-                    Rendimiento de Trilla en Tiempo Real (% sobre {kilosNetos ? "kilos netos" : "base"})
+                  <BarChartOutlined />
+                  <Text strong style={{ fontSize: 13 }}>
+                    Rendimiento de Trilla en Tiempo Real (% sobre{" "}
+                    {kilosNetos ? "kilos netos" : "base"})
                   </Text>
                 </Space>
+
                 {baseKilos > 0 && (
                   <Tag color="gold">Base: {baseKilos.toFixed(2)} kg</Tag>
                 )}
               </div>
+
               <Row gutter={[12, 8]}>
                 <Col xs={24} sm={8}>
-                  <div style={{ padding: "8px 12px", background: "#f6ffed", border: "1px solid #b7eb8f", borderRadius: 6, textAlign: "center" }}>
-                    <Text style={{ fontSize: 12, color: "#389e0d", display: "block", fontWeight: 600 }}>% Exportable</Text>
-                    <span style={{ fontSize: 20, fontWeight: 700, color: "#389e0d" }}>
+                  <div className="trilla-kpi-card trilla-kpi-card-exportable">
+                    <Text className="trilla-kpi-label trilla-kpi-label-exportable">
+                      % Exportable
+                    </Text>
+                    <span className="trilla-kpi-value trilla-kpi-value-exportable">
                       {pctExportable.toFixed(1)}%
                     </span>
-                    <Text type="secondary" style={{ fontSize: 11, display: "block" }}>
+                    <Text className="trilla-kpi-secondary">
                       {expVal.toFixed(1)} kg
                     </Text>
                   </div>
                 </Col>
+
                 <Col xs={24} sm={8}>
-                  <div style={{ padding: "8px 12px", background: "#e6f7ff", border: "1px solid #91d5ff", borderRadius: 6, textAlign: "center" }}>
-                    <Text style={{ fontSize: 12, color: "#096dd9", display: "block", fontWeight: 600 }}>% Recuperado</Text>
-                    <span style={{ fontSize: 20, fontWeight: 700, color: "#096dd9" }}>
+                  <div className="trilla-kpi-card trilla-kpi-card-recuperado">
+                    <Text className="trilla-kpi-label trilla-kpi-label-recuperado">
+                      % Recuperado
+                    </Text>
+                    <span className="trilla-kpi-value trilla-kpi-value-recuperado">
                       {pctRecuperado.toFixed(1)}%
                     </span>
-                    <Text type="secondary" style={{ fontSize: 11, display: "block" }}>
+                    <Text className="trilla-kpi-secondary">
                       {recVal.toFixed(1)} kg
                     </Text>
                   </div>
                 </Col>
+
                 <Col xs={24} sm={8}>
-                  <div style={{ padding: "8px 12px", background: "#fff7e6", border: "1px solid #ffd591", borderRadius: 6, textAlign: "center" }}>
-                    <Text style={{ fontSize: 12, color: "#d46b08", display: "block", fontWeight: 600 }}>% Resto</Text>
-                    <span style={{ fontSize: 20, fontWeight: 700, color: "#d46b08" }}>
+                  <div className="trilla-kpi-card trilla-kpi-card-resto">
+                    <Text className="trilla-kpi-label trilla-kpi-label-resto">
+                      % Resto
+                    </Text>
+                    <span className="trilla-kpi-value trilla-kpi-value-resto">
                       {pctResto.toFixed(1)}%
                     </span>
-                    <Text type="secondary" style={{ fontSize: 11, display: "block" }}>
+                    <Text className="trilla-kpi-secondary">
                       {restoKilos.toFixed(1)} kg
                     </Text>
                   </div>
@@ -389,9 +412,8 @@ export default function RecepcionTrillaModal({ open, onClose, onSubmit, orden, l
                 kilosNetos && totalSubproductos > Number(kilosNetos)
                   ? "rgba(255, 77, 79, 0.08)"
                   : "rgba(82, 196, 26, 0.08)",
-              border: `1px solid ${
-                kilosNetos && totalSubproductos > Number(kilosNetos) ? "#ff4d4f" : "#52c41a"
-              }`,
+              border: `1px solid ${kilosNetos && totalSubproductos > Number(kilosNetos) ? "#ff4d4f" : "#52c41a"
+                }`,
               borderRadius: 6,
             }}
           >

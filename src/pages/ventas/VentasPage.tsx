@@ -20,6 +20,7 @@ import {
   theme,
   Tooltip,
   Badge,
+  Divider
 } from "antd";
 import {
   DeleteOutlined,

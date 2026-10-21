@@ -288,7 +288,8 @@ export default function EnviarATrillaModal({ open, onClose, onSubmit, lotes, loa
       okText="Enviar a Trilla"
       cancelText="Cancelar"
       confirmLoading={loading}
-      width={780}
+      width="min(860px, 96vw)"
+      centered
       destroyOnClose
     >
       <Alert
@@ -301,7 +302,7 @@ export default function EnviarATrillaModal({ open, onClose, onSubmit, lotes, loa
       <Form form={form} layout="vertical" onFinish={handleFinish}>
         {/* ── Código de Trilla editable ── */}
         <Row gutter={16}>
-          <Col span={12}>
+          <Col xs={24} md={12}>
             <Form.Item
               label={
                 <Space>
@@ -315,7 +316,7 @@ export default function EnviarATrillaModal({ open, onClose, onSubmit, lotes, loa
               <Input placeholder='Ej: "TRI-2026-001" (vacío = temporal)' allowClear />
             </Form.Item>
           </Col>
-          <Col span={12}>
+          <Col xs={24} md={12}>
             <Form.Item
               label="Fecha de Despacho"
               name="fechaDespacho"
@@ -390,7 +391,7 @@ export default function EnviarATrillaModal({ open, onClose, onSubmit, lotes, loa
 
         {/* ── Kilos enviados + N° Guía + Sacos ── */}
         <Row gutter={16}>
-          <Col span={8}>
+          <Col xs={24} sm={12} md={8}>
             <Form.Item
               label={
                 <Space>
@@ -431,7 +432,7 @@ export default function EnviarATrillaModal({ open, onClose, onSubmit, lotes, loa
               />
             </Form.Item>
           </Col>
-          <Col span={8}>
+          <Col xs={24} sm={12} md={8}>
             <Form.Item
               label={
                 <Space>
@@ -445,7 +446,7 @@ export default function EnviarATrillaModal({ open, onClose, onSubmit, lotes, loa
               <InputNumber style={{ width: "100%" }} placeholder="Ej: 50" min={1} />
             </Form.Item>
           </Col>
-          <Col span={8}>
+          <Col xs={24} sm={12} md={8}>
             <Form.Item
               label={
                 <Space>
@@ -462,48 +463,67 @@ export default function EnviarATrillaModal({ open, onClose, onSubmit, lotes, loa
         </Row>
 
         {/* ── Panel KPI en tiempo real: % Exportable, % Recuperado y % Resto ── */}
-        <div style={{ margin: "16px 0", padding: "12px 16px", background: "#fcfaf6", borderRadius: 8, border: "1px solid #ebd9c3" }}>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
+        <div className="trilla-kpi-panel">
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              gap: 12,
+              flexWrap: "wrap",
+              marginBottom: 10,
+            }}
+          >
             <Space>
-              <BarChartOutlined style={{ color: "#8c6b3e" }} />
-              <Text strong style={{ color: "#614725", fontSize: 13 }}>
+              <BarChartOutlined />
+              <Text strong style={{ fontSize: 13 }}>
                 Rendimiento Estimado en Tiempo Real (% sobre base enviada)
               </Text>
             </Space>
+
             {baseKilos > 0 && (
               <Tag color="gold">Base: {baseKilos.toFixed(2)} kg</Tag>
             )}
           </div>
+
           <Row gutter={[12, 8]}>
             <Col xs={24} sm={8}>
-              <div style={{ padding: "8px 12px", background: "#f6ffed", border: "1px solid #b7eb8f", borderRadius: 6, textAlign: "center" }}>
-                <Text style={{ fontSize: 12, color: "#389e0d", display: "block", fontWeight: 600 }}>% Exportable</Text>
-                <span style={{ fontSize: 20, fontWeight: 700, color: "#389e0d" }}>
+              <div className="trilla-kpi-card trilla-kpi-card-exportable">
+                <Text className="trilla-kpi-label trilla-kpi-label-exportable">
+                  % Exportable
+                </Text>
+                <span className="trilla-kpi-value trilla-kpi-value-exportable">
                   {pctExportable.toFixed(1)}%
                 </span>
-                <Text type="secondary" style={{ fontSize: 11, display: "block" }}>
+                <Text className="trilla-kpi-secondary">
                   {expVal.toFixed(1)} kg
                 </Text>
               </div>
             </Col>
+
             <Col xs={24} sm={8}>
-              <div style={{ padding: "8px 12px", background: "#e6f7ff", border: "1px solid #91d5ff", borderRadius: 6, textAlign: "center" }}>
-                <Text style={{ fontSize: 12, color: "#096dd9", display: "block", fontWeight: 600 }}>% Recuperado</Text>
-                <span style={{ fontSize: 20, fontWeight: 700, color: "#096dd9" }}>
+              <div className="trilla-kpi-card trilla-kpi-card-recuperado">
+                <Text className="trilla-kpi-label trilla-kpi-label-recuperado">
+                  % Recuperado
+                </Text>
+                <span className="trilla-kpi-value trilla-kpi-value-recuperado">
                   {pctRecuperado.toFixed(1)}%
                 </span>
-                <Text type="secondary" style={{ fontSize: 11, display: "block" }}>
+                <Text className="trilla-kpi-secondary">
                   {recVal.toFixed(1)} kg
                 </Text>
               </div>
             </Col>
+
             <Col xs={24} sm={8}>
-              <div style={{ padding: "8px 12px", background: "#fff7e6", border: "1px solid #ffd591", borderRadius: 6, textAlign: "center" }}>
-                <Text style={{ fontSize: 12, color: "#d46b08", display: "block", fontWeight: 600 }}>% Resto</Text>
-                <span style={{ fontSize: 20, fontWeight: 700, color: "#d46b08" }}>
+              <div className="trilla-kpi-card trilla-kpi-card-resto">
+                <Text className="trilla-kpi-label trilla-kpi-label-resto">
+                  % Resto
+                </Text>
+                <span className="trilla-kpi-value trilla-kpi-value-resto">
                   {pctResto.toFixed(1)}%
                 </span>
-                <Text type="secondary" style={{ fontSize: 11, display: "block" }}>
+                <Text className="trilla-kpi-secondary">
                   {restoKilos.toFixed(1)} kg
                 </Text>
               </div>
@@ -548,9 +568,8 @@ export default function EnviarATrillaModal({ open, onClose, onSubmit, lotes, loa
                 kilosEnviados && totalSubproductos > Number(kilosEnviados)
                   ? "rgba(255, 77, 79, 0.08)"
                   : "rgba(82, 196, 26, 0.08)",
-              border: `1px solid ${
-                kilosEnviados && totalSubproductos > Number(kilosEnviados) ? "#ff4d4f" : "#52c41a"
-              }`,
+              border: `1px solid ${kilosEnviados && totalSubproductos > Number(kilosEnviados) ? "#ff4d4f" : "#52c41a"
+                }`,
               borderRadius: 6,
             }}
           >
