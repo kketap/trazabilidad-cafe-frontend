@@ -730,13 +730,13 @@ export default function DashboardCosechas() {
                       ))}
                     </Pie>
                     <ReTooltip
-                      formatter={(value) =>
-                        fmtKg(
-                          typeof value === "number"
-                            ? value
-                            : Number(value ?? 0),
-                        )
-                      }
+                      formatter={(v: any) => fmtKg(v)}
+                      contentStyle={{
+                        borderRadius: 10,
+                        background: "rgba(15,15,30,0.92)",
+                        border: "none",
+                        color: "#fff",
+                      }}
                     />
                   </PieChart>
                 </ResponsiveContainer>
@@ -823,8 +823,7 @@ export default function DashboardCosechas() {
                 maxBarSize={24}
                 label={{
                   position: "right",
-                  formatter: (value) =>
-                    fmtKg(Number(value ?? 0)),
+                  formatter: (v: any) => fmtKg(v),
                   fontSize: 11,
                   fill: "#6b7280",
                 }}

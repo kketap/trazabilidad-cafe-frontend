@@ -581,6 +581,14 @@ export default function VentasPage() {
               </Descriptions.Item>
             </Descriptions>
 
+            {viewingVenta.observaciones && (
+              <>
+                <Divider titlePlacement="left" orientationMargin={0} style={{ marginTop: 20 }}>
+                  <Typography.Text strong style={{ fontSize: 13 }}>Observaciones</Typography.Text>
+                </Divider>
+                <Typography.Text type="secondary">{viewingVenta.observaciones}</Typography.Text>
+              </>
+            )}
           </>
         )}
       </Modal>

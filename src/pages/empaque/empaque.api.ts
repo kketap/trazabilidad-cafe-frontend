@@ -1,9 +1,17 @@
-// src/api/empaque.api.ts
 import { apiClient } from "../../api/apiClient";
 import type { Lote } from "../lotes/lotes.api";
+import type { Secado } from "../secado/secado.api";
+
+export type EmpaqueSecado = {
+  id: number;
+  empaqueId: number;
+  secadoId: number;
+  secado: Secado;
+};
 
 export type Empaque = {
   id: number;
+  codigo?: string | null;
   loteId: number;
   fechaInicio: string;
   fechaFin?: string | null;
@@ -24,15 +32,19 @@ export type Empaque = {
   createdAt?: string;
   updatedAt?: string;
   lote?: Lote;
+  secado?: Secado | null;
+  empaqueSecados?: EmpaqueSecado[];
 };
 
 export type CreateEmpaqueDTO = {
+  codigo?: string | null;
   loteId: number;
   fechaInicio: string;
   fechaFin?: string | null;
   kilosIngresados: number;
   kilosResultantes: number;
   secadoId?: number | null;
+  secadoIds?: number[];
   tipoEmpaque?: string | null;
   cantidadEmpaques?: number | null;
   rendimiento?: number | null;

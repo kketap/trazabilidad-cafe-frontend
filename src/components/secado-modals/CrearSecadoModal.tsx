@@ -1,7 +1,5 @@
-// src/components/secado-modals/CrearSecadoModal.tsx
 import { useState } from "react";
 import {
-  Alert,
   Col,
   DatePicker,
   Form,
@@ -11,10 +9,10 @@ import {
   Row,
   Select,
   Space,
+  Table,
   Tag,
   Typography,
 } from "antd";
-import { InfoCircleOutlined } from "@ant-design/icons";
 import dayjs from "dayjs";
 import type { Lote } from "../../pages/lotes/lotes.api";
 import type { CreateSecadoDTO } from "../../pages/secado/secado.api";
@@ -29,18 +27,19 @@ type Props = {
 
 export default function CrearSecadoModal({ open, onClose, onSubmit, lotes, loading }: Props) {
   const [form] = Form.useForm();
-  const [loteSeleccionado, setLoteSeleccionado] = useState<Lote | null>(null);
+  const [selectedLoteIds, setSelectedLoteIds] = useState<number[]>([]);
+  const [kilosPorLote, setKilosPorLote] = useState<Record<number, number>>({});
 
   const kilosIngresados = Form.useWatch("kilosIngresados", form);
   const kilosResultantes = Form.useWatch("kilosResultantes", form);
   const tempMinima = Form.useWatch("tempMinima", form);
   const tempMaxima = Form.useWatch("tempMaxima", form);
 
-  // Kilos reales disponibles del lote seleccionado
-  const kilosDisponibles =
-    loteSeleccionado != null
-      ? (loteSeleccionado.kilosActuales ?? loteSeleccionado.kilosIniciales ?? null)
-      : null;
+  // Kilos reales disponibles del conjunto de lotes seleccionados
+  const kilosDisponiblesTotal = selectedLoteIds.reduce((acc, id) => {
+    const l = lotes.find((item) => item.id === id);
+    return acc + Number(l?.kilosActuales ?? l?.kilosIniciales ?? 0);
+  }, 0);
 
   // Merma calculada en tiempo real
   const mermaCalculada =
@@ -56,22 +55,33 @@ export default function CrearSecadoModal({ open, onClose, onSubmit, lotes, loadi
     return (a.codigo || "").localeCompare(b.codigo || "");
   });
 
-  const handleLoteChange = (loteId: number) => {
-    const lote = lotes.find((l) => l.id === loteId) ?? null;
-    setLoteSeleccionado(lote);
-    if (lote) {
-      const disponibles = lote.kilosActuales ?? lote.kilosIniciales;
-      if (disponibles) {
-        form.setFieldsValue({ kilosIngresados: disponibles });
+  const handleLotesChange = (ids: number[]) => {
+    setSelectedLoteIds(ids);
+    const newKilos = { ...kilosPorLote };
+    ids.forEach((id) => {
+      if (newKilos[id] === undefined) {
+        const l = lotes.find((item) => item.id === id);
+        newKilos[id] = Number(l?.kilosActuales ?? l?.kilosIniciales ?? 0);
       }
-    }
-    // Revalidar kilosIngresados si ya tiene valor
+    });
+    setKilosPorLote(newKilos);
+    const sum = ids.reduce((acc, id) => acc + (newKilos[id] || 0), 0);
+    form.setFieldsValue({ kilosIngresados: sum });
     form.validateFields(["kilosIngresados"]).catch(() => undefined);
   };
 
   const handleFinish = async (values: any) => {
+    const lotesPayload = selectedLoteIds
+      .map((id) => ({
+        loteId: id,
+        kilosUsados: Number(kilosPorLote[id] || 0),
+      }))
+      .filter((l) => l.kilosUsados > 0);
+
     const payload: CreateSecadoDTO = {
-      loteId: values.loteId,
+      codigo: values.codigo?.trim() || null,
+      loteId: selectedLoteIds[0] || values.loteId || 0,
+      lotes: lotesPayload.length > 0 ? lotesPayload : undefined,
       fechaInicio: values.fechaInicio
         ? dayjs(values.fechaInicio).toISOString()
         : new Date().toISOString(),
@@ -92,12 +102,14 @@ export default function CrearSecadoModal({ open, onClose, onSubmit, lotes, loadi
     };
     await onSubmit(payload);
     form.resetFields();
-    setLoteSeleccionado(null);
+    setSelectedLoteIds([]);
+    setKilosPorLote({});
   };
 
   const handleCancel = () => {
     form.resetFields();
-    setLoteSeleccionado(null);
+    setSelectedLoteIds([]);
+    setKilosPorLote({});
     onClose();
   };
 
@@ -110,7 +122,7 @@ export default function CrearSecadoModal({ open, onClose, onSubmit, lotes, loadi
       confirmLoading={loading}
       okText="Registrar Secado"
       cancelText="Cancelar"
-      width={660}
+      width={720}
     >
       <Form
         form={form}
@@ -118,21 +130,70 @@ export default function CrearSecadoModal({ open, onClose, onSubmit, lotes, loadi
         onFinish={handleFinish}
         initialValues={{ fechaInicio: dayjs() }}
       >
-        {/* ── Lote de origen ── */}
+        {/* ── Perfil de proceso + Código ── */}
+        <Row gutter={16}>
+          <Col span={12}>
+            <Form.Item
+              name="perfilProceso"
+              label="Perfil de Proceso"
+              rules={[{ required: true, message: "Seleccione un perfil de proceso" }]}
+            >
+              <Select
+                placeholder="Seleccione perfil..."
+                onChange={(perfil) => {
+                  const prefixMap: Record<string, string> = {
+                    NATURAL: "SEC-NAT",
+                    HONEY: "SEC-HON",
+                    LAVADO: "SEC-LAV",
+                  };
+                  const prefix = prefixMap[perfil] || "SEC";
+                  if (!form.getFieldValue("codigo")) {
+                    form.setFieldValue("codigo", `${prefix}-001`);
+                  }
+                }}
+              >
+                <Select.Option value="HONEY">Honey</Select.Option>
+                <Select.Option value="NATURAL">Natural</Select.Option>
+                <Select.Option value="LAVADO">Lavado</Select.Option>
+              </Select>
+            </Form.Item>
+          </Col>
+          <Col span={12}>
+            <Form.Item
+              name="codigo"
+              label="Código de Secado"
+              tooltip="Código autogenerado vinculado al perfil de secado (SEC-NAT-001, etc.), pero editable"
+            >
+              <Input placeholder="Ej. SEC-NAT-001" style={{ fontWeight: "bold" }} />
+            </Form.Item>
+          </Col>
+        </Row>
+
+        {/* ── Lotes de origen (Multi-lote) ── */}
         <Form.Item
-          name="loteId"
-          label="Lote de Café"
-          rules={[{ required: true, message: "Por favor seleccione un lote" }]}
-          extra="Lotes priorizados en estado EN_PROCESO"
+          label="Lotes de Proceso Húmedo (Multi-lote)"
+          rules={[
+            {
+              validator: async () => {
+                if (selectedLoteIds.length === 0) {
+                  throw new Error("Por favor seleccione al menos un lote de café");
+                }
+              },
+            },
+          ]}
+          extra="Seleccione uno o más lotes de café con saldo disponible para este secado"
         >
           <Select
-            placeholder="Seleccione un lote"
-            onChange={handleLoteChange}
+            mode="multiple"
+            placeholder="Seleccione uno o varios lotes"
+            value={selectedLoteIds}
+            onChange={handleLotesChange}
             showSearch
             optionFilterProp="label"
           >
             {lotesOrdenados.map((lote) => {
               const esRecomendado = lote.estado === "EN_PROCESO";
+              const disp = lote.kilosActuales ?? lote.kilosIniciales;
               return (
                 <Select.Option
                   key={lote.id}
@@ -144,9 +205,9 @@ export default function CrearSecadoModal({ open, onClose, onSubmit, lotes, loadi
                       <strong>{lote.codigo}</strong> {lote.nombre ? `(${lote.nombre})` : ""}
                     </span>
                     <Space>
-                      {(lote.kilosActuales ?? lote.kilosIniciales) != null && (
+                      {disp != null && (
                         <Tag color="blue">
-                          {(lote.kilosActuales ?? lote.kilosIniciales)?.toLocaleString()} kg
+                          {disp.toLocaleString()} kg disp.
                         </Tag>
                       )}
                       <Tag color={esRecomendado ? "green" : "default"}>
@@ -160,23 +221,61 @@ export default function CrearSecadoModal({ open, onClose, onSubmit, lotes, loadi
           </Select>
         </Form.Item>
 
-        {/* Saldo disponible del lote seleccionado */}
-        {loteSeleccionado && kilosDisponibles != null && (
-          <Alert
-            type="info"
-            icon={<InfoCircleOutlined />}
-            showIcon
-            style={{ marginBottom: 16, borderRadius: 6 }}
-            message={
-              <span>
-                Saldo disponible en lote{" "}
-                <strong>{loteSeleccionado.codigo}</strong>:{" "}
-                <Tag color="blue" style={{ fontSize: 13 }}>
-                  {kilosDisponibles.toLocaleString("es-AR", { minimumFractionDigits: 2 })} kg
-                </Tag>
-              </span>
-            }
-          />
+        {/* Tabla de kilos por lote cuando hay selección múltiple */}
+        {selectedLoteIds.length > 0 && (
+          <div style={{ marginBottom: 16, background: "#f8f9fa", padding: 12, borderRadius: 6 }}>
+            <Typography.Text strong style={{ fontSize: 13, display: "block", marginBottom: 8 }}>
+              Kilos a descontar por lote:
+            </Typography.Text>
+            <Table
+              size="small"
+              pagination={false}
+              dataSource={selectedLoteIds.map((id) => {
+                const l = lotes.find((item) => item.id === id);
+                return {
+                  id,
+                  codigo: l?.codigo || `Lote #${id}`,
+                  disponible: Number(l?.kilosActuales ?? l?.kilosIniciales ?? 0),
+                };
+              })}
+              rowKey="id"
+              columns={[
+                {
+                  title: "Lote",
+                  dataIndex: "codigo",
+                  key: "codigo",
+                  render: (c: string) => <Tag color="blue">{c}</Tag>,
+                },
+                {
+                  title: "Disponible",
+                  dataIndex: "disponible",
+                  key: "disponible",
+                  render: (d: number) => `${d.toLocaleString()} kg`,
+                },
+                {
+                  title: "Kilos para Secado",
+                  key: "kilos",
+                  render: (_: unknown, row: any) => (
+                    <InputNumber
+                      min={0.1}
+                      max={row.disponible}
+                      precision={2}
+                      addonAfter="kg"
+                      style={{ width: "100%" }}
+                      value={kilosPorLote[row.id]}
+                      placeholder={`Máx ${row.disponible}`}
+                      onChange={(val) => {
+                        const newMap = { ...kilosPorLote, [row.id]: Number(val ?? 0) };
+                        setKilosPorLote(newMap);
+                        const sum = selectedLoteIds.reduce((acc, id) => acc + (newMap[id] || 0), 0);
+                        form.setFieldsValue({ kilosIngresados: sum });
+                      }}
+                    />
+                  ),
+                },
+              ]}
+            />
+          </div>
         )}
 
         {/* ── Fechas ── */}
@@ -212,10 +311,10 @@ export default function CrearSecadoModal({ open, onClose, onSubmit, lotes, loadi
                 },
                 {
                   validator: (_, value) => {
-                    if (value && kilosDisponibles != null && Number(value) > kilosDisponibles) {
+                    if (value && kilosDisponiblesTotal > 0 && Number(value) > kilosDisponiblesTotal + 0.01) {
                       return Promise.reject(
                         new Error(
-                          `No puede superar los ${kilosDisponibles.toLocaleString("es-AR", {
+                          `No puede superar los ${kilosDisponiblesTotal.toLocaleString("es-AR", {
                             minimumFractionDigits: 2,
                           })} kg disponibles`
                         )
@@ -274,31 +373,14 @@ export default function CrearSecadoModal({ open, onClose, onSubmit, lotes, loadi
           </div>
         )}
 
-        {/* ── Perfil de proceso + Secadora ── */}
-        <Row gutter={16}>
-          <Col span={12}>
-            <Form.Item
-              name="perfilProceso"
-              label="Perfil de Proceso"
-              rules={[{ required: true, message: "Seleccione un perfil de proceso" }]}
-            >
-              <Select placeholder="Seleccione perfil...">
-                <Select.Option value="HONEY">Honey</Select.Option>
-                <Select.Option value="NATURAL">Natural</Select.Option>
-                <Select.Option value="LAVADO">Lavado</Select.Option>
-              </Select>
-            </Form.Item>
-          </Col>
-          <Col span={12}>
-            <Form.Item
-              name="secadora"
-              label="Secadora / Infraestructura (Opcional)"
-              tooltip="Identificación del equipo o patio de secado"
-            >
-              <Input placeholder='Ej. "Secadora 01", "Patio Solar A"' maxLength={100} />
-            </Form.Item>
-          </Col>
-        </Row>
+        {/* ── Secadora / Infraestructura ── */}
+        <Form.Item
+          name="secadora"
+          label="Secadora / Infraestructura (Opcional)"
+          tooltip="Identificación del equipo o patio de secado"
+        >
+          <Input placeholder='Ej. "Secadora 01", "Patio Solar A"' maxLength={100} />
+        </Form.Item>
 
         {/* ── Temperaturas ── */}
         <Row gutter={16}>

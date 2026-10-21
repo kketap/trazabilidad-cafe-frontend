@@ -18,6 +18,7 @@ export type Venta = {
   ordenTrillaId: string;
   cliente?: Cliente;
   ordenTrilla?: OrdenTrilla;
+  observaciones?: string | null;
   createdAt?: string;
   updatedAt?: string;
 };

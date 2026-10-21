@@ -129,7 +129,7 @@ function calcularDuracionHoras(
 
 export default function CrearProcesoModal({
     open,
-    cosechas,
+    cosechas: _cosechas,
     lotes,
 
     loading = false,
@@ -177,31 +177,6 @@ export default function CrearProcesoModal({
         );
     }, [lotesDisponibles]);
 
-    const cosechaOptions = useMemo(() => {
-        return (cosechas ?? []).map(
-            (cosecha) => ({
-                value: cosecha.id,
-
-                label:
-                    `COS-${String(
-                        cosecha.id,
-                    ).padStart(3, "0")}` +
-                    ` | Lote: ${cosecha.lotes || "N/A"
-                    }` +
-                    ` | ${cosecha.fecha
-                        ? String(
-                            cosecha.fecha,
-                        ).slice(0, 10)
-                        : ""
-                    }` +
-                    ` | ${(
-                        cosecha.kilosCosechados ?? 0
-                    ).toLocaleString(
-                        "es-CL",
-                    )} kg`,
-            }),
-        );
-    }, [cosechas]);
 
     /**
      * Actualiza duracionHoras en el formulario.
@@ -379,18 +354,8 @@ export default function CrearProcesoModal({
                 }}
             >
                 {/* ── SECCIÓN: Datos generales ── */}
-
-                <Divider
-                    orientationMargin={0}
-                >
-                    <Text
-                        strong
-                        style={{
-                            fontSize: 13,
-                        }}
-                    >
-                        Datos generales
-                    </Text>
+                <Divider titlePlacement="left" orientationMargin={0}>
+                    <Text strong style={{ fontSize: 13 }}>Datos generales</Text>
                 </Divider>
 
                 <Row gutter={[16, 0]}>
@@ -486,31 +451,7 @@ export default function CrearProcesoModal({
                         </Col>
                     )}
 
-                    <Col
-                        xs={24}
-                        md={12}
-                    >
-                        <Form.Item
-                            label="Cosecha relacionada"
-                            name="cosechaId"
-                        >
-                            <Select
-                                placeholder="Seleccione una cosecha (opcional)"
-                                options={
-                                    cosechaOptions
-                                }
-                                showSearch
-                                optionFilterProp="label"
-                                allowClear
-                                loading={loading}
-                                disabled={
-                                    loading ||
-                                    cosechas.length ===
-                                    0
-                                }
-                            />
-                        </Form.Item>
-                    </Col>
+
 
                     <Col
                         xs={24}
@@ -639,18 +580,8 @@ export default function CrearProcesoModal({
                 </Row>
 
                 {/* ── SECCIÓN: Fermentación ── */}
-
-                <Divider
-                    orientationMargin={0}
-                >
-                    <Text
-                        strong
-                        style={{
-                            fontSize: 13,
-                        }}
-                    >
-                        Fermentación
-                    </Text>
+                <Divider titlePlacement="left" orientationMargin={0}>
+                    <Text strong style={{ fontSize: 13 }}>Fermentación</Text>
                 </Divider>
 
                 <Row gutter={[16, 0]}>
@@ -803,18 +734,8 @@ export default function CrearProcesoModal({
                 </Row>
 
                 {/* ── SECCIÓN: Temperaturas y pH ── */}
-
-                <Divider
-                    orientationMargin={0}
-                >
-                    <Text
-                        strong
-                        style={{
-                            fontSize: 13,
-                        }}
-                    >
-                        Temperaturas y pH
-                    </Text>
+                <Divider titlePlacement="left" orientationMargin={0}>
+                    <Text strong style={{ fontSize: 13 }}>Temperaturas y pH</Text>
                 </Divider>
 
                 <Row gutter={[16, 0]}>
@@ -879,18 +800,8 @@ export default function CrearProcesoModal({
                 </Row>
 
                 {/* ── SECCIÓN: Procesos aplicados ── */}
-
-                <Divider
-                    orientationMargin={0}
-                >
-                    <Text
-                        strong
-                        style={{
-                            fontSize: 13,
-                        }}
-                    >
-                        Procesos aplicados
-                    </Text>
+                <Divider titlePlacement="left" orientationMargin={0}>
+                    <Text strong style={{ fontSize: 13 }}>Procesos aplicados</Text>
                 </Divider>
 
                 <Row gutter={[16, 0]}>
