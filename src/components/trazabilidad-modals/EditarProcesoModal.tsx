@@ -1,13 +1,12 @@
+import CamposOxidacion from "./CamposOxidacion";
 // src/components/trazabilidad-modals/EditarProcesoModal.tsx
 
 import {
     useEffect,
     useMemo,
-    useState,
 } from "react";
 
 import {
-    Alert,
     Button,
     Col,
     DatePicker,
@@ -21,6 +20,7 @@ import {
     Switch,
     Typography,
     theme,
+    Space
 } from "antd";
 
 import dayjs from "dayjs";
@@ -32,7 +32,7 @@ dayjs.extend(utc);
 import type { Cosecha } from "../../pages/cosechas/cosechas.api";
 import type { Lote } from "../../pages/lotes/lotes.api";
 import type { ProcesoTrazabilidad } from "../../pages/trazabilidad/trazabilidad.api";
-import type { ProcesoFormValues } from "./CrearProcesoModal";
+import type { ProcesoFormValues, ProcesoLoteFormValue } from "./CrearProcesoModal";
 
 import esES from "antd/es/date-picker/locale/es_ES";
 
@@ -59,28 +59,6 @@ type EditarProcesoModalProps = {
     ) => Promise<void> | void;
 };
 
-const ETAPA_OPTIONS = [
-    {
-        value: "Despulpado",
-        label: "Despulpado",
-    },
-    {
-        value: "Lavado",
-        label: "Lavado",
-    },
-    {
-        value: "Secado",
-        label: "Secado",
-    },
-    {
-        value: "Trilla",
-        label: "Trilla",
-    },
-    {
-        value: "Clasificación",
-        label: "Clasificación",
-    },
-];
 
 function calcularDuracionHoras(
     inicio?: Dayjs | null,
@@ -123,41 +101,31 @@ export default function EditarProcesoModal({
     const { token } =
         theme.useToken();
 
-    const [
-        loteSeleccionadoId,
-        setLoteSeleccionadoId,
-    ] = useState<number | null>(null);
+    const lotesObservados = Form.useWatch(
+        "lotes",
+        {
+            form,
+            preserve: true,
+        },
+    ) as ProcesoLoteFormValue[] | undefined;
+
+    const lotesSeleccionados =
+        lotesObservados ?? [];
 
     const lotesDisponibles = useMemo(() => {
-        return (lotes ?? []).filter(
-            (lote) => {
-                const esLoteActual =
-                    lote.id === proceso?.loteId;
-
-                return (
-                    lote.activo ||
-                    esLoteActual
-                );
-            },
+        const idsActuales = new Set(
+            proceso?.procesoLotes?.map(
+                (item) => item.loteId,
+            ) ?? [],
         );
-    }, [
-        lotes,
-        proceso?.loteId,
-    ]);
 
-    const loteSeleccionado =
-        useMemo(() => {
-            return (
-                lotesDisponibles.find(
-                    (lote) =>
-                        lote.id ===
-                        loteSeleccionadoId,
-                ) ?? null
-            );
-        }, [
-            lotesDisponibles,
-            loteSeleccionadoId,
-        ]);
+        return (lotes ?? []).filter(
+            (lote) =>
+                lote.activo ||
+                idsActuales.has(lote.id) ||
+                lote.id === proceso?.loteId,
+        );
+    }, [lotes, proceso]);
 
     const loteOptions = useMemo(() => {
         return lotesDisponibles.map(
@@ -167,11 +135,16 @@ export default function EditarProcesoModal({
                 label: `${lote.codigo}${lote.nombre
                     ? ` - ${lote.nombre}`
                     : ""
-                    }`,
+                    }${!lote.activo ? " (Inactivo)" : ""} · ${(lote.kilosActuales ?? lote.kilosIniciales ?? 0).toLocaleString("es-CL")} kg disp.${lote.createdAt ? ` · Lote creado: ${dayjs(lote.createdAt).format("DD/MM/YYYY")}` : ""}`,
+
+                disabled: !lote.activo &&
+                    !proceso?.procesoLotes?.some(
+                        (item) => item.loteId === lote.id,
+                    ) &&
+                    lote.id !== proceso?.loteId,
             }),
         );
-    }, [lotesDisponibles]);
-
+    }, [lotesDisponibles, proceso]);
 
     useEffect(() => {
         if (open && proceso) {
@@ -195,7 +168,25 @@ export default function EditarProcesoModal({
                     fin,
                 );
 
+            const lotesActuales: ProcesoLoteFormValue[] =
+                proceso.procesoLotes?.length
+                    ? proceso.procesoLotes.map(
+                        (item) => ({
+                            loteId: item.loteId,
+                            kilosUsados: item.kilosUsados,
+                        }),
+                    )
+                    : proceso.loteId != null
+                        ? [{
+                            loteId: proceso.loteId,
+                            kilosUsados: proceso.kilosIngresados,
+                        }]
+                        : [];
+
             form.setFieldsValue({
+                inicioOxidacion: proceso.inicioOxidacion ? dayjs(proceso.inicioOxidacion) : null,
+                finOxidacion: proceso.finOxidacion ? dayjs(proceso.finOxidacion) : null,
+                tanqueOxidacion: proceso.tanqueOxidacion ?? null,
                 fecha:
                     dayjs.utc(proceso.fecha),
 
@@ -218,23 +209,14 @@ export default function EditarProcesoModal({
                     proceso.duracionHoras ??
                     undefined,
 
-                loteId:
-                    proceso.loteId ?? null,
+                lotes: lotesActuales,
 
                 cosechaId:
                     proceso.cosechaId ??
                     null,
 
-                etapa:
-                    proceso.etapa ??
-                    undefined,
-
                 kilosIngresados:
                     proceso.kilosIngresados,
-
-                kilosResultantes:
-                    proceso.kilosResultantes ??
-                    undefined,
 
                 fueDespulpado:
                     proceso.fueDespulpado ??
@@ -261,17 +243,11 @@ export default function EditarProcesoModal({
                     false,
             });
 
-            setLoteSeleccionadoId(
-                proceso.loteId ?? null,
-            );
         }
 
         if (!open) {
             form.resetFields();
 
-            setLoteSeleccionadoId(
-                null,
-            );
         }
     }, [
         open,
@@ -357,25 +333,21 @@ export default function EditarProcesoModal({
         _value: Dayjs | null,
     ) {
         form.resetFields([
-            "loteId",
+            "lotes",
             "cosechaId",
             "kilosIngresados",
-            "kilosResultantes",
-        ]);
-
-        setLoteSeleccionadoId(null);
-    }
-
-    function handleLoteChange(
-        value: number | null,
-    ) {
-        setLoteSeleccionadoId(value);
-
-        form.resetFields([
-            "kilosIngresados",
-            "kilosResultantes",
         ]);
     }
+
+    const totalKilosIngresados = useMemo(() => {
+        return Number(
+            lotesSeleccionados.reduce(
+                (total, item) =>
+                    total + Number(item.kilosUsados || 0),
+                0,
+            ).toFixed(2),
+        );
+    }, [lotesSeleccionados]);
 
     const handleFinish = async (
         values: ProcesoFormValues,
@@ -384,6 +356,31 @@ export default function EditarProcesoModal({
             return;
         }
 
+        const valoresActuales =
+            form.getFieldsValue(true) as ProcesoFormValues;
+
+
+        const lotesSeleccionados =
+            valoresActuales.lotes ?? values.lotes ?? [];
+
+        if (lotesSeleccionados.length === 0) {
+            form.setFields([
+                {
+                    name: "lotes",
+                    errors: [
+                        "Seleccione al menos un lote de origen",
+                    ],
+                },
+            ]);
+            return;
+        }
+
+        const total = lotesSeleccionados.reduce(
+            (suma, item) =>
+                suma + Number(item.kilosUsados),
+            0,
+        );
+
         const duracionCalculada =
             calcularDuracionHoras(
                 values.inicioFermentacion,
@@ -391,14 +388,20 @@ export default function EditarProcesoModal({
             );
 
         if (
-            duracionCalculada === undefined
+            duracionCalculada === undefined ||
+            !Number.isFinite(total) ||
+            total <= 0
         ) {
             return;
         }
 
-        const valuesFinales: ProcesoFormValues =
-        {
+        const valuesFinales: ProcesoFormValues = {
             ...values,
+
+            lotes: lotesSeleccionados,
+
+            kilosIngresados:
+                Number(total.toFixed(2)),
 
             duracionHoras:
                 duracionCalculada,
@@ -413,16 +416,8 @@ export default function EditarProcesoModal({
     const handleCancel = () => {
         form.resetFields();
 
-        setLoteSeleccionadoId(
-            null,
-        );
-
         onClose();
     };
-
-    const kilosDisponibles =
-        loteSeleccionado?.kilosActuales ??
-        loteSeleccionado?.kilosIniciales;
 
     return (
         <Modal
@@ -484,191 +479,171 @@ export default function EditarProcesoModal({
                         </Form.Item>
                     </Col>
 
-                    <Col
-                        xs={24}
-                        md={12}
-                    >
+
+                    <Col xs={24} md={12}>
                         <Form.Item
-                            label="Lote de origen"
-                            name="loteId"
-                            rules={[
-                                {
-                                    required: true,
-                                    message:
-                                        "Seleccione el lote asociado al proceso",
-                                },
-                            ]}
+                            label="Lotes de origen"
+                            required
+                            tooltip="Puede agregar, quitar o modificar los lotes relacionados con este proceso húmedo."
                         >
                             <Select
-                                placeholder="Seleccione un lote"
-                                options={
-                                    loteOptions
-                                }
+                                mode="multiple"
+                                placeholder="Seleccione los lotes"
                                 showSearch
                                 optionFilterProp="label"
-                                onChange={
-                                    handleLoteChange
-                                }
-                            />
-                        </Form.Item>
-                    </Col>
+                                allowClear
+                                options={loteOptions}
+                                value={lotesSeleccionados.map(
+                                    (item) => item.loteId,
+                                )}
+                                onChange={(ids: number[]) => {
+                                    const actuales =
+                                        form.getFieldValue("lotes") as
+                                        ProcesoLoteFormValue[] | undefined;
 
-                    {loteSeleccionado && (
-                        <Col xs={24}>
-                            <Alert
-                                className="proceso-alert-disponible"
-                                type="success"
-                                showIcon
-                                message={
-                                    <span>
-                                        Kg disponibles en
-                                        lote:{" "}
-                                        <strong>
-                                            {(
-                                                kilosDisponibles ??
-                                                0
-                                            ).toLocaleString(
-                                                "es-CL",
-                                            )}{" "}
-                                            kg
-                                        </strong>
-                                    </span>
-                                }
-                                style={{
-                                    marginBottom: 16,
+                                    const nuevos = ids.map((id) => {
+                                        const existente = actuales?.find(
+                                            (item) => item.loteId === id,
+                                        );
+
+                                        return existente ?? {
+                                            loteId: id,
+                                            kilosUsados: 0,
+                                        };
+                                    });
+
+                                    form.setFieldValue("lotes", nuevos);
                                 }}
                             />
-                        </Col>
-                    )}
-
-
-
-                    <Col
-                        xs={24}
-                        md={12}
-                    >
-                        <Form.Item
-                            label="Etapa"
-                            name="etapa"
-                            rules={[
-                                {
-                                    required: true,
-                                    message:
-                                        "Seleccione la etapa",
-                                },
-                            ]}
-                        >
-                            <Select
-                                placeholder="Seleccione una etapa"
-                                options={
-                                    ETAPA_OPTIONS
-                                }
-                            />
                         </Form.Item>
                     </Col>
 
-                    <Col
-                        xs={24}
-                        md={12}
-                    >
+                    <Col xs={24}>
+                        <Form.List name="lotes">
+                            {(fields) => (
+                                <Space
+                                    direction="vertical"
+                                    size="middle"
+                                    style={{ width: "100%" }}
+                                >
+                                    {fields.map((field) => {
+                                        const item =
+                                            lotesSeleccionados[field.name];
+
+                                        const lote = lotesDisponibles.find(
+                                            (actual) =>
+                                                actual.id === item?.loteId,
+                                        );
+
+                                        const disponible =
+                                            lote?.kilosActuales ??
+                                            lote?.kilosIniciales;
+
+                                        return (
+                                            <div key={field.key}>
+                                                {/* ID del lote asociado */}
+                                                <Form.Item
+                                                    name={[field.name, "loteId"]}
+                                                    hidden
+                                                >
+                                                    <InputNumber />
+                                                </Form.Item>
+
+                                                <Row
+                                                    gutter={[12, 8]}
+                                                    align="middle"
+                                                >
+                                                    <Col xs={24} sm={14}>
+                                                        <Typography.Text strong>
+                                                            {lote?.codigo ?? `Lote #${item?.loteId ?? "?"}`}
+                                                        </Typography.Text>
+
+                                                        <div>
+                                                            <Typography.Text type="secondary">
+                                                                {disponible != null
+                                                                    ? `Disponible: ${Number(
+                                                                        disponible,
+                                                                    ).toLocaleString("es-CL")} kg`
+                                                                    : "Disponibilidad sin registrar"}
+                                                            </Typography.Text>
+                                                        </div>
+                                                    </Col>
+
+                                                    <Col xs={24} sm={10}>
+                                                        <Form.Item
+                                                            name={[
+                                                                field.name,
+                                                                "kilosUsados",
+                                                            ]}
+                                                            label="Kilos aportados"
+                                                            rules={[
+                                                                {
+                                                                    required: true,
+                                                                    message: "Ingrese los kilos",
+                                                                },
+                                                                {
+                                                                    validator: async (_, value) => {
+                                                                        if (value == null) return;
+
+                                                                        const cantidad = Number(value);
+
+                                                                        if (
+                                                                            !Number.isFinite(cantidad) ||
+                                                                            cantidad <= 0
+                                                                        ) {
+                                                                            throw new Error(
+                                                                                "Debe ingresar más de 0 kg",
+                                                                            );
+                                                                        }
+
+                                                                        if (
+                                                                            disponible != null &&
+                                                                            cantidad > Number(disponible)
+                                                                        ) {
+                                                                            throw new Error(
+                                                                                `Máximo disponible: ${disponible} kg`,
+                                                                            );
+                                                                        }
+                                                                    },
+                                                                },
+                                                            ]}
+                                                        >
+                                                            <InputNumber
+                                                                min={0.01}
+                                                                precision={2} decimalSeparator=","
+                                                                addonAfter="kg"
+                                                                style={{ width: "100%" }}
+                                                            />
+                                                        </Form.Item>
+                                                    </Col>
+                                                </Row>
+                                            </div>
+                                        );
+                                    })}
+                                </Space>
+                            )}
+                        </Form.List>
+                    </Col>
+
+
+                    <Col xs={24} md={12}>
                         <Form.Item
                             label="Kilos ingresados"
-                            name="kilosIngresados"
-                            rules={[
-                                {
-                                    required: true,
-                                    message:
-                                        "Los kilos ingresados son obligatorios",
-                                },
-                                {
-                                    validator: async (
-                                        _,
-                                        value,
-                                    ) => {
-                                        if (
-                                            kilosDisponibles !=
-                                            null &&
-                                            Number(value) >
-                                            kilosDisponibles
-                                        ) {
-                                            throw new Error(
-                                                `El lote solamente tiene ${kilosDisponibles.toLocaleString(
-                                                    "es-CL",
-                                                )} kg disponibles`,
-                                            );
-                                        }
-                                    },
-                                },
-                            ]}
+                            tooltip="Total calculado a partir de los kilos aportados por cada lote"
                         >
                             <InputNumber
-                                style={{
-                                    width: "100%",
-                                }}
-                                min={0.01}
-                                max={
-                                    kilosDisponibles ??
-                                    undefined
-                                }
-                                precision={2}
+                                value={totalKilosIngresados}
+                                readOnly
+                                controls={false}
                                 addonAfter="kg"
-                                placeholder="Ej: 180"
+                                style={{ width: "100%" }}
                             />
                         </Form.Item>
                     </Col>
 
-                    <Col
-                        xs={24}
-                        md={12}
-                    >
-                        <Form.Item
-                            label="Kilos resultantes"
-                            name="kilosResultantes"
-                            rules={[
-                                {
-                                    required: true,
-                                    message:
-                                        "Los kilos resultantes son obligatorios",
-                                },
-                                {
-                                    validator: async (
-                                        _,
-                                        value,
-                                    ) => {
-                                        const kilosIngresados =
-                                            form.getFieldValue(
-                                                "kilosIngresados",
-                                            );
-
-                                        if (
-                                            kilosIngresados !=
-                                            null &&
-                                            Number(value) >
-                                            Number(
-                                                kilosIngresados,
-                                            )
-                                        ) {
-                                            throw new Error(
-                                                "Los kilos resultantes no pueden superar los kilos ingresados",
-                                            );
-                                        }
-                                    },
-                                },
-                            ]}
-                        >
-                            <InputNumber
-                                style={{
-                                    width: "100%",
-                                }}
-                                min={0}
-                                precision={2}
-                                addonAfter="kg"
-                                placeholder="Ej: 150"
-                            />
-                        </Form.Item>
-                    </Col>
                 </Row>
 
+                <CamposOxidacion />
                 {/* ── SECCIÓN: Fermentación ── */}
                 <Divider titlePlacement="left" orientationMargin={0}>
                     <Text strong style={{ fontSize: 13 }}>Fermentación</Text>
@@ -799,7 +774,7 @@ export default function EditarProcesoModal({
                                 style={{
                                     width: "100%",
                                 }}
-                                precision={2}
+                                precision={2} decimalSeparator=","
                                 addonAfter="horas"
                                 readOnly
                                 controls={false}
@@ -841,7 +816,7 @@ export default function EditarProcesoModal({
                                 style={{
                                     width: "100%",
                                 }}
-                                precision={1}
+                                precision={1} decimalSeparator=","
                                 addonAfter="°C"
                                 placeholder="Ej: 28.5"
                             />
@@ -860,7 +835,7 @@ export default function EditarProcesoModal({
                                 style={{
                                     width: "100%",
                                 }}
-                                precision={1}
+                                precision={1} decimalSeparator=","
                                 addonAfter="°C"
                                 placeholder="Ej: 18.0"
                             />
@@ -882,7 +857,7 @@ export default function EditarProcesoModal({
                                 min={0}
                                 max={14}
                                 step={0.1}
-                                precision={1}
+                                precision={1} decimalSeparator=","
                                 placeholder="Ej: 3.8"
                             />
                         </Form.Item>

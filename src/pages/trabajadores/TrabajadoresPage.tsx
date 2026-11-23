@@ -1,3 +1,4 @@
+import { mostrarError } from "../../utils/mostrarError";
 // src/pages/trabajadores/TrabajadoresPage.tsx
 import { useEffect, useState } from "react";
 import {
@@ -50,7 +51,7 @@ export default function TrabajadoresPage() {
       const data = await getTrabajadoresApi();
       setTrabajadores(data);
     } catch (error: any) {
-      message.error(error?.response?.data?.message || "Error al cargar la lista de trabajadores");
+      mostrarError(error?.response?.data?.message || "Error al cargar la lista de trabajadores");
     } finally {
       setLoading(false);
     }
@@ -74,7 +75,8 @@ export default function TrabajadoresPage() {
     form.setFieldsValue({
       nombres: record.nombres,
       apellidos: record.apellidos || "",
-      dni: record.dni,
+      dni: record.dni ?? "",
+      codigoInterno: record.codigoInterno ?? "",
       rol: record.rol || "",
       telefono: record.telefono || "",
       activo: record.activo,
@@ -88,7 +90,7 @@ export default function TrabajadoresPage() {
       message.success("Trabajador eliminado correctamente");
       fetchTrabajadores();
     } catch (error: any) {
-      message.error(error?.response?.data?.message || "Error al eliminar trabajador");
+      mostrarError(error?.response?.data?.message || "Error al eliminar trabajador");
     }
   };
 
@@ -108,7 +110,7 @@ export default function TrabajadoresPage() {
       fetchTrabajadores();
     } catch (error: any) {
       if (error?.response?.data?.message) {
-        message.error(error.response.data.message);
+        mostrarError(error.response.data.message);
       }
     } finally {
       setSubmitting(false);
@@ -121,7 +123,8 @@ export default function TrabajadoresPage() {
     return (
       t.nombres.toLowerCase().includes(search) ||
       (t.apellidos?.toLowerCase().includes(search) ?? false) ||
-      t.dni.includes(searchText) ||
+      (t.dni?.toLowerCase().includes(search) ?? false) ||
+      (t.codigoInterno ?? "").toLowerCase().includes(searchText.toLowerCase()) ||
       (t.telefono?.toLowerCase().includes(search) ?? false) ||
       (t.rol?.toLowerCase().includes(search) ?? false) ||
       (t.activo ? "activo" : "inactivo").includes(search)
@@ -168,14 +171,17 @@ export default function TrabajadoresPage() {
         activo ? <Tag color="success">Activo</Tag> : <Tag color="default">Inactivo</Tag>,
     },
     {
+      title: "Código Interno",
+      dataIndex: "codigoInterno",
+      key: "codigoInterno",
+      render: (codigo?: string | null) => codigo || "—",
+    },
+    {
       title: "DNI",
       dataIndex: "dni",
       key: "dni",
-      render: (text: string) => (
-        <Tag icon={<IdcardOutlined />} color="gold">
-          {text}
-        </Tag>
-      ),
+      render: (text: string | null) =>
+        text ? <Tag icon={<IdcardOutlined />} color="gold">{text}</Tag> : "—",
     },
     {
       title: "Rol / Cargo",
@@ -308,15 +314,12 @@ export default function TrabajadoresPage() {
             />
           </Form.Item>
 
-          <Form.Item
-            name="dni"
-            label="DNI"
-            rules={[
-              { required: true, message: "Ingrese el DNI" },
-              { pattern: /^\d{8}$/, message: "El DNI debe contener 8 dígitos numéricos" },
-            ]}
-          >
-            <Input prefix={<IdcardOutlined />} placeholder="Ej: 12345678" maxLength={8} />
+          <Form.Item name="dni" label="DNI (Opcional)">
+            <Input prefix={<IdcardOutlined />} placeholder="Ej: 00123456-K" />
+          </Form.Item>
+
+          <Form.Item name="codigoInterno" label="Código Interno (Opcional)">
+            <Input placeholder="Ej: TRAB-001" />
           </Form.Item>
 
           <Form.Item name="rol" label="Rol / Cargo (Opcional)">

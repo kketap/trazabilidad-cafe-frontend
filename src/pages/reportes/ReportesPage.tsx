@@ -1,3 +1,4 @@
+import { mostrarError } from "../../utils/mostrarError";
 // src/pages/reportes/ReportesPage.tsx
 import { useEffect, useMemo, useState } from "react";
 import {
@@ -15,7 +16,6 @@ import {
     Tabs,
     Tag,
     Typography,
-    message,
     theme,
 } from "antd";
 import type { ColumnsType } from "antd/es/table";
@@ -132,7 +132,7 @@ export default function ReportesPage() {
             setTrazabilidad(dataTrazabilidad);
         } catch (error) {
             console.error("Error cargando reportes:", error);
-            message.error("No se pudieron cargar todos los datos de reportes.");
+            mostrarError("No se pudieron cargar todos los datos de reportes.");
         } finally {
             setLoading(false);
             setLoadingTrazabilidad(false);
@@ -223,7 +223,7 @@ export default function ReportesPage() {
     // Extraer trabajadores únicos del día seleccionado
     const trabajadoresUnicosDia = useMemo(() => {
         if (!diaSeleccionado?.detalles) return [];
-        const map = new Map<number, { id: number; nombre: string; dni: string; kilosAsignados: number | null }>();
+        const map = new Map<number, { id: number; nombre: string; dni: string | null; kilosAsignados: number | null }>();
         diaSeleccionado.detalles.forEach((d) => {
             d.trabajadores.forEach((t) => {
                 if (!map.has(t.id)) map.set(t.id, t);
@@ -1089,7 +1089,7 @@ export default function ReportesPage() {
                                                     title: "DNI",
                                                     dataIndex: "dni",
                                                     key: "dni",
-                                                    render: (dni: string) => <Tag>{dni || "-"}</Tag>,
+                                                    render: (dni: string | null) => <Tag>{dni || "-"}</Tag>,
                                                 },
                                                 {
                                                     title: "Kilos Asignados",

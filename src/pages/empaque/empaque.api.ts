@@ -34,6 +34,7 @@ export type Empaque = {
   lote?: Lote;
   secado?: Secado | null;
   empaqueSecados?: EmpaqueSecado[];
+  ordenesTrilla?: { kilosEnviados: number }[];
 };
 
 export type CreateEmpaqueDTO = {

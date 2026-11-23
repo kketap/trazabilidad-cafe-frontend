@@ -1,3 +1,4 @@
+import { mostrarError } from "../../utils/mostrarError";
 // src/pages/trazabilidad/TrazabilidadPage.tsx
 import { useEffect, useMemo, useState } from "react";
 import {
@@ -66,23 +67,6 @@ type SortField =
 
 type SortOrder = "asc" | "desc";
 
-function getEtapaColor(etapa?: string | null) {
-    switch (etapa) {
-        case "Despulpado":
-            return "blue";
-        case "Lavado":
-            return "cyan";
-        case "Secado":
-            return "orange";
-        case "Trilla":
-            return "purple";
-        case "Clasificación":
-            return "gold";
-        default:
-            return "default";
-    }
-}
-
 function getMermaColor(porcentajeMerma?: number | null) {
     const value = Number(porcentajeMerma ?? 0);
 
@@ -115,6 +99,26 @@ function formatHoras(value?: number | null) {
     return `${Number(value).toLocaleString("es-CL", {
         maximumFractionDigits: 2,
     })} h`;
+}
+
+function duracionEtapa(inicio?: string | null, fin?: string | null) {
+    if (!inicio || !fin) return null;
+
+    const minutos = dayjs(fin).diff(dayjs(inicio), "minute");
+    if (!Number.isFinite(minutos) || minutos < 0) return null;
+    return `${Math.floor(minutos / 60)} h ${minutos % 60} min`;
+}
+
+function renderEtapa(inicio?: string | null, fin?: string | null, duracion?: string | null) {
+    if (!inicio && !fin && !duracion) return "Sin registro";
+
+    return (
+        <Space orientation="vertical" size={2}>
+            <span>Inicio: {inicio ? dayjs(inicio).format("DD/MM/YYYY HH:mm") : "—"}</span>
+            <span>Fin: {fin ? dayjs(fin).format("DD/MM/YYYY HH:mm") : "—"}</span>
+            <Typography.Text type="secondary">Duración: {duracion ?? "—"}</Typography.Text>
+        </Space>
+    );
 }
 
 function formatPorcentaje(value?: number | null) {
@@ -152,25 +156,52 @@ function getLoteProceso(record: ProcesoRow) {
     return record.lote ?? record.Lote ?? null;
 }
 
-function renderLoteOrigen(record: ProcesoRow) {
+
+function renderLoteOrigen(
+    record: ProcesoRow,
+) {
+    const relaciones =
+        record.procesoLotes ?? [];
+
+    if (relaciones.length > 0) {
+        return (
+            <Space wrap size={[4, 4]}>
+                {relaciones.map((item) => (
+                    <Tag
+                        key={item.id}
+                        color="gold"
+                    >
+                        {item.lote?.codigo ??
+                            `Lote #${item.loteId}`}
+                        {" · "}
+                        {formatKg(item.kilosUsados)}
+                    </Tag>
+                ))}
+            </Space>
+        );
+    }
+
     const lote = getLoteProceso(record);
 
     if (lote) {
         return (
             <Tag color="gold">
                 {lote.codigo}
-                {lote.nombre ? ` - ${lote.nombre}` : ""}
             </Tag>
         );
     }
 
-    const lotesCosecha = record.cosecha?.cosechaLotes ?? [];
+    const lotesCosecha =
+        record.cosecha?.cosechaLotes ?? [];
 
     if (lotesCosecha.length > 0) {
         return (
             <Space wrap>
                 {lotesCosecha.map((item) => (
-                    <Tag key={item.id} color="gold">
+                    <Tag
+                        key={item.id}
+                        color="gold"
+                    >
                         {item.lote.codigo}
                     </Tag>
                 ))}
@@ -178,12 +209,9 @@ function renderLoteOrigen(record: ProcesoRow) {
         );
     }
 
-    if (record.cosecha?.lotes) {
-        return record.cosecha.lotes;
-    }
-
-    return `Cosecha #${record.cosechaId ?? "-"}`;
+    return "Sin lotes asociados";
 }
+
 
 function getTipoCosechaProceso(proceso: ProcesoRow) {
     return proceso.cosecha?.tipoCosecha ?? null;
@@ -199,6 +227,67 @@ function normalizeProceso(proceso: ProcesoRow): ProcesoRow {
         lote: proceso.lote ?? proceso.Lote ?? null,
     };
 }
+
+
+function construirPayloadProceso(
+    values: ProcesoFormValues,
+): CreateProcesoTrazabilidadDto {
+    const distribucion = values.lotes.map((item) => ({
+        loteId: Number(item.loteId),
+        kilosUsados: Number(item.kilosUsados),
+    }));
+
+    const totalIngresado = Number(
+        distribucion.reduce(
+            (total, item) =>
+                total + item.kilosUsados,
+            0,
+        ).toFixed(2),
+    );
+
+    const inicio =
+        values.inicioFermentacion?.toISOString() ?? null;
+
+    const fin =
+        values.finFermentacion?.toISOString() ?? null;
+
+    return {
+        fecha: values.fecha.format("YYYY-MM-DD"),
+
+        fechaInicio: inicio,
+        fechaFin: fin,
+
+        inicioFermentacion: inicio,
+        finFermentacion: fin,
+
+        duracionHoras: values.duracionHoras,
+
+        lotes: distribucion,
+
+        cosechaId: values.cosechaId ?? null,
+
+        inicioOxidacion: values.inicioOxidacion?.toISOString() ?? null,
+        finOxidacion: values.finOxidacion?.toISOString() ?? null,
+        tanqueOxidacion: values.tanqueOxidacion?.trim() || null,
+
+        kilosIngresados: totalIngresado,
+
+        fueDespulpado:
+            values.fueDespulpado ?? false,
+
+        tanqueFermentacion:
+            values.tanqueFermentacion?.trim() || null,
+
+        nivelPh: values.nivelPh ?? null,
+
+        tempMaxima: values.tempMaxima ?? null,
+
+        tempMinima: values.tempMinima ?? null,
+
+        fueLavado: values.fueLavado ?? false,
+    };
+}
+
 
 export default function TrazabilidadPage() {
     const [procesos, setProcesos] = useState<ProcesoRow[]>([]);
@@ -265,7 +354,7 @@ export default function TrazabilidadPage() {
             setLotes(lotesArr);
         } catch (error) {
             console.error("Error cargando trazabilidad:", error);
-            message.error("No se pudieron cargar los datos de trazabilidad.");
+            mostrarError("No se pudieron cargar los datos de trazabilidad.");
 
             setProcesos([]);
             setCosechas([]);
@@ -283,45 +372,37 @@ export default function TrazabilidadPage() {
         setIsModalOpen(false);
     }
 
-    async function onFinish(values: ProcesoFormValues) {
+    async function onFinish(
+        values: ProcesoFormValues,
+    ) {
+        setSaving(true);
+
         try {
-            setSaving(true);
+            const payload =
+                construirPayloadProceso(values);
 
-            const payload: CreateProcesoTrazabilidadDto = {
-                fecha: values.fecha.format("YYYY-MM-DD"),
-                fechaInicio: values.inicioFermentacion?.toISOString() ?? null,
-                finFermentacion: values.finFermentacion?.toISOString() ?? null,
-                duracionHoras: values.duracionHoras,
-                loteId: values.loteId ?? null,
-                cosechaId: values.cosechaId ?? null,
-                etapa: values.etapa,
-                kilosIngresados: values.kilosIngresados,
-                kilosResultantes: values.kilosResultantes,
-                // Campos de fermentación
-                fueDespulpado: values.fueDespulpado ?? false,
-                tanqueFermentacion: values.tanqueFermentacion ?? null,
-                inicioFermentacion: values.inicioFermentacion?.toISOString() ?? null,
-                nivelPh: values.nivelPh ?? null,
-                tempMaxima: values.tempMaxima ?? null,
-                tempMinima: values.tempMinima ?? null,
-                fueLavado: values.fueLavado ?? false,
-            };
+            await createProcesoTrazabilidad(payload);
 
-            const nuevoProceso = await createProcesoTrazabilidad(payload);
-
-            setProcesos((currentProcesos) => [
-                normalizeProceso(nuevoProceso),
-                ...currentProcesos,
-            ]);
-
-            message.success("Proceso registrado correctamente.");
-            setIsModalOpen(false);
-        } catch (error: any) {
-            console.error("Error registrando proceso:", error);
-            message.error(
-                error?.response?.data?.message ||
-                "No se pudo registrar el proceso.",
+            message.success(
+                "Proceso registrado correctamente",
             );
+
+            setIsModalOpen(false);
+
+            await cargarDatos();
+        } catch (error: any) {
+            console.error(
+                "Error registrando proceso:",
+                error,
+            );
+
+            mostrarError(
+                error?.response?.data?.message ||
+                error?.message ||
+                "No se pudo registrar el proceso",
+            );
+
+            throw error;
         } finally {
             setSaving(false);
         }
@@ -342,49 +423,42 @@ export default function TrazabilidadPage() {
         setIsEditModalOpen(false);
     }
 
-    async function handleEditSubmit(id: number, values: ProcesoFormValues) {
+    async function handleEditSubmit(
+        id: number,
+        values: ProcesoFormValues,
+    ) {
+        setSaving(true);
+
         try {
-            setSaving(true);
+            const payload =
+                construirPayloadProceso(values);
 
-            const payload: Partial<CreateProcesoTrazabilidadDto> = {
-                fecha: values.fecha.format("YYYY-MM-DD"),
-                fechaInicio: values.inicioFermentacion?.toISOString() ?? null,
-                finFermentacion: values.finFermentacion?.toISOString() ?? null,
-                duracionHoras: values.duracionHoras,
-                loteId: values.loteId ?? null,
-                cosechaId: values.cosechaId ?? null,
-                etapa: values.etapa,
-                kilosIngresados: values.kilosIngresados,
-                kilosResultantes: values.kilosResultantes,
-                // Campos de fermentación
-                fueDespulpado: values.fueDespulpado ?? false,
-                tanqueFermentacion: values.tanqueFermentacion ?? null,
-                inicioFermentacion: values.inicioFermentacion?.toISOString() ?? null,
-                nivelPh: values.nivelPh ?? null,
-                tempMaxima: values.tempMaxima ?? null,
-                tempMinima: values.tempMinima ?? null,
-                fueLavado: values.fueLavado ?? false,
-            };
-
-            const procesoActualizado = await updateProcesoTrazabilidad(id, payload);
-
-            setProcesos((current) =>
-                current.map((proceso) =>
-                    proceso.id === id
-                        ? normalizeProceso(procesoActualizado)
-                        : proceso,
-                ),
+            await updateProcesoTrazabilidad(
+                id,
+                payload,
             );
 
-            message.success("Proceso actualizado correctamente.");
+            message.success(
+                "Proceso actualizado correctamente",
+            );
+
             setIsEditModalOpen(false);
             setEditingProceso(null);
+
+            await cargarDatos();
         } catch (error: any) {
-            console.error("Error actualizando proceso:", error);
-            message.error(
-                error?.response?.data?.message ||
-                "No se pudo actualizar el proceso.",
+            console.error(
+                "Error actualizando proceso:",
+                error,
             );
+
+            mostrarError(
+                error?.response?.data?.message ||
+                error?.message ||
+                "No se pudo actualizar el proceso",
+            );
+
+            throw error;
         } finally {
             setSaving(false);
         }
@@ -397,7 +471,7 @@ export default function TrazabilidadPage() {
             message.success("Proceso eliminado correctamente.");
         } catch (error: any) {
             console.error("Error eliminando proceso:", error);
-            message.error(
+            mostrarError(
                 error?.response?.data?.message ||
                 "No se pudo eliminar el proceso.",
             );
@@ -469,16 +543,22 @@ export default function TrazabilidadPage() {
                 ? tipoCosechaProceso === filtroTipoCosecha
                 : true;
 
-            const lote = getLoteProceso(proceso);
-
             const cumpleLote = filtroLote
-                ? lote?.codigo === filtroLote ||
-                proceso.cosecha?.cosechaLotes?.some(
-                    (item) => item.lote.codigo === filtroLote,
-                ) ||
-                proceso.cosecha?.lotes
-                    ?.toLowerCase()
-                    .includes(filtroLote.toLowerCase())
+                ? (
+                    proceso.procesoLotes?.some(
+                        (item) =>
+                            item.lote?.codigo === filtroLote,
+                    ) ||
+                    proceso.lote?.codigo === filtroLote ||
+                    proceso.Lote?.codigo === filtroLote ||
+                    proceso.cosecha?.cosechaLotes?.some(
+                        (item) =>
+                            item.lote.codigo === filtroLote,
+                    ) ||
+                    proceso.cosecha?.lotes
+                        ?.toLowerCase()
+                        .includes(filtroLote.toLowerCase())
+                )
                 : true;
 
             return cumpleMes && cumpleEtapa && cumpleTipoCosecha && cumpleLote;
@@ -576,37 +656,29 @@ export default function TrazabilidadPage() {
             ),
         },
         {
-            title: "Inicio",
-            dataIndex: "fechaInicio",
-            key: "fechaInicio",
-            width: 170,
-            render: (fechaInicio: string | null | undefined, record) => {
-                if (!fechaInicio) return "No registrada";
-
-                if (record.codigo?.startsWith("PRO-LEGACY-")) {
-                    return `${dayjs(fechaInicio).format("DD/MM/YYYY")} · sin hora`;
-                }
-
-                return dayjs(fechaInicio).format("DD/MM/YYYY HH:mm");
+            title: "Oxidación",
+            key: "oxidacion",
+            width: 220,
+            render: (_: unknown, record) => renderEtapa(
+                record.inicioOxidacion,
+                record.finOxidacion,
+                duracionEtapa(record.inicioOxidacion, record.finOxidacion),
+            ),
+        },
+        {
+            title: "Fermentación",
+            key: "fermentacion",
+            width: 220,
+            render: (_: unknown, record) => {
+                const inicio = record.inicioFermentacion ?? (record.codigo?.startsWith("PRO-LEGACY-") ? null : record.fechaInicio);
+                const fin = record.finFermentacion ?? (record.codigo?.startsWith("PRO-LEGACY-") ? null : record.fechaFin);
+                const duracion = duracionEtapa(inicio, fin) ??
+                    (record.duracionHoras ? formatHoras(record.duracionHoras) : null);
+                return renderEtapa(inicio, fin, duracion);
             },
         },
         {
-            title: "Duración",
-            dataIndex: "duracionHoras",
-            key: "duracionHoras",
-            align: "right",
-            width: 130,
-            render: (duracionHoras: number | null | undefined) =>
-                duracionHoras != null && duracionHoras > 0 ? (
-                    <Tag icon={<ClockCircleOutlined />} color="cyan">
-                        {formatHoras(duracionHoras)}
-                    </Tag>
-                ) : (
-                    "No registrada"
-                ),
-        },
-        {
-            title: "Fecha",
+            title: "Fecha del proceso",
             dataIndex: "fecha",
             key: "fecha",
             width: 120,
@@ -627,21 +699,6 @@ export default function TrazabilidadPage() {
             render: (_: unknown, record) => renderLoteOrigen(record),
         },
         {
-            title: "Tipo Cosecha",
-            key: "tipoCosecha",
-            width: 140,
-            render: (_: unknown, record) => getTipoCosechaProceso(record) ?? "-",
-        },
-        {
-            title: "Etapa",
-            dataIndex: "etapa",
-            key: "etapa",
-            width: 150,
-            render: (etapa: string | null | undefined) => (
-                <Tag color={getEtapaColor(etapa)}>{etapa ?? "-"}</Tag>
-            ),
-        },
-        {
             title: "Kg Ingresados",
             dataIndex: "kilosIngresados",
             key: "kilosIngresados",
@@ -651,55 +708,6 @@ export default function TrazabilidadPage() {
                 formatKg(kilosIngresados),
             sorter: (a, b) =>
                 Number(a.kilosIngresados ?? 0) - Number(b.kilosIngresados ?? 0),
-        },
-        {
-            title: "Kg Resultantes",
-            dataIndex: "kilosResultantes",
-            key: "kilosResultantes",
-            align: "right",
-            width: 150,
-            render: (kilosResultantes: number | null | undefined) =>
-                formatKg(kilosResultantes),
-            sorter: (a, b) =>
-                Number(a.kilosResultantes ?? 0) -
-                Number(b.kilosResultantes ?? 0),
-        },
-        {
-            title: "% Merma",
-            key: "porcentajeMerma",
-            align: "right",
-            width: 120,
-            render: (_: unknown, record) => {
-                const merma = calcularMermaLocal(
-                    record.kilosIngresados,
-                    record.kilosResultantes,
-                );
-
-                if (merma === null) {
-                    return "-";
-                }
-
-                return (
-                    <Tag color={getMermaColor(merma)}>
-                        {formatPorcentaje(merma)}
-                    </Tag>
-                );
-            },
-            sorter: (a, b) => {
-                const mermaA =
-                    calcularMermaLocal(
-                        a.kilosIngresados,
-                        a.kilosResultantes,
-                    ) ?? 0;
-
-                const mermaB =
-                    calcularMermaLocal(
-                        b.kilosIngresados,
-                        b.kilosResultantes,
-                    ) ?? 0;
-
-                return mermaA - mermaB;
-            },
         },
         {
             title: "Acciones",
@@ -806,6 +814,7 @@ export default function TrazabilidadPage() {
                                 { value: "plena", label: "Plena" },
                                 { value: "rebusca", label: "Rebusca" },
                                 { value: "selectiva", label: "Selectiva" },
+                                { value: "raspa", label: "Raspa" },
                             ]}
                         />
 
@@ -986,11 +995,39 @@ export default function TrazabilidadPage() {
                             {renderLoteOrigen(selectedProceso)}
                         </Descriptions.Item>
 
-                        <Descriptions.Item label="Etapa">
-                            <Tag color={getEtapaColor(selectedProceso.etapa)}>
-                                {selectedProceso.etapa ?? "-"}
-                            </Tag>
+                        <Descriptions.Item
+                            label="Distribución de kilos"
+                            span={2}
+                        >
+                            {selectedProceso.procesoLotes?.length ? (
+                                <Table
+                                    size="small"
+                                    rowKey="id"
+                                    pagination={false}
+                                    dataSource={
+                                        selectedProceso.procesoLotes
+                                    }
+                                    columns={[
+                                        {
+                                            title: "Lote",
+                                            render: (_, item) =>
+                                                item.lote?.codigo ??
+                                                `Lote #${item.loteId}`,
+                                        },
+                                        {
+                                            title: "Kilos utilizados",
+                                            dataIndex: "kilosUsados",
+                                            align: "right",
+                                            render: (value: number) =>
+                                                formatKg(value),
+                                        },
+                                    ]}
+                                />
+                            ) : (
+                                "Sin distribución individual registrada"
+                            )}
                         </Descriptions.Item>
+
 
                         <Descriptions.Item label="Tipo de Cosecha">
                             {getTipoCosechaProceso(selectedProceso) ?? "-"}
@@ -1010,7 +1047,7 @@ export default function TrazabilidadPage() {
                             )}
                         </Descriptions.Item>
 
-                        <Descriptions.Item label="Duración">
+                        <Descriptions.Item label="Duración de fermentación">
                             {selectedProceso.duracionHoras != null &&
                                 selectedProceso.duracionHoras > 0 ? (
                                 <Tag icon={<ClockCircleOutlined />} color="cyan">
@@ -1021,6 +1058,18 @@ export default function TrazabilidadPage() {
                             )}
                         </Descriptions.Item>
 
+                        <Descriptions.Item label="Inicio de oxidación">
+                            {selectedProceso.inicioOxidacion ? dayjs(selectedProceso.inicioOxidacion).format("DD/MM/YYYY HH:mm") : "—"}
+                        </Descriptions.Item>
+                        <Descriptions.Item label="Fin de oxidación">
+                            {selectedProceso.finOxidacion ? dayjs(selectedProceso.finOxidacion).format("DD/MM/YYYY HH:mm") : "—"}
+                        </Descriptions.Item>
+                        <Descriptions.Item label="Duración de oxidación">
+                            {duracionEtapa(selectedProceso.inicioOxidacion, selectedProceso.finOxidacion) ?? "—"}
+                        </Descriptions.Item>
+                        <Descriptions.Item label="Posa / Tanque de oxidación">
+                            {selectedProceso.tanqueOxidacion ?? "—"}
+                        </Descriptions.Item>
                         <Descriptions.Item label="Inicio Fermentación">
                             {selectedProceso.inicioFermentacion
                                 ? dayjs(selectedProceso.inicioFermentacion).format(
@@ -1100,13 +1149,6 @@ export default function TrazabilidadPage() {
                             })()}
                         </Descriptions.Item>
 
-                        <Descriptions.Item label="Fecha de Registro">
-                            {selectedProceso.createdAt
-                                ? dayjs(selectedProceso.createdAt).format(
-                                    "DD/MM/YYYY HH:mm",
-                                )
-                                : "-"}
-                        </Descriptions.Item>
 
                         <Descriptions.Item label="Última Actualización">
                             {selectedProceso.updatedAt

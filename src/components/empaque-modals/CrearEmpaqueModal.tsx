@@ -19,6 +19,7 @@ export default function CrearEmpaqueModal({ open, onClose, onSubmit, lotes, seca
   const [form] = Form.useForm();
   const kilosIngresados = Form.useWatch("kilosIngresados", form);
   const kilosResultantes = Form.useWatch("kilosResultantes", form);
+  const secadoIdsVinculados = Form.useWatch<number[]>("secadoIds", form) ?? [];
 
   const lotesOrdenados = [...lotes].sort((a, b) => {
     if (a.estado === "EN_SECADO" && b.estado !== "EN_SECADO") return -1;
@@ -74,23 +75,34 @@ export default function CrearEmpaqueModal({ open, onClose, onSubmit, lotes, seca
       const s = secados.find((item) => item.id === id);
       return acc + Number(s?.kilosResultantes || 0);
     }, 0);
-    if (totalSecados > 0) {
-      form.setFieldsValue({ kilosIngresados: totalSecados });
-    }
+    const peso = ids.length ? Number(totalSecados.toFixed(2)) : null;
+    form.setFieldsValue({ kilosIngresados: peso, kilosResultantes: peso });
   };
 
   return (
     <Modal
-      title="Registrar — Empaque / Almacén Pergamino"
+      title="Registrar ingreso a Almacén Pergamino"
       open={open}
       onCancel={() => { form.resetFields(); onClose(); }}
       onOk={() => form.submit()}
       confirmLoading={loading}
-      okText="Registrar Empaque"
+      okText="Registrar ingreso"
       cancelText="Cancelar"
       width={720}
     >
       <Form form={form} layout="vertical" onFinish={handleFinish} initialValues={{ fechaInicio: dayjs(), fueCatado: false }}>
+        <Row gutter={16}>
+          <Col span={12}>
+            <Form.Item name="fechaInicio" label="Fecha de Ingreso" rules={[{ required: true, message: "Requerida" }]}>
+              <DatePicker style={{ width: "100%" }} format="YYYY-MM-DD HH:mm" showTime />
+            </Form.Item>
+          </Col>
+          <Col span={12}>
+            <Form.Item name="fechaFin" label="Fecha de Salida (Opcional)">
+              <DatePicker style={{ width: "100%" }} format="YYYY-MM-DD HH:mm" showTime />
+            </Form.Item>
+          </Col>
+        </Row>
 
         <Row gutter={16}>
           <Col span={12}>
@@ -134,7 +146,7 @@ export default function CrearEmpaqueModal({ open, onClose, onSubmit, lotes, seca
             allowClear
             onChange={handleSecadosChange}
           >
-            {secados.map((secado) => (
+            {secados.filter((secado) => secado.kilosResultantes != null).map((secado) => (
               <Select.Option key={secado.id} value={secado.id} label={secado.codigo || `SEC-${secado.id}`}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                   <span><strong>{secado.codigo || `SEC-${secado.id}`}</strong> - Lote: {secado.lote?.codigo}</span>
@@ -146,41 +158,6 @@ export default function CrearEmpaqueModal({ open, onClose, onSubmit, lotes, seca
             ))}
           </Select>
         </Form.Item>
-
-        <Row gutter={16}>
-          <Col span={12}>
-            <Form.Item name="fechaInicio" label="Fecha de Ingreso" rules={[{ required: true, message: "Requerida" }]}>
-              <DatePicker style={{ width: "100%" }} format="YYYY-MM-DD HH:mm" showTime />
-            </Form.Item>
-          </Col>
-          <Col span={12}>
-            <Form.Item name="fechaFin" label="Fecha de Salida (Opcional)">
-              <DatePicker style={{ width: "100%" }} format="YYYY-MM-DD HH:mm" showTime />
-            </Form.Item>
-          </Col>
-        </Row>
-
-        <Row gutter={16}>
-          <Col span={12}>
-            <Form.Item name="kilosIngresados" label="Kilos Ingresados (Secado)" rules={[{ required: true, message: "Requerido" }]}>
-              <InputNumber style={{ width: "100%" }} min={0.1} precision={2} placeholder="Ej. 420" addonAfter="kg" />
-            </Form.Item>
-          </Col>
-          <Col span={12}>
-            <Form.Item name="kilosResultantes" label="Kg Pergamino Seco" rules={[{ required: true, message: "Requerido" }]}>
-              <InputNumber style={{ width: "100%" }} min={0} precision={2} placeholder="Ej. 400" addonAfter="kg" />
-            </Form.Item>
-          </Col>
-        </Row>
-
-        {mermaCalculada !== null && (
-          <div style={{ padding: "12px 16px", marginBottom: 16, background: mermaCalculada >= 0 ? "rgba(250,173,20,0.1)" : "rgba(255,77,79,0.1)", border: `1px solid ${mermaCalculada >= 0 ? "#faad14" : "#ff4d4f"}`, borderRadius: 6 }}>
-            <Typography.Text type={mermaCalculada >= 0 ? "warning" : "danger"}>
-              <strong>Merma estimada: </strong>{mermaCalculada.toFixed(2)} kg ({kilosIngresados ? ((mermaCalculada / Number(kilosIngresados)) * 100).toFixed(1) : 0}%)
-            </Typography.Text>
-          </div>
-        )}
-
         <Divider titlePlacement="left" orientationMargin={0}>
           <Typography.Text strong style={{ fontSize: 13 }}>Detalles del Empaque y Sacos</Typography.Text>
         </Divider>
@@ -204,10 +181,33 @@ export default function CrearEmpaqueModal({ open, onClose, onSubmit, lotes, seca
           </Col>
           <Col span={8}>
             <Form.Item name="rendimiento" label="Rendimiento (%)">
-              <InputNumber style={{ width: "100%" }} min={0} max={100} precision={2} addonAfter="%" placeholder="Ej. 75.5" />
+              <InputNumber style={{ width: "100%" }} min={0} max={100} precision={2} decimalSeparator="," addonAfter="%" placeholder="Ej. 75.5" />
             </Form.Item>
           </Col>
         </Row>
+
+
+        <Row gutter={16}>
+          <Col span={12}>
+            <Form.Item name="kilosIngresados" label="Kilos Ingresados (Secado)" rules={[{ required: true, message: "Requerido" }]}>
+              <InputNumber readOnly={secadoIdsVinculados.length > 0} decimalSeparator="," style={{ width: "100%" }} min={0.1} precision={2} placeholder="Ej. 420" addonAfter="kg" />
+            </Form.Item>
+          </Col>
+          <Col span={12}>
+            <Form.Item name="kilosResultantes" label="Kg Pergamino Seco" rules={[{ required: true, message: "Requerido" }]}>
+              <InputNumber readOnly={secadoIdsVinculados.length > 0} decimalSeparator="," style={{ width: "100%" }} min={0} precision={2} placeholder="Ej. 400" addonAfter="kg" />
+            </Form.Item>
+          </Col>
+        </Row>
+
+        {mermaCalculada !== null && (
+          <div style={{ padding: "12px 16px", marginBottom: 16, background: mermaCalculada >= 0 ? "rgba(250,173,20,0.1)" : "rgba(255,77,79,0.1)", border: `1px solid ${mermaCalculada >= 0 ? "#faad14" : "#ff4d4f"}`, borderRadius: 6 }}>
+            <Typography.Text type={mermaCalculada >= 0 ? "warning" : "danger"}>
+              <strong>Merma estimada: </strong>{mermaCalculada.toFixed(2)} kg ({kilosIngresados ? ((mermaCalculada / Number(kilosIngresados)) * 100).toFixed(1) : 0}%)
+            </Typography.Text>
+          </div>
+        )}
+
 
         <Divider titlePlacement="left" orientationMargin={0}>
           <Typography.Text strong style={{ fontSize: 13 }}>Datos de Calidad (Opcional)</Typography.Text>
@@ -216,7 +216,7 @@ export default function CrearEmpaqueModal({ open, onClose, onSubmit, lotes, seca
         <Row gutter={16}>
           <Col span={12}>
             <Form.Item name="humedad" label="Humedad">
-              <InputNumber style={{ width: "100%" }} min={0} max={100} precision={1} step={0.1} addonAfter="%" placeholder="Ej. 11.5" />
+              <InputNumber style={{ width: "100%" }} min={0} max={100} precision={1} decimalSeparator="," step={0.1} addonAfter="%" placeholder="Ej. 11.5" />
             </Form.Item>
           </Col>
           <Col span={12}>
@@ -229,7 +229,7 @@ export default function CrearEmpaqueModal({ open, onClose, onSubmit, lotes, seca
         <Row gutter={16}>
           <Col span={12}>
             <Form.Item name="puntajeSca" label="Puntaje SCA" tooltip="Escala 0-100 segun protocolo SCA">
-              <InputNumber style={{ width: "100%" }} min={0} max={100} precision={2} step={0.25} addonAfter="pts" placeholder="Ej. 83.50" />
+              <InputNumber style={{ width: "100%" }} min={0} max={100} precision={2} decimalSeparator="," step={0.25} addonAfter="pts" placeholder="Ej. 83.50" />
             </Form.Item>
           </Col>
           <Col span={12}>

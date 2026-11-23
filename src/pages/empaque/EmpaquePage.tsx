@@ -1,3 +1,4 @@
+import { mostrarError } from "../../utils/mostrarError";
 // src/pages/empaque/EmpaquePage.tsx
 import { useEffect, useState, useMemo } from "react";
 import {
@@ -87,7 +88,7 @@ export default function EmpaquePage() {
       setSecados(secadosData);
     } catch (error: any) {
       console.error("Error al cargar datos de empaque:", error);
-      message.error(error?.response?.data?.message || "Error al cargar registros de empaque");
+      mostrarError(error?.response?.data?.message || "Error al cargar registros de empaque");
     } finally {
       setLoading(false);
     }
@@ -106,7 +107,7 @@ export default function EmpaquePage() {
       fetchData();
     } catch (error: any) {
       console.error("Error creando empaque:", error);
-      message.error(error?.response?.data?.message || error.message || "Error al registrar empaque");
+      mostrarError(error?.response?.data?.message || error.message || "Error al registrar empaque");
     } finally {
       setSaving(false);
     }
@@ -122,7 +123,7 @@ export default function EmpaquePage() {
       fetchData();
     } catch (error: any) {
       console.error("Error actualizando empaque:", error);
-      message.error(error?.response?.data?.message || error.message || "Error al actualizar empaque");
+      mostrarError(error?.response?.data?.message || error.message || "Error al actualizar empaque");
     } finally {
       setSaving(false);
     }
@@ -135,7 +136,7 @@ export default function EmpaquePage() {
       fetchData();
     } catch (error: any) {
       console.error("Error eliminando empaque:", error);
-      message.error(error?.response?.data?.message || error.message || "Error al eliminar empaque");
+      mostrarError(error?.response?.data?.message || error.message || "Error al eliminar empaque");
     }
   };
 
@@ -338,7 +339,7 @@ export default function EmpaquePage() {
             <InboxOutlined style={{ fontSize: 28, color: "#722ed1" }} />
             <div>
               <Title level={3} style={{ margin: 0 }}>
-                Módulo de Empaque
+                Almacén Pergamino
               </Title>
               <Text type="secondary">
                 Empacado final de pergamino/verde, pesaje y almacenamiento.
@@ -357,7 +358,7 @@ export default function EmpaquePage() {
               onClick={() => setIsCreateOpen(true)}
               style={{ background: "#722ed1", borderColor: "#722ed1" }}
             >
-              Nuevo Empaque
+              Nuevo registro de almacén
             </Button>
           </Space>
         </Col>

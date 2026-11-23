@@ -1,3 +1,4 @@
+import { estadosTrilla, getEstadoTrilla } from "../../pages/trilla/trilla.api";
 // src/components/trilla-modals/RecepcionTrillaModal.tsx
 import { useEffect } from "react";
 import {
@@ -99,6 +100,11 @@ export default function RecepcionTrillaModal({ open, onClose, onSubmit, orden, l
         tipoSaco: orden.tipoSaco || undefined,
         kilosNetos: orden.kilosNetos ?? undefined,
         numeroGuia: orden.numeroGuia ?? "",
+        numeroGuiaHayland: orden.numeroGuiaHayland ?? "",
+        estadoManual: getEstadoTrilla(orden),
+        exportable2: orden.exportable2 ?? null,
+        exportable3: orden.exportable3 ?? null,
+        exportable4: orden.exportable4 ?? null,
         // Subproductos
         exportable: orden.exportable ?? null,
         recuperado: orden.recuperado ?? null,
@@ -125,6 +131,11 @@ export default function RecepcionTrillaModal({ open, onClose, onSubmit, orden, l
       tipoSaco: values.tipoSaco || null,
       kilosNetos: values.kilosNetos ? Number(values.kilosNetos) : null,
       numeroGuia: values.numeroGuia?.trim() || null,
+      numeroGuiaHayland: values.numeroGuiaHayland?.trim() || null,
+      estadoManual: values.estadoManual,
+      exportable2: toNumberOrNull(values.exportable2),
+      exportable3: toNumberOrNull(values.exportable3),
+      exportable4: toNumberOrNull(values.exportable4),
       ...Object.fromEntries(
         SUBPRODUCTOS.map((s) => [s.name, toNumberOrNull(values[s.name])])
       ),
@@ -194,6 +205,21 @@ export default function RecepcionTrillaModal({ open, onClose, onSubmit, orden, l
       )}
 
       <Form form={form} layout="vertical" onFinish={handleFinish}>
+        <Form.Item name="estadoManual" label="Estado" rules={[{ required: true }]}>
+          <Select options={[...estadosTrilla]} />
+        </Form.Item>
+        <Form.Item name="numeroGuiaHayland" label="N.º de guía de recepción Hayland">
+          <Input maxLength={80} allowClear />
+        </Form.Item>
+        <Row gutter={12}>
+          {([2, 3, 4] as const).map((numero) => (
+            <Col key={numero} xs={24} sm={8}>
+              <Form.Item name={`exportable${numero}`} label={`Exportable ${numero}`}>
+                <InputNumber min={0} precision={2} decimalSeparator="," addonAfter="kg" />
+              </Form.Item>
+            </Col>
+          ))}
+        </Row>
 
         {/* ── Código de trilla ── */}
         <Form.Item
@@ -278,14 +304,15 @@ export default function RecepcionTrillaModal({ open, onClose, onSubmit, orden, l
             min={0.1}
             step={0.5}
             addonAfter="kg"
-            precision={2}
+            precision={2} decimalSeparator=","
           />
         </Form.Item>
 
         {/* ── Panel KPI en tiempo real: % Exportable, % Recuperado y % Resto ── */}
         {(() => {
           const baseKilos = Number(kilosNetos || orden?.kilosNetos || orden?.kilosEnviados || 0);
-          const expVal = Number(allValues?.exportable ?? orden?.exportable ?? 0);
+          const expVal = [allValues?.exportable, allValues?.exportable2, allValues?.exportable3, allValues?.exportable4]
+            .reduce((total, kilos) => total + Number(kilos ?? 0), 0);
           const recVal = Number(allValues?.recuperado ?? orden?.recuperado ?? 0);
           const otrosSubproductos =
             Number(allValues?.malla13 ?? orden?.malla13 ?? 0) +
@@ -392,7 +419,7 @@ export default function RecepcionTrillaModal({ open, onClose, onSubmit, orden, l
                 <InputNumber
                   style={{ width: "100%" }}
                   min={0}
-                  precision={2}
+                  precision={2} decimalSeparator=","
                   placeholder="0.00"
                   addonAfter="kg"
                   step={0.5}

@@ -1,5 +1,5 @@
 // src/components/trilla-modals/EnviarATrillaModal.tsx
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import {
   Alert,
   Col,
@@ -12,13 +12,12 @@ import {
   Row,
   Select,
   Space,
-  Table,
   Tag,
   Typography,
 } from "antd";
 import { BarChartOutlined, NumberOutlined, SendOutlined, ShopOutlined, InboxOutlined } from "@ant-design/icons";
 import dayjs from "dayjs";
-import type { Lote } from "../../pages/lotes/lotes.api";
+import type { Empaque } from "../../pages/empaque/empaque.api";
 import type { CreateOrdenTrillaDTO } from "../../pages/trilla/trilla.api";
 
 const { Text } = Typography;
@@ -40,7 +39,7 @@ type Props = {
   open: boolean;
   onClose: () => void;
   onSubmit: (values: CreateOrdenTrillaDTO) => void;
-  lotes: Lote[];
+  empaques: Empaque[];
   loading?: boolean;
 };
 
@@ -51,11 +50,8 @@ function toNumberOrNull(val: any): number | null {
   return isNaN(n) ? null : n;
 }
 
-export default function EnviarATrillaModal({ open, onClose, onSubmit, lotes, loading }: Props) {
+export default function EnviarATrillaModal({ open, onClose, onSubmit, empaques, loading }: Props) {
   const [form] = Form.useForm();
-  const [selectedLoteIds, setSelectedLoteIds] = useState<number[]>([]);
-  const [descuentos, setDescuentos] = useState<Record<number, { kilosDescontados: number; sacos?: number | null }>>({});
-
   // Observar todos los valores del formulario en tiempo real (evita hooks en loop)
   const allValues = Form.useWatch([], form);
   const kilosEnviados: number | undefined = allValues?.kilosEnviados;
@@ -64,16 +60,21 @@ export default function EnviarATrillaModal({ open, onClose, onSubmit, lotes, loa
     if (open) {
       form.resetFields();
       form.setFieldValue("fechaDespacho", dayjs());
-      setSelectedLoteIds([]);
-      setDescuentos({});
     }
   }, [open, form]);
 
-  // Kilos disponibles totales de los lotes seleccionados
-  const kilosDisponiblesTotal = selectedLoteIds.reduce((acc, id) => {
-    const lote = lotes.find((l) => l.id === id);
-    return acc + (lote?.kilosActuales ?? lote?.kilosIniciales ?? 0);
-  }, 0);
+  const empaque = empaques.find((item) => item.id === allValues?.empaqueId);
+  const saldo = (item: Empaque) => Math.max(0, Number((
+    item.kilosResultantes - (item.ordenesTrilla ?? []).reduce((total, orden) => total + orden.kilosEnviados, 0)
+  ).toFixed(2)));
+  const kilosDisponiblesTotal = empaque ? saldo(empaque) : 0;
+  const secados = empaque?.empaqueSecados?.length
+    ? empaque.empaqueSecados.map(({ secado }) => secado)
+    : empaque?.secado ? [empaque.secado] : [];
+  const lotesOrigen = [...new Map(secados.flatMap((secado) => secado.secadoLotes?.length
+    ? secado.secadoLotes.map(({ loteId, lote }) => [loteId, lote?.codigo ?? `Lote #${loteId}`] as const)
+    : [[secado.loteId, secado.lote?.codigo ?? `Lote #${secado.loteId}`] as const],
+  )).values()];
 
   // Suma de subproductos ingresados
   const totalSubproductos = SUBPRODUCTOS.reduce((acc, s) => {
@@ -81,72 +82,9 @@ export default function EnviarATrillaModal({ open, onClose, onSubmit, lotes, loa
     return acc + (val != null && !isNaN(Number(val)) ? Number(val) : 0);
   }, 0);
 
-  const handleLotesChange = (ids: number[]) => {
-    setSelectedLoteIds(ids);
-    setDescuentos((prev) => {
-      const next: Record<number, { kilosDescontados: number; sacos?: number | null }> = {};
-      for (const id of ids) {
-        if (prev[id]) {
-          next[id] = prev[id];
-        } else {
-          const l = lotes.find((item) => item.id === id);
-          const disp = Number(l?.kilosActuales ?? l?.kilosIniciales ?? 0);
-          next[id] = { kilosDescontados: disp, sacos: null };
-        }
-      }
-      const sumKilos = Object.values(next).reduce((acc, curr) => acc + (curr.kilosDescontados || 0), 0);
-      const sumSacos = Object.values(next).reduce((acc, curr) => acc + (curr.sacos || 0), 0);
-      form.setFieldsValue({
-        kilosEnviados: Number(sumKilos.toFixed(2)),
-        sacosEnviados: sumSacos > 0 ? sumSacos : undefined,
-      });
-      return next;
-    });
-    form.validateFields(["kilosEnviados"]).catch(() => undefined);
-  };
-
-  const handleKilosLoteChange = (loteId: number, val: number | null) => {
-    const newKilos = Number(val || 0);
-    setDescuentos((prev) => {
-      const updated = {
-        ...prev,
-        [loteId]: {
-          ...prev[loteId],
-          kilosDescontados: newKilos,
-        },
-      };
-      const sumKilos = Object.values(updated).reduce((acc, curr) => acc + (curr.kilosDescontados || 0), 0);
-      form.setFieldValue("kilosEnviados", Number(sumKilos.toFixed(2)));
-      return updated;
-    });
-  };
-
-  const handleSacosLoteChange = (loteId: number, val: number | null) => {
-    const newSacos = val != null ? Number(val) : null;
-    setDescuentos((prev) => {
-      const updated = {
-        ...prev,
-        [loteId]: {
-          ...prev[loteId],
-          sacos: newSacos,
-        },
-      };
-      const sumSacos = Object.values(updated).reduce((acc, curr) => acc + (curr.sacos || 0), 0);
-      form.setFieldValue("sacosEnviados", sumSacos > 0 ? sumSacos : undefined);
-      return updated;
-    });
-  };
-
   const handleFinish = (values: any) => {
-    const descuentosPorLote = selectedLoteIds.map((id) => ({
-      loteId: id,
-      kilosDescontados: Number(descuentos[id]?.kilosDescontados || 0),
-      sacos: descuentos[id]?.sacos != null ? Number(descuentos[id]?.sacos) : null,
-    }));
-
     const payload: CreateOrdenTrillaDTO = {
-      loteIds: values.loteIds,
-      descuentosPorLote,
+      empaqueId: values.empaqueId,
       codigoTrilla: values.codigoTrilla?.trim() || undefined,
       kilosEnviados: Number(values.kilosEnviados),
       fechaDespacho: values.fechaDespacho
@@ -160,99 +98,6 @@ export default function EnviarATrillaModal({ open, onClose, onSubmit, lotes, loa
     };
     onSubmit(payload);
   };
-
-  // Solo lotes activos y en estados aptos
-  const lotesDisponibles = lotes.filter(
-    (l) =>
-      l.activo &&
-      l.estado !== "VENDIDO" &&
-      l.estado !== "INACTIVO" &&
-      l.estado !== "TRILLADO"
-  );
-
-  const hayLotesSeleccionados = selectedLoteIds.length > 0;
-
-  // Lógica de tabla de lotes y descuentos
-  const remanenteData = selectedLoteIds.map((id) => {
-    const lote = lotes.find((l) => l.id === id);
-    if (!lote) return null;
-    const disponible = Number(lote.kilosActuales ?? lote.kilosIniciales ?? 0);
-    return {
-      key: lote.id,
-      id: lote.id,
-      codigo: lote.codigo,
-      nombre: lote.nombre,
-      disponible,
-    };
-  }).filter(Boolean);
-
-  const remanenteColumns = [
-    {
-      title: "Lote",
-      dataIndex: "codigo",
-      key: "codigo",
-      render: (text: string, r: any) => (
-        <Space direction="vertical" size={0}>
-          <strong>{text}</strong>
-          {r.nombre && <Text type="secondary" style={{ fontSize: 11 }}>{r.nombre}</Text>}
-        </Space>
-      ),
-    },
-    {
-      title: "Disp. (kg)",
-      dataIndex: "disponible",
-      key: "disponible",
-      align: "right" as const,
-      render: (val: number) => <Tag color="blue">{val.toFixed(2)}</Tag>,
-    },
-    {
-      title: "Kg a Descontar",
-      key: "kilosDescontados",
-      align: "center" as const,
-      render: (_: any, r: any) => (
-        <InputNumber
-          min={0.1}
-          max={r.disponible}
-          step={1}
-          precision={2}
-          value={descuentos[r.id]?.kilosDescontados}
-          onChange={(val) => handleKilosLoteChange(r.id, val)}
-          addonAfter="kg"
-          style={{ width: 140 }}
-        />
-      ),
-    },
-    {
-      title: "Sacos a Descontar",
-      key: "sacos",
-      align: "center" as const,
-      render: (_: any, r: any) => (
-        <InputNumber
-          min={0}
-          step={1}
-          precision={0}
-          value={descuentos[r.id]?.sacos ?? undefined}
-          onChange={(val) => handleSacosLoteChange(r.id, val)}
-          placeholder="0"
-          style={{ width: 95 }}
-        />
-      ),
-    },
-    {
-      title: "Nuevo Saldo",
-      key: "nuevoSaldo",
-      align: "right" as const,
-      render: (_: any, r: any) => {
-        const descontado = descuentos[r.id]?.kilosDescontados || 0;
-        const nuevo = Math.max(0, r.disponible - descontado);
-        return (
-          <Tag color={nuevo === 0 ? "default" : "green"}>
-            {nuevo.toFixed(2)} kg
-          </Tag>
-        );
-      },
-    },
-  ];
 
   // Métricas de rendimiento en tiempo real
   const baseKilos = Number(kilosEnviados || 0);
@@ -332,59 +177,28 @@ export default function EnviarATrillaModal({ open, onClose, onSubmit, lotes, loa
           </Col>
         </Row>
 
-        {/* ── Lotes de origen ── */}
         <Form.Item
-          label="Lotes a enviar"
-          name="loteIds"
-          rules={[{ required: true, message: "Seleccione al menos un lote" }]}
+          label="Registro de Almacén Pergamino"
+          name="empaqueId"
+          tooltip="El saldo disponible se calcula con los kilos almacenados y los envíos de trilla ya registrados."
+          rules={[{ required: true, message: "Seleccione un registro con stock disponible" }]}
         >
-          <Select
-            mode="multiple"
-            placeholder="Seleccionar lotes de café pergamino..."
-            allowClear
+          <Select<number>
             showSearch
-            onChange={handleLotesChange}
-            filterOption={(input, option) =>
-              (String(option?.label ?? "")).toLowerCase().includes(input.toLowerCase())
-            }
-            options={lotesDisponibles.map((l) => ({
-              value: l.id,
-              label: `${l.codigo}${l.nombre ? ` – ${l.nombre}` : ""}${(l.kilosActuales ?? l.kilosIniciales) ? ` (${(l.kilosActuales ?? l.kilosIniciales)?.toLocaleString()} kg)` : ""}`,
+            optionFilterProp="label"
+            options={empaques.filter((item) => saldo(item) > 0).map((item) => ({
+              value: item.id,
+              label: `${item.codigo ?? `EMP-${item.id}`} · ${saldo(item).toLocaleString("es-CL")} kg disponibles`,
             }))}
-            tagRender={({ label, onClose: closeTag }) => (
-              <Tag
-                closable
-                onClose={closeTag}
-                style={{ marginRight: 4, borderRadius: 4 }}
-                color="gold"
-              >
-                {label}
-              </Tag>
-            )}
-            notFoundContent={
-              <Text type="secondary">No hay lotes disponibles para trilla</Text>
-            }
+            onChange={() => form.setFieldValue("kilosEnviados", undefined)}
           />
         </Form.Item>
-
-        {hayLotesSeleccionados && kilosDisponiblesTotal > 0 && (
-          <div style={{ marginBottom: 16 }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
-              <Text strong style={{ fontSize: 13 }}>
-                Descuento manual por lote (Kilos y Sacos):
-              </Text>
-              <Text type="secondary" style={{ fontSize: 12 }}>
-                Total disponible: <Tag color="blue">{kilosDisponiblesTotal.toFixed(2)} kg</Tag>
-              </Text>
-            </div>
-            <Table
-              dataSource={remanenteData as any}
-              columns={remanenteColumns}
-              pagination={false}
-              size="small"
-              bordered
-            />
-          </div>
+        {empaque && (
+          <Space wrap style={{ marginBottom: 16 }}>
+            <Text type="secondary">Lotes de origen</Text>
+            {(lotesOrigen.length ? lotesOrigen : [empaque.lote?.codigo ?? `Lote #${empaque.loteId}`])
+              .map((codigo) => <Tag key={codigo}>{codigo}</Tag>)}
+          </Space>
         )}
 
         <Divider style={{ margin: "12px 0" }} />
@@ -407,9 +221,8 @@ export default function EnviarATrillaModal({ open, onClose, onSubmit, lotes, loa
                   validator: (_, value) => {
                     if (
                       value &&
-                      hayLotesSeleccionados &&
-                      kilosDisponiblesTotal > 0 &&
-                      Number(value) > kilosDisponiblesTotal + 0.01
+                      empaque &&
+                      Number(value) > kilosDisponiblesTotal
                     ) {
                       return Promise.reject(
                         new Error(
@@ -428,7 +241,7 @@ export default function EnviarATrillaModal({ open, onClose, onSubmit, lotes, loa
                 min={0.01}
                 step={0.5}
                 addonAfter="kg"
-                precision={2}
+                precision={2} decimalSeparator=","
               />
             </Form.Item>
           </Col>
@@ -548,7 +361,7 @@ export default function EnviarATrillaModal({ open, onClose, onSubmit, lotes, loa
                 <InputNumber
                   style={{ width: "100%" }}
                   min={0}
-                  precision={2}
+                  precision={2} decimalSeparator=","
                   placeholder="0.00"
                   addonAfter="kg"
                   step={0.5}

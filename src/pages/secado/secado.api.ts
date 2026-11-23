@@ -9,8 +9,8 @@ export type Secado = {
   fechaInicio: string;
   fechaFin?: string | null;
   kilosIngresados: number;
-  kilosResultantes: number;
-  merma: number;
+  kilosResultantes: number | null;
+  merma: number | null;
   observaciones?: string | null;
   perfilProceso?: string;
   /** Identificación de la infraestructura de secado (ej. "Secadora 01", "Patio Solar A") */
@@ -38,7 +38,7 @@ export type CreateSecadoDTO = {
   fechaInicio: string;
   fechaFin?: string | null;
   kilosIngresados: number;
-  kilosResultantes: number;
+  kilosResultantes?: number | null;
   observaciones?: string | null;
   perfilProceso?: string;
   secadora?: string | null;

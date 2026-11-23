@@ -323,7 +323,7 @@ export default function RegistrarVentaModal({
               placeholder="Ej: 300"
               min={0.1}
               step={0.5}
-              precision={2}
+              precision={2} decimalSeparator=","
               addonAfter="kg"
             />
           </Form.Item>
@@ -350,7 +350,7 @@ export default function RegistrarVentaModal({
               placeholder="Ej: 8.50"
               min={0.01}
               step={0.1}
-              precision={2}
+              precision={2} decimalSeparator=","
               addonBefore="$"
             />
           </Form.Item>
@@ -361,7 +361,7 @@ export default function RegistrarVentaModal({
               placeholder="Ej: 5.00"
               min={0.01}
               step={0.1}
-              precision={2}
+              precision={2} decimalSeparator=","
               addonBefore="$"
             />
           </Form.Item>

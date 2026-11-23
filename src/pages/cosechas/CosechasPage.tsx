@@ -1,3 +1,4 @@
+import { mostrarError } from "../../utils/mostrarError";
 // src/pages/cosechas/CosechasPage.tsx
 import { useEffect, useMemo, useState } from "react";
 import {
@@ -58,8 +59,8 @@ import { getTrabajadoresApi } from "../../pages/trabajadores/trabajadores.api";
 
 import type { Lote } from "../lotes/lotes.api";
 import { getLotesApi } from "../lotes/lotes.api";
-
 import { getFundosApi, type Fundo } from "./fundos.api";
+
 
 import { formatEstadoEnum } from "../../utils/enumFormatters";
 
@@ -89,7 +90,7 @@ export default function CosechasPage() {
   const [cosechas, setCosechas] = useState<Cosecha[]>([]);
   const [trabajadores, setTrabajadores] = useState<Trabajador[]>([]);
   const [lotesList, setLotesList] = useState<Lote[]>([]);
-  const [fundos, setFundos] = useState<Fundo[]>([]);
+  const [fundos, setFundos] = useState<Fundo[] | null>(null);
   const [loading, setLoading] = useState(false);
 
   const [searchText, setSearchText] = useState("");
@@ -120,7 +121,7 @@ export default function CosechasPage() {
       const data = await getCosechasApi();
       setCosechas(data);
     } catch (error: any) {
-      message.error(
+      mostrarError(
         error?.response?.data?.message ||
         "Error al cargar la lista de cosechas",
       );
@@ -131,24 +132,25 @@ export default function CosechasPage() {
 
   async function fetchTrabajadoresYLotes() {
     try {
-      const [trabData, lotesData, fundosData] = await Promise.all([
+      const [trabData, lotesData] = await Promise.all([
         getTrabajadoresApi(),
         getLotesApi(),
-        getFundosApi().catch(() => [] as Fundo[]),
       ]);
 
       setTrabajadores(trabData);
       setLotesList(lotesData);
-      setFundos(fundosData);
     } catch (error) {
-      console.error("Error al cargar trabajadores/lotes/fundos:", error);
-      message.error("No se pudieron cargar trabajadores, lotes o fundos.");
+      console.error("Error al cargar trabajadores/lotes:", error);
+      mostrarError("No se pudieron cargar trabajadores o lotes.");
     }
   }
 
   useEffect(() => {
     fetchCosechas();
     fetchTrabajadoresYLotes();
+    void getFundosApi().then(setFundos).catch(() => {
+      mostrarError("No se pudieron cargar los lotes físicos. Actualiza la página para volver a intentar.");
+    });
   }, []);
 
   function handleOpenCreateModal() {
@@ -272,7 +274,7 @@ export default function CosechasPage() {
       message.success("Cosecha eliminada correctamente");
       fetchCosechas();
     } catch (error: any) {
-      message.error(error?.response?.data?.message || "Error al eliminar cosecha");
+      mostrarError(error?.response?.data?.message || "Error al eliminar cosecha");
     }
   }
 
@@ -302,7 +304,9 @@ export default function CosechasPage() {
 
         lotes: lotesSeleccionadosTexto,
         loteIds,
-        loteFisicoIds: Array.isArray(values.loteFisicoIds) ? values.loteFisicoIds : [],
+        ...(fundos !== null && {
+          loteFisicoIds: Array.isArray(values.loteFisicoIds) ? values.loteFisicoIds : [],
+        }),
 
         trabajadores: trabajadorIds.map(
           (trabajadorId) => ({
@@ -333,7 +337,7 @@ export default function CosechasPage() {
       fetchCosechas();
     } catch (error: any) {
       if (error?.response?.data?.message) {
-        message.error(error.response.data.message);
+        mostrarError(error.response.data.message);
       }
     } finally {
       setSubmitting(false);
@@ -755,7 +759,7 @@ export default function CosechasPage() {
                         options={trabajadores.map((trabajador) => ({
                           value: trabajador.id,
                           label: `${trabajador.nombres}${trabajador.apellidos ? ` ${trabajador.apellidos}` : ""
-                            } (${trabajador.dni})`,
+                            } (${trabajador.codigoInterno || "Sin código interno"})`,
                         }))}
                       />
                     </Col>
@@ -771,6 +775,7 @@ export default function CosechasPage() {
                           { value: "plena", label: "Plena" },
                           { value: "rebusca", label: "Rebusca" },
                           { value: "selectiva", label: "Selectiva" },
+                          { value: "raspa", label: "Raspa" },
                         ]}
                       />
                     </Col>
@@ -843,7 +848,7 @@ export default function CosechasPage() {
                               .map((trabajador) => ({
                                 value: trabajador.id,
                                 label: `${trabajador.nombres}${trabajador.apellidos ? ` ${trabajador.apellidos}` : ""
-                                  } (${trabajador.dni})`,
+                                  } (${trabajador.codigoInterno || "Sin código interno"})`,
                               }))}
                           />
                         </Form.Item>
@@ -865,6 +870,7 @@ export default function CosechasPage() {
                               { value: "plena", label: "Plena" },
                               { value: "rebusca", label: "Rebusca" },
                               { value: "selectiva", label: "Selectiva" },
+                              { value: "raspa", label: "Raspa" },
                             ]}
                           />
                         </Form.Item>
@@ -953,7 +959,8 @@ export default function CosechasPage() {
                         placeholder="Seleccione cuarteles físicos (ej. FSC-1, FSS-12...)"
                         showSearch
                         optionFilterProp="label"
-                        options={fundos.map((fundo) => ({
+                        disabled={fundos === null}
+                        options={(fundos ?? []).map((fundo) => ({
                           label: `${fundo.codigo} - ${fundo.nombre || fundo.codigo}`,
                           options: (fundo.lotesFisicos || [])
                             .filter((lf) => lf.activo)

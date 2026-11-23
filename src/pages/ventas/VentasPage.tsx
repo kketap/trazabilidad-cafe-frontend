@@ -1,3 +1,4 @@
+import { mostrarError } from "../../utils/mostrarError";
 // src/pages/ventas/VentasPage.tsx
 import { useEffect, useState, useMemo } from "react";
 import {
@@ -84,7 +85,7 @@ export default function VentasPage() {
       setOrdenes(ordenesData);
     } catch (error: any) {
       console.error("Error al cargar datos de ventas:", error);
-      message.error(
+      mostrarError(
         error?.response?.data?.message || "Error al cargar registros de ventas"
       );
     } finally {
@@ -111,7 +112,7 @@ export default function VentasPage() {
       fetchData();
     } catch (error: any) {
       console.error("Error en operación de venta:", error);
-      message.error(
+      mostrarError(
         error?.response?.data?.message || error.message || "Error al procesar la venta"
       );
     } finally {
@@ -126,7 +127,7 @@ export default function VentasPage() {
       fetchData();
     } catch (error: any) {
       console.error("Error eliminando venta:", error);
-      message.error(
+      mostrarError(
         error?.response?.data?.message || error.message || "Error al eliminar la venta"
       );
     }

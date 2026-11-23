@@ -122,6 +122,7 @@ export async function updateLoteApi(
     return response.data.data;
 }
 
-export async function deleteLoteApi(id: number): Promise<void> {
-    await apiClient.delete(`/lotes/${id}`);
+export async function deleteLoteApi(id: number): Promise<string | undefined> {
+    const response = await apiClient.delete<ApiResponse<void>>(`/lotes/${id}`);
+    return response.data.message;
 }

@@ -43,7 +43,7 @@ export type HomeReporteCosechas = {
     mejorTrabajador: {
         trabajadorId: number;
         nombre: string;
-        dni: string;
+        dni: string | null;
         kilos: number;
         cosechas: number;
     } | null;
@@ -109,7 +109,7 @@ type CosechasReporteResponse = {
     porTrabajador: {
         trabajadorId: number;
         nombre: string;
-        dni: string;
+        dni: string | null;
         kilos: number;
         cosechas: number;
     }[];

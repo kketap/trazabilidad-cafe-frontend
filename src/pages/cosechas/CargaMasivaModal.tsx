@@ -1,3 +1,4 @@
+import { mostrarError } from "../../utils/mostrarError";
 // src/pages/cosechas/CargaMasivaModal.tsx
 import { useState } from "react";
 import {
@@ -95,7 +96,7 @@ export default function CargaMasivaModal({
       message.error({
         content: errorMsg,
         key: "preview-loading",
-        duration: 5,
+        duration: 0, onClick: () => message.destroy(),
       });
     } finally {
       setAnalyzing(false);
@@ -122,7 +123,7 @@ export default function CargaMasivaModal({
     }
 
     if (tieneErrores) {
-      message.error("Debes eliminar las filas con error antes de confirmar la carga.");
+      mostrarError("Debes eliminar las filas con error antes de confirmar la carga.");
       return;
     }
 
@@ -165,7 +166,7 @@ export default function CargaMasivaModal({
       message.error({
         content: errorMsg,
         key: "confirm-loading",
-        duration: 5,
+        duration: 0, onClick: () => message.destroy(),
       });
     } finally {
       setSubmitting(false);
@@ -436,7 +437,7 @@ export default function CargaMasivaModal({
                   file.type === "application/vnd.ms-excel";
 
                 if (!isExcel) {
-                  message.error("Solo se permiten archivos Excel (.xlsx o .xls)");
+                  mostrarError("Solo se permiten archivos Excel (.xlsx o .xls)");
                   return Upload.LIST_IGNORE;
                 }
 

@@ -40,7 +40,24 @@ export type MetricasRendimientoTrilla = {
   restoPct: number;
 };
 
+export type EstadoTrilla = "EN_PROCESO" | "TERMINADO" | "DESPACHADO";
+
+export function getEstadoTrilla(orden: OrdenTrilla): EstadoTrilla {
+  return orden.estadoManual ?? (orden.kilosNetos != null ? "TERMINADO" : orden.fechaIngreso ? "EN_PROCESO" : "DESPACHADO");
+}
+
+export const estadosTrilla = [
+  { value: "EN_PROCESO", label: "En proceso" },
+  { value: "TERMINADO", label: "Terminado" },
+  { value: "DESPACHADO", label: "Despachado" },
+] as const;
+
 export type OrdenTrilla = {
+  numeroGuiaHayland?: string | null;
+  estadoManual?: EstadoTrilla | null;
+  exportable2?: number | null;
+  exportable3?: number | null;
+  exportable4?: number | null;
   id: string;
   codigoTrilla: string;
   fechaDespacho: string;
@@ -70,7 +87,8 @@ export type OrdenTrilla = {
 };
 
 export type CreateOrdenTrillaDTO = {
-  loteIds: number[];
+  loteIds?: number[];
+  empaqueId?: number;
   descuentosPorLote?: DescuentoLoteInput[];
   kilosEnviados: number;
   sacosEnviados?: number | null;
@@ -90,6 +108,11 @@ export type CreateOrdenTrillaDTO = {
 };
 
 export type UpdateOrdenTrillaDTO = {
+  numeroGuiaHayland?: string | null;
+  estadoManual?: EstadoTrilla;
+  exportable2?: number | null;
+  exportable3?: number | null;
+  exportable4?: number | null;
   codigoTrilla?: string;
   fechaDespacho?: string;
   fechaIngreso?: string | null;

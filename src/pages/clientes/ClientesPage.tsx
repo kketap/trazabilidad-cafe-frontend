@@ -1,3 +1,4 @@
+import { mostrarError } from "../../utils/mostrarError";
 // src/pages/clientes/ClientesPage.tsx
 import { useEffect, useMemo, useState } from "react";
 import {
@@ -60,7 +61,7 @@ export default function ClientesPage() {
       const data = await getClientesApi();
       setClientes(data);
     } catch (error: any) {
-      message.error(
+      mostrarError(
         error?.response?.data?.message || "Error al cargar la lista de clientes",
       );
     } finally {
@@ -102,7 +103,7 @@ export default function ClientesPage() {
       message.success("Cliente desactivado correctamente");
       fetchClientes();
     } catch (error: any) {
-      message.error(
+      mostrarError(
         error?.response?.data?.message || "Error al eliminar cliente",
       );
     }
@@ -126,7 +127,7 @@ export default function ClientesPage() {
       fetchClientes();
     } catch (error: any) {
       if (error?.response?.data?.message) {
-        message.error(error.response.data.message);
+        mostrarError(error.response.data.message);
       }
     } finally {
       setSubmitting(false);
@@ -272,7 +273,7 @@ export default function ClientesPage() {
                   message.success("Cliente reactivado correctamente");
                   await fetchClientes();
                 } catch (error: any) {
-                  message.error(
+                  mostrarError(
                     error?.response?.data?.message ||
                     "No se pudo reactivar el cliente",
                   );

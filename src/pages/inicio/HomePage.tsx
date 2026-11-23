@@ -1,3 +1,4 @@
+import { mostrarError } from "../../utils/mostrarError";
 // src/pages/inicio/HomePage.tsx
 import { useEffect, useState, type ReactNode } from "react";
 import {
@@ -5,7 +6,6 @@ import {
     Card,
     Col,
     Grid,
-    message,
     Row,
     Skeleton,
     Space,
@@ -143,7 +143,7 @@ export default function HomePage() {
             setResumen(data);
         } catch (error) {
             console.error("Error cargando resumen del home:", error);
-            message.error("No se pudieron cargar los indicadores de producción.");
+            mostrarError("No se pudieron cargar los indicadores de producción.");
         } finally {
             setLoading(false);
         }
@@ -512,7 +512,7 @@ export default function HomePage() {
                                 </Typography.Title>
 
                                 <Typography.Text type="secondary">
-                                    DNI: {resumen.reporteCosechas.mejorTrabajador.dni}
+                                    DNI: {resumen.reporteCosechas.mejorTrabajador.dni ?? "—"}
                                 </Typography.Text>
 
                                 <Typography.Text strong>

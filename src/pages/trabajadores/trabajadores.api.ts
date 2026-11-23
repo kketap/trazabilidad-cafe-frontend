@@ -11,7 +11,8 @@ export type Trabajador = {
   id: number;
   nombres: string;
   apellidos?: string | null;
-  dni: string;
+  dni: string | null;
+  codigoInterno?: string | null;
   rol?: string | null;
   telefono?: string | null;
   activo: boolean;
@@ -22,7 +23,8 @@ export type Trabajador = {
 export type CreateTrabajadorDTO = {
   nombres: string;
   apellidos?: string | null;
-  dni: string;
+  dni?: string | null;
+  codigoInterno?: string | null;
   rol?: string | null;
   telefono?: string | null;
   activo?: boolean;

@@ -1,3 +1,4 @@
+import { mostrarError } from "../../utils/mostrarError";
 // src/pages/trilla/TrillaPage.tsx
 import { useEffect, useState, useMemo } from "react";
 import {
@@ -46,8 +47,8 @@ import {
 } from "./trilla.api";
 
 
-import type { Lote } from "../lotes/lotes.api";
-import { getLotesApi } from "../lotes/lotes.api";
+import { estadosTrilla, getEstadoTrilla } from "./trilla.api";
+import { getEmpaquesApi, type Empaque } from "../empaque/empaque.api";
 
 import EnviarATrillaModal from "../../components/trilla-modals/EnviarATrillaModal";
 import RecepcionTrillaModal from "../../components/trilla-modals/RecepcionTrillaModal";
@@ -72,7 +73,7 @@ export default function TrillaPage() {
   const { token } = theme.useToken();
 
   const [ordenes, setOrdenes] = useState<OrdenTrilla[]>([]);
-  const [lotes, setLotes] = useState<Lote[]>([]);
+  const [empaques, setEmpaques] = useState<Empaque[]>([]);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [searchText, setSearchText] = useState("");
@@ -87,15 +88,15 @@ export default function TrillaPage() {
   const fetchData = async () => {
     setLoading(true);
     try {
-      const [ordenesData, lotesData] = await Promise.all([
+      const [ordenesData, empaquesData] = await Promise.all([
         getOrdenesTrilaApi(),
-        getLotesApi(),
+        getEmpaquesApi(),
       ]);
       setOrdenes(ordenesData);
-      setLotes(lotesData);
+      setEmpaques(empaquesData);
     } catch (error: any) {
       console.error("Error al cargar datos de trilla:", error);
-      message.error(error?.response?.data?.message || "Error al cargar registros de trilla");
+      mostrarError(error?.response?.data?.message || "Error al cargar registros de trilla");
     } finally {
       setLoading(false);
     }
@@ -115,7 +116,7 @@ export default function TrillaPage() {
       fetchData();
     } catch (error: any) {
       console.error("Error creando orden de trilla:", error);
-      message.error(
+      mostrarError(
         error?.response?.data?.message || error.message || "Error al crear orden de trilla"
       );
     } finally {
@@ -134,7 +135,7 @@ export default function TrillaPage() {
       fetchData();
     } catch (error: any) {
       console.error("Error actualizando orden de trilla:", error);
-      message.error(
+      mostrarError(
         error?.response?.data?.message || error.message || "Error al actualizar la trilla"
       );
     } finally {
@@ -150,7 +151,7 @@ export default function TrillaPage() {
       fetchData();
     } catch (error: any) {
       console.error("Error eliminando orden de trilla:", error);
-      message.error(
+      mostrarError(
         error?.response?.data?.message || error.message || "Error al eliminar orden de trilla"
       );
     }
@@ -196,10 +197,7 @@ export default function TrillaPage() {
       }
 
       if (filtroEstado) {
-        let estadoReal = "DESPACHADO";
-        if (o.kilosNetos != null) estadoReal = "RECIBIDO";
-        else if (o.fechaIngreso) estadoReal = "EN_TRILLA";
-        if (estadoReal !== filtroEstado) return false;
+        if (getEstadoTrilla(o) !== filtroEstado) return false;
       }
 
       return true;
@@ -435,13 +433,9 @@ export default function TrillaPage() {
       key: "estado",
       align: "center",
       render: (_, record: OrdenTrilla) => {
-        if (record.kilosNetos != null) {
-          return <Badge status="success" text="Recibido" />;
-        }
-        if (record.fechaIngreso) {
-          return <Badge status="processing" text="En trilla" />;
-        }
-        return <Badge status="warning" text="Despachado" />;
+        const estado = getEstadoTrilla(record);
+        const etiqueta = estadosTrilla.find((opcion) => opcion.value === estado)?.label;
+        return <Badge status={estado === "TERMINADO" ? "success" : estado === "EN_PROCESO" ? "processing" : "warning"} text={etiqueta} />;
       },
     },
     {
@@ -610,9 +604,7 @@ export default function TrillaPage() {
               allowClear
               style={{ width: "100%" }}
               options={[
-                { value: "DESPACHADO", label: "Despachado" },
-                { value: "EN_TRILLA", label: "En Trilla" },
-                { value: "RECIBIDO", label: "Recibido" },
+                ...estadosTrilla,
               ]}
             />
           </Col>
@@ -642,7 +634,7 @@ export default function TrillaPage() {
         open={isCreateOpen}
         onClose={() => setIsCreateOpen(false)}
         onSubmit={handleCreate}
-        lotes={lotes}
+        empaques={empaques}
         loading={saving}
       />
 

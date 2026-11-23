@@ -1,4 +1,5 @@
 // src/api/apiClient.ts
+import { mensajeParaUsuario } from "../utils/mensajeParaUsuario";
 import axios, {
   type AxiosError,
   type InternalAxiosRequestConfig,
@@ -202,14 +203,24 @@ apiClient.interceptors.response.use(
           code === "TOKEN_EXPIRED"
             ? "expired"
             : "invalid",
-          refreshMessage ||
-          "Tu sesión ha finalizado. Inicia sesión nuevamente.",
+          mensajeParaUsuario(refreshMessage, "Tu sesión ha finalizado. Inicia sesión nuevamente."),
         );
 
         return Promise.reject(
           refreshError,
         );
       }
+    }
+
+    if (error.response) {
+      const datos = error.response.data;
+      const mensaje = mensajeParaUsuario(datos?.message, undefined, status);
+      error.response.data = typeof datos === "object" && datos !== null
+        ? { ...datos, message: mensaje }
+        : { message: mensaje };
+      error.message = mensaje;
+    } else {
+      error.message = "No se pudo conectar con el servidor. Revisa tu conexión e intenta nuevamente.";
     }
 
     return Promise.reject(error);

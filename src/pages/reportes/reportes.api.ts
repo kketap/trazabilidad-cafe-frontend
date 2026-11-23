@@ -14,7 +14,7 @@ export type CosechaDetalleItem = {
     tipoCosecha: string;
     varietal: string | null;
     lotes: { id: number; codigo: string; nombre: string | null; hectareas: number | null }[];
-    trabajadores: { id: number; nombre: string; dni: string; kilosAsignados: number | null }[];
+    trabajadores: { id: number; nombre: string; dni: string | null; kilosAsignados: number | null }[];
 };
 
 export type ReportePorDia = {
@@ -43,7 +43,7 @@ export type ReportePorTipoCosecha = {
 export type ReportePorTrabajador = {
     trabajadorId: number;
     nombre: string;
-    dni: string;
+    dni: string | null;
     kilos: number;
     cosechas: number;
 };

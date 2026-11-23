@@ -16,6 +16,7 @@ import {
     InboxOutlined,
     ExperimentOutlined,
     DollarOutlined,
+    EnvironmentOutlined
 } from "@ant-design/icons";
 import { Button, Grid, Layout, Menu, Tooltip, Typography, theme as antdTheme } from "antd";
 import { useState } from "react";
@@ -225,9 +226,10 @@ export default function AppLayout({ themeMode, isDarkMode, onThemeModeChange, te
                                 children: [
                                     { key: "/cosechas", icon: <ShopOutlined />, label: "Cosechas" },
                                     { key: "/lotes", icon: <AppstoreOutlined />, label: "Lotes" },
+                                    { key: "/lotes-fisicos", icon: <EnvironmentOutlined  />, label: "Lotes Físicos" },
                                     { key: "/trazabilidad", icon: <PartitionOutlined />, label: "Proceso Húmedo" },
                                     { key: "/secado", icon: <FireOutlined />, label: "Secado" },
-                                    { key: "/empaque", icon: <InboxOutlined />, label: "Empaque" },
+                                    { key: "/empaque", icon: <InboxOutlined />, label: "Almacén Pergamino" },
                                     { key: "/trilla", icon: <ExperimentOutlined />, label: "Trilla" },
                                 ],
                             },
@@ -348,7 +350,7 @@ export default function AppLayout({ themeMode, isDarkMode, onThemeModeChange, te
                                 {
                                     key: "/empaque",
                                     icon: <InboxOutlined />,
-                                    label: "Empaque",
+                                    label: "Almacén Pergamino",
                                 },
                                 {
                                     key: "/trilla",

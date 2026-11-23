@@ -153,7 +153,7 @@ export type CosechasReporte = {
   porTrabajador: {
     trabajadorId: number;
     nombre: string;
-    dni: string;
+    dni: string | null;
     kilos: number;
     cosechas: number;
   }[];

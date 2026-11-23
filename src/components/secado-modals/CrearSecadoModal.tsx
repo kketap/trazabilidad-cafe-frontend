@@ -1,5 +1,6 @@
 import { useState } from "react";
 import {
+  Alert,
   Col,
   DatePicker,
   Form,
@@ -20,18 +21,18 @@ import type { CreateSecadoDTO } from "../../pages/secado/secado.api";
 type Props = {
   open: boolean;
   onClose: () => void;
-  onSubmit: (values: CreateSecadoDTO) => Promise<void>;
+  onSubmit: (values: CreateSecadoDTO) => Promise<boolean>;
   lotes: Lote[];
   loading?: boolean;
+  error?: string;
 };
 
-export default function CrearSecadoModal({ open, onClose, onSubmit, lotes, loading }: Props) {
+export default function CrearSecadoModal({ open, onClose, onSubmit, lotes, loading, error }: Props) {
   const [form] = Form.useForm();
   const [selectedLoteIds, setSelectedLoteIds] = useState<number[]>([]);
   const [kilosPorLote, setKilosPorLote] = useState<Record<number, number>>({});
 
-  const kilosIngresados = Form.useWatch("kilosIngresados", form);
-  const kilosResultantes = Form.useWatch("kilosResultantes", form);
+  const fechaFin = Form.useWatch("fechaFin", form);
   const tempMinima = Form.useWatch("tempMinima", form);
   const tempMaxima = Form.useWatch("tempMaxima", form);
 
@@ -41,12 +42,6 @@ export default function CrearSecadoModal({ open, onClose, onSubmit, lotes, loadi
     return acc + Number(l?.kilosActuales ?? l?.kilosIniciales ?? 0);
   }, 0);
 
-  // Merma calculada en tiempo real
-  const mermaCalculada =
-    kilosIngresados !== undefined && kilosIngresados !== null &&
-      kilosResultantes !== undefined && kilosResultantes !== null
-      ? Number(kilosIngresados) - Number(kilosResultantes)
-      : null;
 
   // Filtrar y ordenar lotes: EN_PROCESO primero
   const lotesOrdenados = [...lotes].sort((a, b) => {
@@ -87,7 +82,6 @@ export default function CrearSecadoModal({ open, onClose, onSubmit, lotes, loadi
         : new Date().toISOString(),
       fechaFin: values.fechaFin ? dayjs(values.fechaFin).toISOString() : null,
       kilosIngresados: Number(values.kilosIngresados),
-      kilosResultantes: Number(values.kilosResultantes),
       observaciones: values.observaciones || null,
       perfilProceso: values.perfilProceso,
       secadora: values.secadora?.trim() || null,
@@ -100,7 +94,7 @@ export default function CrearSecadoModal({ open, onClose, onSubmit, lotes, loadi
           ? Number(values.tempMaxima)
           : null,
     };
-    await onSubmit(payload);
+    if (!(await onSubmit(payload))) return;
     form.resetFields();
     setSelectedLoteIds([]);
     setKilosPorLote({});
@@ -127,6 +121,7 @@ export default function CrearSecadoModal({ open, onClose, onSubmit, lotes, loadi
       destroyOnHidden
       className="secado-modal"
     >
+      {error && <Alert type="error" showIcon message={error} style={{ marginBottom: 16 }} />}
       <Form
         form={form}
         layout="vertical"
@@ -138,22 +133,11 @@ export default function CrearSecadoModal({ open, onClose, onSubmit, lotes, loadi
           <Col xs={24} md={12}>
             <Form.Item
               name="perfilProceso"
-              label="Perfil de Proceso"
+              label="Perfil de secado"
               rules={[{ required: true, message: "Seleccione un perfil de proceso" }]}
             >
               <Select
                 placeholder="Seleccione perfil..."
-                onChange={(perfil) => {
-                  const prefixMap: Record<string, string> = {
-                    NATURAL: "SEC-NAT",
-                    HONEY: "SEC-HON",
-                    LAVADO: "SEC-LAV",
-                  };
-                  const prefix = prefixMap[perfil] || "SEC";
-                  if (!form.getFieldValue("codigo")) {
-                    form.setFieldValue("codigo", `${prefix}-001`);
-                  }
-                }}
               >
                 <Select.Option value="HONEY">Honey</Select.Option>
                 <Select.Option value="NATURAL">Natural</Select.Option>
@@ -163,18 +147,17 @@ export default function CrearSecadoModal({ open, onClose, onSubmit, lotes, loadi
           </Col>
           <Col xs={24} md={12}>
             <Form.Item
-              name="codigo"
               label="Código de Secado"
-              tooltip="Código autogenerado vinculado al perfil de secado (SEC-NAT-001, etc.), pero editable"
+              tooltip="Se asigna al guardar con el siguiente correlativo del perfil seleccionado."
             >
-              <Input placeholder="Ej. SEC-NAT-001" style={{ fontWeight: "bold" }} />
+              <Input placeholder="Se genera al guardar" readOnly />
             </Form.Item>
           </Col>
         </Row>
 
         {/* ── Lotes de origen (Multi-lote) ── */}
         <Form.Item
-          label="Lotes de Proceso Húmedo (Multi-lote)"
+          label="Lotes originales de café"
           rules={[
             {
               validator: async () => {
@@ -194,7 +177,7 @@ export default function CrearSecadoModal({ open, onClose, onSubmit, lotes, loadi
             showSearch
             optionFilterProp="label"
           >
-            {lotesOrdenados.map((lote) => {
+            {lotesOrdenados.filter((lote) => lote.activo && (lote.kilosActuales ?? lote.kilosIniciales ?? 0) > 0).map((lote) => {
               const esRecomendado = lote.estado === "EN_PROCESO";
               const disp = lote.kilosActuales ?? lote.kilosIniciales;
               return (
@@ -361,7 +344,7 @@ export default function CrearSecadoModal({ open, onClose, onSubmit, lotes, loadi
                       max={
                         row.disponible
                       }
-                      precision={2}
+                      precision={2} decimalSeparator=","
                       addonAfter="kg"
                       style={{
                         width: "100%",
@@ -456,7 +439,11 @@ export default function CrearSecadoModal({ open, onClose, onSubmit, lotes, loadi
             </Form.Item>
           </Col>
           <Col xs={24} md={12}>
-            <Form.Item name="fechaFin" label="Fecha de Fin (Opcional)">
+            <Form.Item
+              name="fechaFin"
+              label="Fecha de Fin (Opcional)"
+              help={!fechaFin ? "El secado se guardará sin fecha de término." : undefined}
+            >
               <DatePicker style={{ width: "100%" }} format="YYYY-MM-DD HH:mm" showTime />
             </Form.Item>
           </Col>
@@ -491,58 +478,21 @@ export default function CrearSecadoModal({ open, onClose, onSubmit, lotes, loadi
                 },
               ]}
             >
-              <InputNumber
+              <InputNumber readOnly controls={false}
                 style={{ width: "100%" }}
                 min={0.01}
-                precision={2}
+                precision={2} decimalSeparator=","
                 placeholder="Ej. 500"
-                addonAfter="kg"
-              />
-            </Form.Item>
-          </Col>
-          <Col xs={24} md={12}>
-            <Form.Item
-              name="kilosResultantes"
-              label="Kilos Resultantes (Secos)"
-              rules={[{ required: true, message: "Kilos resultantes requeridos" }]}
-            >
-              <InputNumber
-                style={{ width: "100%" }}
-                min={0}
-                precision={2}
-                placeholder="Ej. 420"
                 addonAfter="kg"
               />
             </Form.Item>
           </Col>
         </Row>
 
-        {/* Merma calculada */}
-        {mermaCalculada !== null && (
-          <div
-            style={{
-              padding: "12px 16px",
-              marginBottom: 16,
-              background: mermaCalculada >= 0 ? "rgba(250, 173, 20, 0.1)" : "rgba(255, 77, 79, 0.1)",
-              border: `1px solid ${mermaCalculada >= 0 ? "#faad14" : "#ff4d4f"}`,
-              borderRadius: 6,
-            }}
-          >
-            <Typography.Text type={mermaCalculada >= 0 ? "warning" : "danger"}>
-              <strong>Merma estimada: </strong>
-              {mermaCalculada.toFixed(2)} kg (
-              {kilosIngresados
-                ? ((mermaCalculada / Number(kilosIngresados)) * 100).toFixed(1)
-                : 0}
-              %)
-            </Typography.Text>
-          </div>
-        )}
-
         {/* ── Secadora / Infraestructura ── */}
         <Form.Item
           name="secadora"
-          label="Secadora / Infraestructura (Opcional)"
+          label="Lugar de secado (Opcional)"
           tooltip="Identificación del equipo o patio de secado"
         >
           <Input placeholder='Ej. "Secadora 01", "Patio Solar A"' maxLength={100} />
@@ -576,7 +526,7 @@ export default function CrearSecadoModal({ open, onClose, onSubmit, lotes, loadi
             >
               <InputNumber
                 style={{ width: "100%" }}
-                precision={1}
+                precision={1} decimalSeparator=","
                 placeholder="Ej. 35.0"
                 addonAfter="°C"
                 step={0.5}
@@ -609,7 +559,7 @@ export default function CrearSecadoModal({ open, onClose, onSubmit, lotes, loadi
             >
               <InputNumber
                 style={{ width: "100%" }}
-                precision={1}
+                precision={1} decimalSeparator=","
                 placeholder="Ej. 55.0"
                 addonAfter="°C"
                 step={0.5}

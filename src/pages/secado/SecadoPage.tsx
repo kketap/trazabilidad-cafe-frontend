@@ -1,3 +1,4 @@
+import { mostrarError } from "../../utils/mostrarError";
 // src/pages/secado/SecadoPage.tsx
 import { useEffect, useState, useMemo } from "react";
 import {
@@ -57,6 +58,7 @@ export default function SecadoPage() {
   const [lotes, setLotes] = useState<Lote[]>([]);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState<string>();
 
   // Filtros
   const [searchText, setSearchText] = useState("");
@@ -81,7 +83,7 @@ export default function SecadoPage() {
       setLotes(lotesData);
     } catch (error: any) {
       console.error("Error al cargar datos de secado:", error);
-      message.error(error?.response?.data?.message || "Error al cargar registros de secado");
+      mostrarError(error?.response?.data?.message || "Error al cargar registros de secado");
     } finally {
       setLoading(false);
     }
@@ -92,21 +94,25 @@ export default function SecadoPage() {
   }, []);
 
   const handleCreate = async (values: CreateSecadoDTO) => {
+    setSaveError(undefined);
     setSaving(true);
     try {
       await createSecadoApi(values);
       message.success("Proceso de secado registrado exitosamente");
       setIsCreateOpen(false);
       fetchData();
+      return true;
     } catch (error: any) {
       console.error("Error creando secado:", error);
-      message.error(error?.response?.data?.message || error.message || "Error al registrar secado");
+      setSaveError(error?.response?.data?.message || error.message || "Error al registrar secado");
+      return false;
     } finally {
       setSaving(false);
     }
   };
 
   const handleUpdate = async (id: number, values: UpdateSecadoDTO) => {
+    setSaveError(undefined);
     setSaving(true);
     try {
       await updateSecadoApi(id, values);
@@ -116,7 +122,7 @@ export default function SecadoPage() {
       fetchData();
     } catch (error: any) {
       console.error("Error actualizando secado:", error);
-      message.error(error?.response?.data?.message || error.message || "Error al actualizar secado");
+      setSaveError(error?.response?.data?.message || error.message || "Error al actualizar secado");
     } finally {
       setSaving(false);
     }
@@ -129,7 +135,7 @@ export default function SecadoPage() {
       fetchData();
     } catch (error: any) {
       console.error("Error eliminando secado:", error);
-      message.error(error?.response?.data?.message || error.message || "Error al eliminar secado");
+      mostrarError(error?.response?.data?.message || error.message || "Error al eliminar secado");
     }
   };
 
@@ -167,7 +173,7 @@ export default function SecadoPage() {
       }
 
       if (filtroEstado) {
-        const estado = (s as any).estado || (s.kilosResultantes ? "COMPLETADO" : "EN_PROCESO");
+        const estado = (s as any).estado || (s.kilosResultantes != null ? "COMPLETADO" : "EN_PROCESO");
         if (estado !== filtroEstado) return false;
       }
 
@@ -226,7 +232,7 @@ export default function SecadoPage() {
       render: (val: number) => <strong>{val?.toLocaleString() ?? 0} kg</strong>,
     },
     {
-      title: "Perfil",
+      title: "Perfil de secado",
       dataIndex: "perfilProceso",
       key: "perfilProceso",
       render: (perfil: string) => perfil ? <Tag color="purple">{formatEstadoEnum(perfil)}</Tag> : "-",
@@ -236,27 +242,29 @@ export default function SecadoPage() {
       dataIndex: "kilosResultantes",
       key: "kilosResultantes",
       align: "right",
-      render: (val: number) => <strong style={{ color: token.colorPrimary }}>{val?.toLocaleString() ?? 0} kg</strong>,
+      render: (val: number | null) => val === null ? "Pesaje pendiente" : <strong style={{ color: token.colorPrimary }}>{val.toLocaleString()} kg</strong>,
     },
     {
-      title: "Merma",
-      dataIndex: "merma",
-      key: "merma",
-      align: "right",
-      render: (val: number, record: Secado) => {
-        const pct = record.kilosIngresados ? ((val / record.kilosIngresados) * 100).toFixed(1) : "0";
-        return (
-          <Tag color={val > 0 ? "warning" : "green"}>
-            {val?.toLocaleString() ?? 0} kg ({pct}%)
-          </Tag>
-        );
+      title: "Duración",
+      key: "duracion",
+      render: (_: unknown, record: Secado) => {
+        if (!record.fechaFin) return "En curso";
+        const minutos = dayjs(record.fechaFin).diff(dayjs(record.fechaInicio), "minute");
+        if (!Number.isFinite(minutos) || minutos < 0) return "—";
+        return `${Math.floor(minutos / 60)} h ${minutos % 60} min`;
       },
+    },
+    {
+      title: "Lugar de secado",
+      dataIndex: "secadora",
+      key: "secadora",
+      render: (lugar?: string | null) => lugar || "—",
     },
     {
       title: "Estado",
       key: "estado",
       render: (_, record: Secado) => {
-        const estado = (record as any).estado || (record.kilosResultantes ? "COMPLETADO" : "EN_SECADO");
+        const estado = (record as any).estado || (record.kilosResultantes != null ? "COMPLETADO" : "EN_SECADO");
         return (
           <Tag color={estado === "COMPLETADO" ? "success" : "orange"}>
             {formatEstadoEnum(estado)}
@@ -290,7 +298,7 @@ export default function SecadoPage() {
               icon={<EditOutlined style={{ color: "#1890ff" }} />}
               onClick={() => {
                 setEditingSecado(record);
-                setIsEditOpen(true);
+                setSaveError(undefined); setIsEditOpen(true);
               }}
             />
           </Tooltip>
@@ -336,7 +344,7 @@ export default function SecadoPage() {
             <Button
               type="primary"
               icon={<PlusOutlined />}
-              onClick={() => setIsCreateOpen(true)}
+              onClick={() => { setSaveError(undefined); setIsCreateOpen(true); }}
               style={{ background: "#fa8c16", borderColor: "#fa8c16" }}
             >
               Nuevo Secado
@@ -439,6 +447,7 @@ export default function SecadoPage() {
         open={isCreateOpen}
         onClose={() => setIsCreateOpen(false)}
         onSubmit={handleCreate}
+        error={isCreateOpen ? saveError : undefined}
         lotes={lotes}
         loading={saving}
       />
@@ -450,6 +459,7 @@ export default function SecadoPage() {
           setEditingSecado(null);
         }}
         onSubmit={handleUpdate}
+        error={isEditOpen ? saveError : undefined}
         secado={editingSecado}
         lotes={lotes}
         loading={saving}
@@ -514,13 +524,13 @@ export default function SecadoPage() {
                 )}
               </Descriptions.Item>
 
-              <Descriptions.Item label="Perfil de proceso">
+              <Descriptions.Item label="Perfil de secado">
                 {viewingSecado.perfilProceso ? (
                   <Tag color="purple">{formatEstadoEnum(viewingSecado.perfilProceso)}</Tag>
                 ) : <Typography.Text type="secondary">-</Typography.Text>}
               </Descriptions.Item>
 
-              <Descriptions.Item label="Secadora / Infraestructura">
+              <Descriptions.Item label="Lugar de secado">
                 {viewingSecado.secadora || <Typography.Text type="secondary">-</Typography.Text>}
               </Descriptions.Item>
 
@@ -540,12 +550,13 @@ export default function SecadoPage() {
 
               <Descriptions.Item label="Kg resultantes (secos)">
                 <strong style={{ color: token.colorPrimary }}>
-                  {viewingSecado.kilosResultantes?.toLocaleString("es-CL")} kg
+                  {viewingSecado.kilosResultantes == null ? "Pesaje pendiente" : `${viewingSecado.kilosResultantes.toLocaleString("es-CL")} kg`}
                 </strong>
               </Descriptions.Item>
 
               <Descriptions.Item label="Merma">
                 {(() => {
+                  if (viewingSecado.merma == null) return "—";
                   const pct = viewingSecado.kilosIngresados
                     ? ((viewingSecado.merma / viewingSecado.kilosIngresados) * 100).toFixed(1)
                     : "0";

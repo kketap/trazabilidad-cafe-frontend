@@ -1,6 +1,9 @@
+import { mostrarError } from "../../utils/mostrarError";
+import { mensajeParaUsuario } from "../../utils/mensajeParaUsuario";
 // src/pages/lotes/LotesPage.tsx
 import { useEffect, useMemo, useState } from "react";
 import {
+  Alert,
   Button,
   Card,
   Col,
@@ -36,6 +39,7 @@ import {
   SearchOutlined,
 } from "@ant-design/icons";
 import dayjs, { type Dayjs } from "dayjs";
+import utc from "dayjs/plugin/utc";
 
 import type { Lote, TipoCodigoLote, EstadoLote } from "./lotes.api";
 import {
@@ -48,6 +52,8 @@ import {
 import { getCosechasConSaldoApi, type Cosecha } from "../cosechas/cosechas.api";
 
 import { formatEstadoEnum } from "../../utils/enumFormatters";
+
+dayjs.extend(utc);
 
 type TipoCafeUi = "comercial" | "especial";
 
@@ -134,6 +140,8 @@ export default function LotesPage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingLote, setEditingLote] = useState<Lote | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [errorGuardar, setErrorGuardar] = useState<string>();
+  const [errorEliminar, setErrorEliminar] = useState<{ codigo: string; mensaje: string }>();
 
   const [cosechasConSaldo, setCosechasConSaldo] = useState<Cosecha[]>([]);
   const [selectedCosechaIds, setSelectedCosechaIds] = useState<number[]>([]);
@@ -153,7 +161,7 @@ export default function LotesPage() {
       const data = await getLotesApi();
       setLotes(data);
     } catch (error: any) {
-      message.error(
+      mostrarError(
         error?.response?.data?.message || "Error al cargar la lista de lotes",
       );
     } finally {
@@ -173,6 +181,7 @@ export default function LotesPage() {
   }, [tipoCafeWatch, isModalOpen, editingLote, lotes, form]);
 
   async function handleOpenCreateModal() {
+    setErrorGuardar(undefined);
     const tipoInicial: TipoCafeUi = "comercial";
     const codigoInicial = generarCodigoPreview(tipoInicial, lotes);
 
@@ -200,6 +209,7 @@ export default function LotesPage() {
   }
 
   function handleOpenEditModal(record: Lote) {
+    setErrorGuardar(undefined);
     setEditingLote(record);
     setSelectedCosechaIds([]);
     setKilosPorCosecha({});
@@ -224,17 +234,26 @@ export default function LotesPage() {
     setIsViewModalOpen(true);
   }
 
-  async function handleDelete(id: number) {
+  async function handleDelete(lote: Lote) {
+    setErrorEliminar(undefined);
     try {
-      await deleteLoteApi(id);
-      message.success("Lote eliminado o desactivado correctamente");
+      const resultado = await deleteLoteApi(lote.id);
+      message.success(resultado ?? "Lote eliminado o desactivado correctamente");
       fetchLotes();
     } catch (error: any) {
-      message.error(error?.response?.data?.message || "Error al eliminar lote");
+      setErrorEliminar({
+        codigo: lote.codigo,
+        mensaje: mensajeParaUsuario(
+          error?.response?.data?.message ?? error?.message,
+          "No se pudo completar la operación. Actualiza la lista de lotes e intenta nuevamente.",
+          error?.response?.status,
+        ),
+      });
     }
   }
 
   async function handleSubmit() {
+    setErrorGuardar(undefined);
     try {
       const values = await form.validateFields();
       setSubmitting(true);
@@ -292,8 +311,12 @@ export default function LotesPage() {
       form.resetFields();
       fetchLotes();
     } catch (error: any) {
-      if (error?.response?.data?.message) {
-        message.error(error.response.data.message);
+      if (!error?.errorFields) {
+        setErrorGuardar(mensajeParaUsuario(
+          error?.response?.data?.message ?? error?.message,
+          "No se pudo guardar el lote. Revisa los datos e intenta nuevamente.",
+          error?.response?.status,
+        ));
       }
     } finally {
       setSubmitting(false);
@@ -496,8 +519,8 @@ export default function LotesPage() {
 
           <Popconfirm
             title="Eliminar lote"
-            description="¿Deseas eliminar o desactivar este lote?"
-            onConfirm={() => handleDelete(record.id)}
+            description="Si el lote tiene registros asociados, se desactivará y se conservará su historial."
+            onConfirm={() => handleDelete(record)}
             okText="Eliminar"
             cancelText="Cancelar"
             okButtonProps={{ danger: true }}
@@ -546,6 +569,16 @@ export default function LotesPage() {
           Nuevo Lote
         </Button>
       </div>
+
+      {errorEliminar && (
+        <Alert
+          type="error"
+          showIcon
+          title={`No se pudo eliminar el lote ${errorEliminar.codigo}`}
+          description={errorEliminar.mensaje}
+          closable={{ onClose: () => setErrorEliminar(undefined) }}
+        />
+      )}
 
       <Card
         style={{
@@ -644,6 +677,15 @@ export default function LotesPage() {
         width={720}
         destroyOnClose
       >
+        {errorGuardar && (
+          <Alert
+            type="error"
+            showIcon
+            title="No se pudo guardar el lote"
+            description={errorGuardar}
+            closable={{ onClose: () => setErrorGuardar(undefined) }}
+          />
+        )}
         <Form form={form} layout="vertical" style={{ marginTop: 16 }}>
           <Row gutter={16}>
             <Col xs={24} sm={12}>
@@ -747,7 +789,7 @@ export default function LotesPage() {
                   const saldo = Number(c.saldoKilos ?? (c.kilosCosechados - (c.kilosUsados ?? 0)));
                   return {
                     value: c.id,
-                    label: `COS-${String(c.id).padStart(3, "0")} · Saldo: ${formatKg(saldo)} · Fecha: ${dayjs(c.fecha).format("DD/MM/YYYY")}`,
+                    label: `COS-${String(c.id).padStart(3, "0")} · Saldo: ${formatKg(saldo)} · Fecha: ${dayjs.utc(c.fecha).format("DD/MM/YYYY")}`,
                   };
                 })}
               />
@@ -776,7 +818,7 @@ export default function LotesPage() {
                         <Space direction="vertical" size={0}>
                           <Tag color="blue">{text}</Tag>
                           <span style={{ fontSize: 11, color: token.colorTextSecondary }}>
-                            {row.fecha ? dayjs(row.fecha).format("DD/MM/YYYY") : ""}
+                            {row.fecha ? dayjs.utc(row.fecha).format("DD/MM/YYYY") : ""}
                           </span>
                         </Space>
                       ),
@@ -794,7 +836,7 @@ export default function LotesPage() {
                         <InputNumber
                           min={0.1}
                           max={row.saldo}
-                          precision={2}
+                          precision={2} decimalSeparator=","
                           addonAfter="kg"
                           style={{ width: "100%" }}
                           value={kilosPorCosecha[row.id]}
@@ -826,7 +868,7 @@ export default function LotesPage() {
                 <InputNumber
                   style={{ width: "100%" }}
                   min={0}
-                  precision={2}
+                  precision={2} decimalSeparator=","
                   addonAfter="kg"
                   placeholder="Ej: 250"
                 />
@@ -838,7 +880,7 @@ export default function LotesPage() {
                 <InputNumber
                   style={{ width: "100%" }}
                   min={0}
-                  precision={2}
+                  precision={2} decimalSeparator=","
                   addonAfter="kg"
                   placeholder="Si lo deja vacío, se usará el inicial"
                 />
@@ -858,7 +900,7 @@ export default function LotesPage() {
                   min={0}
                   max={30}
                   step={0.1}
-                  precision={1}
+                  precision={1} decimalSeparator=","
                   addonAfter="°Bx"
                   placeholder="Ej: 18.5"
                 />
@@ -1005,7 +1047,7 @@ export default function LotesPage() {
                     <Tag key={item.id} icon={<AppstoreOutlined />} color="blue" style={{ fontSize: 12, padding: "3px 8px" }}>
                       COS-{String(item.cosechaId).padStart(3, "0")}
                       {item.kilosUsados != null ? ` · ${formatKg(item.kilosUsados)} tomados` : ""}
-                      {item.cosecha.fecha ? ` (${dayjs(item.cosecha.fecha).format("DD/MM/YYYY")})` : ""}
+                      {item.cosecha.fecha ? ` (${dayjs.utc(item.cosecha.fecha).format("DD/MM/YYYY")})` : ""}
                     </Tag>
                   ))}
                 </Space>

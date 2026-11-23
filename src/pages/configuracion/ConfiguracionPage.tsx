@@ -1,3 +1,4 @@
+import { mostrarError } from "../../utils/mostrarError";
 // src/pages/configuracion/ConfiguracionPage.tsx
 import { useEffect, useState } from "react";
 import { Button, Card, Col, Form, Input, Row, message } from "antd";
@@ -47,7 +48,7 @@ export default function ConfiguracionPage() {
                     message?: string;
                 }>;
 
-            message.error(
+            mostrarError(
                 axiosError.response?.data?.message ??
                 "Error al guardar el perfil.",
             );
@@ -81,7 +82,7 @@ export default function ConfiguracionPage() {
         } catch (error) {
             const axiosError = error as AxiosError<{ message?: string }>;
 
-            message.error(axiosError.response?.data?.message ?? "Error al cambiar la contraseña.");
+            mostrarError(axiosError.response?.data?.message ?? "Error al cambiar la contraseña.");
         } finally {
             setLoadingPassword(false);
         }

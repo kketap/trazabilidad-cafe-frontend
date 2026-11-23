@@ -24,10 +24,15 @@ import {
 import dayjs from "dayjs";
 import type { OrdenTrilla } from "../../pages/trilla/trilla.api";
 
+import { estadosTrilla, getEstadoTrilla } from "../../pages/trilla/trilla.api";
+
 const { Text } = Typography;
 
 const SUBPRODUCTO_LABELS: { key: keyof OrdenTrilla; label: string }[] = [
-  { key: "exportable", label: "Exportable" },
+  { key: "exportable", label: "Exportable 1" },
+  { key: "exportable2", label: "Exportable 2" },
+  { key: "exportable3", label: "Exportable 3" },
+  { key: "exportable4", label: "Exportable 4" },
   { key: "recuperado", label: "Recuperado" },
   { key: "malla13", label: "Malla 13" },
   { key: "segundaBuena", label: "2° Buena" },
@@ -50,12 +55,11 @@ export default function DetalleTrillaModal({ open, onClose, orden }: Props) {
   const esTemporal = orden.codigoTrilla?.startsWith("TEMP-");
 
   // Estado del proceso
-  const estadoLabel =
-    orden.kilosNetos != null
-      ? { text: "Recibido", color: "success" as const }
-      : orden.fechaIngreso
-        ? { text: "En Trilla", color: "processing" as const }
-        : { text: "Despachado", color: "warning" as const };
+  const estado = getEstadoTrilla(orden);
+  const estadoLabel = {
+    text: estadosTrilla.find((item) => item.value === estado)?.label,
+    color: estado === "TERMINADO" ? "success" as const : estado === "EN_PROCESO" ? "processing" as const : "warning" as const,
+  };
 
   // Subproductos registrados y suma
   const subproductosList = SUBPRODUCTO_LABELS.map((item) => ({
@@ -161,6 +165,7 @@ export default function DetalleTrillaModal({ open, onClose, orden }: Props) {
           </Descriptions.Item>
           <Descriptions.Item label="Estado">
             <Badge status={estadoLabel.color} text={estadoLabel.text} />
+            {orden.numeroGuiaHayland && <Tag>N.º guía Hayland {orden.numeroGuiaHayland}</Tag>}
           </Descriptions.Item>
 
           <Descriptions.Item label="N° Guía de Despacho">

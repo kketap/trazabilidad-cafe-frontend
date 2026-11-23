@@ -18,6 +18,7 @@ import TrillaPage from "./pages/trilla/TrillaPage";
 import VentasPage from "./pages/ventas/VentasPage";
 import LoginPage from "./pages/auth/LoginPage";
 import ProtectedRoute from "./components/auth/ProtectedRoute";
+import LotesFisicosPage from "./pages/lotes-fisicos/LotesFisicosPage";
 
 import "./App.css";
 
@@ -176,8 +177,10 @@ function App() {
         <Route element={<ProtectedRoute><AppLayout themeMode={themeMode} isDarkMode={isDarkMode} onThemeModeChange={setThemeMode} textSize={textSize} onTextSizeChange={setTextSize} /></ProtectedRoute>}>
           <Route path="/" element={<Navigate to="/inicio" replace />} />
           <Route path="/inicio" element={<HomePage />} />
+          <Route path="/home" element={<Navigate to="/inicio" replace />} />
           <Route path="/cosechas" element={<CosechasPage />} />
           <Route path="/lotes" element={<LotesPage />} />
+          <Route path="/lotes-fisicos" element={<LotesFisicosPage />} />
           <Route path="/clientes" element={<ClientesPage />} />
           <Route path="/trabajadores" element={<TrabajadoresPage />} />
           <Route path="/facturacion" element={<FacturacionPage />} />
