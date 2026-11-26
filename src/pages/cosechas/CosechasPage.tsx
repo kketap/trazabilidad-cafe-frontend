@@ -25,7 +25,6 @@ import {
 } from "antd";
 import type { ColumnsType } from "antd/es/table";
 import {
-  AppstoreOutlined,
   BarChartOutlined,
   ClearOutlined,
   DeleteOutlined,
@@ -57,8 +56,6 @@ import {
 import type { Trabajador } from "../../pages/trabajadores/trabajadores.api";
 import { getTrabajadoresApi } from "../../pages/trabajadores/trabajadores.api";
 
-import type { Lote } from "../lotes/lotes.api";
-import { getLotesApi } from "../lotes/lotes.api";
 import { getFundosApi, type Fundo } from "./fundos.api";
 
 
@@ -89,7 +86,6 @@ export default function CosechasPage() {
 
   const [cosechas, setCosechas] = useState<Cosecha[]>([]);
   const [trabajadores, setTrabajadores] = useState<Trabajador[]>([]);
-  const [lotesList, setLotesList] = useState<Lote[]>([]);
   const [fundos, setFundos] = useState<Fundo[] | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -132,13 +128,9 @@ export default function CosechasPage() {
 
   async function fetchTrabajadoresYLotes() {
     try {
-      const [trabData, lotesData] = await Promise.all([
-        getTrabajadoresApi(),
-        getLotesApi(),
-      ]);
+      const trabData = await getTrabajadoresApi();
 
       setTrabajadores(trabData);
-      setLotesList(lotesData);
     } catch (error) {
       console.error("Error al cargar trabajadores/lotes:", error);
       mostrarError("No se pudieron cargar trabajadores o lotes.");
@@ -162,7 +154,6 @@ export default function CosechasPage() {
       tipoCosecha: "plena",
       totalHectareas: 1,
       trabajadorIds: [],
-      loteIds: [],
       loteFisicoIds: [],
     });
 
@@ -171,29 +162,6 @@ export default function CosechasPage() {
 
   function handleOpenEditModal(record: Cosecha) {
     setEditingCosecha(record);
-
-    const loteIdsRelacion =
-      (record.cosechaLotes ?? []).map(
-        (item) => item.loteId,
-      );
-
-    const loteIdsFallback =
-      loteIdsRelacion.length > 0
-        ? loteIdsRelacion
-        : lotesList
-          .filter((lote) =>
-            record.lotes
-              .split(",")
-              .map((codigo) =>
-                codigo.trim(),
-              )
-              .includes(
-                lote.codigo,
-              ),
-          )
-          .map(
-            (lote) => lote.id,
-          );
 
     const loteFisicoIdsRelacion =
       (
@@ -225,8 +193,6 @@ export default function CosechasPage() {
       totalHectareas:
         record.totalHectareas,
 
-      loteIds:
-        loteIdsFallback,
 
       loteFisicoIds:
         loteFisicoIdsRelacion,
@@ -287,23 +253,13 @@ export default function CosechasPage() {
         ? values.trabajadorIds
         : [];
 
-      const loteIds: number[] = Array.isArray(values.loteIds)
-        ? values.loteIds
-        : [];
-
-      const lotesSeleccionadosTexto = lotesList
-        .filter((lote) => loteIds.includes(lote.id))
-        .map((lote) => lote.codigo)
-        .join(", ");
-
       const payload: CreateCosechaDTO = {
         fecha: values.fecha.format("YYYY-MM-DD"),
         kilosCosechados: Number(values.kilosCosechados),
         totalHectareas: Number(values.totalHectareas),
         tipoCosecha: values.tipoCosecha,
 
-        lotes: lotesSeleccionadosTexto,
-        loteIds,
+        lotes: editingCosecha?.lotes ?? "",
         ...(fundos !== null && {
           loteFisicoIds: Array.isArray(values.loteFisicoIds) ? values.loteFisicoIds : [],
         }),
@@ -380,10 +336,6 @@ export default function CosechasPage() {
         const matchesCodigo = codigo.includes(term);
 
         const matchesLotes =
-          cosecha.lotes?.toLowerCase().includes(term) ||
-          cosecha.cosechaLotes?.some((item) =>
-            item.lote.codigo.toLowerCase().includes(term),
-          ) ||
           cosecha.cosechasLotesFisicos?.some((item) =>
             item.loteFisico.codigo.toLowerCase().includes(term),
           );
@@ -470,15 +422,14 @@ export default function CosechasPage() {
       sorter: (a, b) => dayjs.utc(a.fecha).unix() - dayjs.utc(b.fecha).unix(),
     },
     {
-      title: "Lotes / Cuarteles",
+      title: "Lotes físicos",
       key: "lotes",
       width: 240,
       render: (_: unknown, record) => {
-        const lotesCosecha = record.cosechaLotes ?? [];
         const lotesFisicos = record.cosechasLotesFisicos ?? [];
 
-        if (lotesCosecha.length === 0 && lotesFisicos.length === 0) {
-          return record.lotes || "-";
+        if (lotesFisicos.length === 0) {
+          return "—";
         }
 
         return (
@@ -486,11 +437,6 @@ export default function CosechasPage() {
             {lotesFisicos.map((item) => (
               <Tag key={`lf-${item.id}`} color="cyan" style={{ fontSize: 11 }}>
                 {item.loteFisico.codigo}
-              </Tag>
-            ))}
-            {lotesCosecha.map((item) => (
-              <Tag key={`l-${item.id}`} icon={<AppstoreOutlined />} color="gold" style={{ fontSize: 11 }}>
-                {item.lote.codigo}
               </Tag>
             ))}
           </Space>
@@ -701,7 +647,7 @@ export default function CosechasPage() {
                         }}
                       >
                         <span>
-                          Hay <strong>{cosechasConSaldo.length}</strong> {cosechasConSaldo.length === 1 ? "cosecha" : "cosechas"} con saldo pendiente disponible para agrupar en Lotes de Proceso (Total disponible: <strong>{formatKg(totalSaldoDisponible)}</strong>).
+                          Hay <strong>{cosechasConSaldo.length}</strong> {cosechasConSaldo.length === 1 ? "cosecha" : "cosechas"} con saldo pendiente (Total disponible: <strong>{formatKg(totalSaldoDisponible)}</strong>).
                         </span>
                         <Button
                           size="small"
@@ -929,34 +875,13 @@ export default function CosechasPage() {
                     </Row>
 
                     <Form.Item
-                      name="loteIds"
-                      label="Lotes de Proceso (Opcional)"
-                      tooltip="Lotes de proceso a los que se asocia directamente esta cosecha"
-                    >
-                      <Select
-                        mode="multiple"
-                        placeholder="Seleccione los lotes de proceso..."
-                        showSearch
-                        optionFilterProp="label"
-                        allowClear
-                        options={lotesList
-                          .filter((lote) => lote.activo)
-                          .map((lote) => ({
-                            value: lote.id,
-                            label: `${lote.codigo}${lote.nombre ? ` - ${lote.nombre}` : ""
-                              }`,
-                          }))}
-                      />
-                    </Form.Item>
-
-                    <Form.Item
                       name="loteFisicoIds"
-                      label="Cuarteles / Lotes Físicos de Origen (Fundos)"
-                      tooltip="Cuarteles físicos de recolección: FSC 1..45, FSS 1..36, FDS 1..7"
+                      label="Lotes físicos"
+                      tooltip="Lotes físicos de recolección: FSC 1..45, FSS 1..36, FDS 1..7"
                     >
                       <Select
                         mode="multiple"
-                        placeholder="Seleccione cuarteles físicos (ej. FSC-1, FSS-12...)"
+                        placeholder="Seleccione lotes físicos (ej. FSC-1, FSS-12...)"
                         showSearch
                         optionFilterProp="label"
                         disabled={fundos === null}
@@ -1083,7 +1008,7 @@ export default function CosechasPage() {
                         ha
                       </Descriptions.Item>
 
-                      <Descriptions.Item label="Cuarteles Físicos (Fundos)">
+                      <Descriptions.Item label="Lotes físicos">
                         {viewingCosecha.cosechasLotesFisicos &&
                           viewingCosecha.cosechasLotesFisicos.length > 0 ? (
                           <Space wrap>
@@ -1094,22 +1019,7 @@ export default function CosechasPage() {
                             ))}
                           </Space>
                         ) : (
-                          "Sin cuarteles físicos asignados"
-                        )}
-                      </Descriptions.Item>
-
-                      <Descriptions.Item label="Lotes de Proceso">
-                        {viewingCosecha.cosechaLotes &&
-                          viewingCosecha.cosechaLotes.length > 0 ? (
-                          <Space wrap>
-                            {viewingCosecha.cosechaLotes.map((item) => (
-                              <Tag key={item.id} icon={<AppstoreOutlined />} color="gold">
-                                {item.lote.codigo}
-                              </Tag>
-                            ))}
-                          </Space>
-                        ) : (
-                          viewingCosecha.lotes || "-"
+                          "Sin lotes físicos asignados"
                         )}
                       </Descriptions.Item>
 

@@ -10,9 +10,9 @@ import {
   Modal,
   Row,
   Select,
-  Typography,
 } from "antd";
-import dayjs from "dayjs";
+import dayjs, { type Dayjs } from "dayjs";
+import { formatearDuracionSecado } from "../../utils/formatearDuracion";
 import type { Lote } from "../../pages/lotes/lotes.api";
 import type { Secado, UpdateSecadoDTO } from "../../pages/secado/secado.api";
 
@@ -29,9 +29,8 @@ type Props = {
 export default function EditarSecadoModal({ open, onClose, onSubmit, secado, lotes, loading, error }: Props) {
   const [form] = Form.useForm();
   const aportes = Form.useWatch<{ loteId: number; kilosUsados: number | null }[]>("lotes", form) ?? [];
-  const fechaFin = Form.useWatch("fechaFin", form);
-  const kilosIngresados = Form.useWatch("kilosIngresados", form);
-  const kilosResultantes = Form.useWatch("kilosResultantes", form);
+  const fechaInicio = Form.useWatch<Dayjs | null>("fechaInicio", form);
+  const fechaFin = Form.useWatch<Dayjs | null>("fechaFin", form);
   const tempMinima = Form.useWatch("tempMinima", form);
   const tempMaxima = Form.useWatch("tempMaxima", form);
 
@@ -55,7 +54,6 @@ export default function EditarSecadoModal({ open, onClose, onSubmit, secado, lot
         fechaInicio: secado.fechaInicio ? dayjs(secado.fechaInicio) : null,
         fechaFin: secado.fechaFin ? dayjs(secado.fechaFin) : null,
         kilosIngresados: secado.kilosIngresados,
-        kilosResultantes: secado.kilosResultantes,
         observaciones: secado.observaciones || "",
         perfilProceso: secado.perfilProceso,
         secadora: secado.secadora ?? "",
@@ -65,11 +63,6 @@ export default function EditarSecadoModal({ open, onClose, onSubmit, secado, lot
     }
   }, [secado, open, form]);
 
-  const mermaCalculada =
-    kilosIngresados !== undefined && kilosIngresados !== null &&
-      kilosResultantes !== undefined && kilosResultantes !== null
-      ? Number(kilosIngresados) - Number(kilosResultantes)
-      : null;
 
   const handleFinish = async (values: any) => {
     if (!secado) return;
@@ -80,7 +73,6 @@ export default function EditarSecadoModal({ open, onClose, onSubmit, secado, lot
         : secado.fechaInicio,
       fechaFin: values.fechaFin ? dayjs(values.fechaFin).toISOString() : null,
       kilosIngresados: Number(values.kilosIngresados),
-      kilosResultantes: values.kilosResultantes == null ? null : Number(values.kilosResultantes),
       observaciones: values.observaciones || null,
       perfilProceso: values.perfilProceso,
       secadora: values.secadora?.trim() || null,
@@ -114,7 +106,6 @@ export default function EditarSecadoModal({ open, onClose, onSubmit, secado, lot
             (sum: number, item: { kilosUsados?: number }) => sum + (item.kilosUsados ?? 0), 0,
           );
           form.setFieldValue("kilosIngresados", Number(total.toFixed(2)));
-          void form.validateFields(["kilosResultantes"]).catch(() => undefined);
         }
       }}>
 
@@ -172,7 +163,7 @@ export default function EditarSecadoModal({ open, onClose, onSubmit, secado, lot
 
         {/* ── Fechas ── */}
         <Row gutter={16}>
-          <Col span={12}>
+          <Col xs={24} md={8}>
             <Form.Item
               name="fechaInicio"
               label="Fecha de Inicio"
@@ -181,9 +172,18 @@ export default function EditarSecadoModal({ open, onClose, onSubmit, secado, lot
               <DatePicker style={{ width: "100%" }} format="YYYY-MM-DD HH:mm" showTime />
             </Form.Item>
           </Col>
-          <Col span={12}>
+          <Col xs={24} md={8}>
             <Form.Item name="fechaFin" label="Fecha de Fin (Opcional)">
               <DatePicker style={{ width: "100%" }} format="YYYY-MM-DD HH:mm" showTime />
+            </Form.Item>
+          </Col>
+          <Col xs={24} md={8}>
+            <Form.Item
+              label="Duración del proceso"
+              htmlFor="duracion-secado-editar"
+              tooltip="Se calcula a partir de las fechas y horas de inicio y fin."
+            >
+              <Input id="duracion-secado-editar" readOnly value={formatearDuracionSecado(fechaInicio, fechaFin) ?? "—"} />
             </Form.Item>
           </Col>
         </Row>
@@ -193,77 +193,13 @@ export default function EditarSecadoModal({ open, onClose, onSubmit, secado, lot
         {/* ── Kilos ── */}
         <Row gutter={16}>
           <Col span={12}>
-            <Form.Item name="kilosIngresados" label="Kilos Ingresados">
+            <Form.Item name="kilosIngresados" label="Kilos de cerezo ingresados">
               <InputNumber readOnly controls={false} precision={2} decimalSeparator="," addonAfter="kg" />
-            </Form.Item>
-          </Col>
-          <Col span={12}>
-            <Form.Item
-              name="kilosResultantes"
-              label="Kilos Resultantes (Secos)"
-              tooltip="Puedes dejar el resultado pendiente hasta registrar el peso seco."
-              dependencies={[
-                "kilosIngresados",
-              ]}
-              rules={[
-                {
-                  validator: (_, value) => {
-                    const ingresados =
-                      form.getFieldValue(
-                        "kilosIngresados",
-                      );
-
-                    if (
-                      value != null &&
-                      ingresados != null &&
-                      Number(value) >
-                      Number(ingresados)
-                    ) {
-                      return Promise.reject(
-                        new Error(
-                          "Los kilos resultantes no pueden superar los kilos ingresados",
-                        ),
-                      );
-                    }
-
-                    return Promise.resolve();
-                  },
-                },
-              ]}
-            >
-              <InputNumber
-                style={{
-                  width: "100%",
-                }}
-                min={0}
-                precision={2} decimalSeparator=","
-                addonAfter="kg"
-              />
             </Form.Item>
           </Col>
         </Row>
 
         {/* Merma calculada */}
-        {mermaCalculada !== null && (
-          <div
-            style={{
-              padding: "12px 16px",
-              marginBottom: 16,
-              background: mermaCalculada >= 0 ? "rgba(250, 173, 20, 0.1)" : "rgba(255, 77, 79, 0.1)",
-              border: `1px solid ${mermaCalculada >= 0 ? "#faad14" : "#ff4d4f"}`,
-              borderRadius: 6,
-            }}
-          >
-            <Typography.Text type={mermaCalculada >= 0 ? "warning" : "danger"}>
-              <strong>Merma estimada: </strong>
-              {mermaCalculada.toFixed(2)} kg (
-              {kilosIngresados
-                ? ((mermaCalculada / Number(kilosIngresados)) * 100).toFixed(1)
-                : 0}
-              %)
-            </Typography.Text>
-          </div>
-        )}
 
         {/* ── Perfil de proceso + Secadora ── */}
         <Row gutter={16}>

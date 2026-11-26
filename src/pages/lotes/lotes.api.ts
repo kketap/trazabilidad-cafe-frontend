@@ -52,6 +52,7 @@ export type Lote = {
         };
     }[];
 
+    kilosProcesados?: number;
     createdAt?: string;
     updatedAt?: string;
 };
@@ -73,7 +74,7 @@ export type CreateLoteDTO = {
     cosechaIds?: number[];
 };
 
-export type UpdateLoteDTO = Partial<CreateLoteDTO>;
+export type UpdateLoteDTO = Partial<CreateLoteDTO> & { versionLote?: string };
 
 export async function getLotesApi(): Promise<Lote[]> {
     const response = await apiClient.get<ApiResponse<Lote[]> | Lote[]>("/lotes");

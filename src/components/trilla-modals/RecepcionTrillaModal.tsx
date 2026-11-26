@@ -4,7 +4,6 @@ import { useEffect } from "react";
 import {
   Alert,
   Col,
-  DatePicker,
   Descriptions,
   Divider,
   Form,
@@ -21,9 +20,7 @@ import {
   BarChartOutlined,
   CheckCircleOutlined,
   EditOutlined,
-  NumberOutlined,
 } from "@ant-design/icons";
-import dayjs from "dayjs";
 import type { OrdenTrilla, UpdateOrdenTrillaDTO } from "../../pages/trilla/trilla.api";
 
 const { Text } = Typography;
@@ -37,23 +34,16 @@ const CALIDAD_OPTIONS = [
   { value: "Estándar", label: "Estándar" },
 ];
 
-const TIPO_SACO_OPTIONS = [
-  { value: "GrainPro", label: "GrainPro" },
-  { value: "Yute", label: "Yute" },
-  { value: "Polipropileno", label: "Polipropileno" },
-  { value: "Ecotact", label: "Ecotact" },
-  { value: "Hermético 30kg", label: "Hermético 30kg" },
-  { value: "Hermético 60kg", label: "Hermético 60kg" },
-];
-
-/** Definición centralizada de los 9 subproductos */
+/** Campos del desglose de subproductos de la recepción. */
 const SUBPRODUCTOS: {
   name: keyof Pick<OrdenTrilla,
-    "exportable" | "recuperado" | "malla13" | "segundaBuena" | "segundaMala" |
+    "exportable" | "exportable2" | "exportable3" | "recuperado" | "malla13" | "segundaBuena" | "segundaMala" |
     "sucioEscojo" | "cisco" | "descarteMaquina" | "cascarilla"
   >; label: string
 }[] = [
-    { name: "exportable", label: "Exportable" },
+    { name: "exportable", label: "Exportable 1" },
+    { name: "exportable2", label: "Exportable 2" },
+    { name: "exportable3", label: "Exportable 3" },
     { name: "recuperado", label: "Recuperado" },
     { name: "malla13", label: "Malla 13" },
     { name: "segundaBuena", label: "Segunda Buena" },
@@ -84,27 +74,28 @@ export default function RecepcionTrillaModal({ open, onClose, onSubmit, orden, l
 
   // Observar todos los valores del formulario en tiempo real (evita hooks en loop)
   const allValues = Form.useWatch([], form);
-  const kilosNetos: number | undefined = allValues?.kilosNetos;
+  const datos = allValues ?? orden;
+  const kilosNetos: number | undefined = datos?.kilosNetos ?? undefined;
+  const kilosEnviados = orden?.kilosEnviados;
+  const excedeKilosEnviados = kilosNetos != null && kilosEnviados != null && kilosNetos > kilosEnviados;
+  const mensajeLimite = `Los kilos netos resultantes no pueden superar los ${kilosEnviados?.toLocaleString("es-CL")} kg enviados.`;
 
-  const totalSubproductos = SUBPRODUCTOS.reduce((acc, s) => {
-    const val = allValues?.[s.name];
-    return acc + (val != null && !isNaN(Number(val)) ? Number(val) : 0);
-  }, 0);
+  const totalSubproductos = Number(SUBPRODUCTOS.reduce(
+    (total, { name }) => total + (toNumberOrNull(datos?.[name]) ?? 0),
+    Number(orden?.exportable4 ?? 0),
+  ).toFixed(2));
 
   useEffect(() => {
     if (open && orden) {
       form.setFieldsValue({
-        codigoTrilla: orden.codigoTrilla,
-        fechaIngreso: orden.fechaIngreso ? dayjs(orden.fechaIngreso) : null,
+        codigoTrilla: "",
         calidad: orden.calidad || undefined,
-        tipoSaco: orden.tipoSaco || undefined,
         kilosNetos: orden.kilosNetos ?? undefined,
-        numeroGuia: orden.numeroGuia ?? "",
         numeroGuiaHayland: orden.numeroGuiaHayland ?? "",
+        guiaIngreso: orden.guiaIngreso ?? "",
         estadoManual: getEstadoTrilla(orden),
         exportable2: orden.exportable2 ?? null,
         exportable3: orden.exportable3 ?? null,
-        exportable4: orden.exportable4 ?? null,
         // Subproductos
         exportable: orden.exportable ?? null,
         recuperado: orden.recuperado ?? null,
@@ -125,17 +116,12 @@ export default function RecepcionTrillaModal({ open, onClose, onSubmit, orden, l
   const handleFinish = (values: any) => {
     if (!orden) return;
     const payload: UpdateOrdenTrillaDTO = {
-      codigoTrilla: values.codigoTrilla?.trim(),
-      fechaIngreso: values.fechaIngreso ? values.fechaIngreso.toISOString() : null,
+      codigoTrilla: values.codigoTrilla?.trim() || undefined,
       calidad: values.calidad || null,
-      tipoSaco: values.tipoSaco || null,
       kilosNetos: values.kilosNetos ? Number(values.kilosNetos) : null,
-      numeroGuia: values.numeroGuia?.trim() || null,
       numeroGuiaHayland: values.numeroGuiaHayland?.trim() || null,
+      guiaIngreso: values.guiaIngreso.trim(),
       estadoManual: values.estadoManual,
-      exportable2: toNumberOrNull(values.exportable2),
-      exportable3: toNumberOrNull(values.exportable3),
-      exportable4: toNumberOrNull(values.exportable4),
       ...Object.fromEntries(
         SUBPRODUCTOS.map((s) => [s.name, toNumberOrNull(values[s.name])])
       ),
@@ -157,6 +143,7 @@ export default function RecepcionTrillaModal({ open, onClose, onSubmit, orden, l
       onCancel={onClose}
       onOk={() => form.submit()}
       okText="Guardar Recepción"
+      okButtonProps={{ disabled: excedeKilosEnviados }}
       cancelText="Cancelar"
       confirmLoading={loading}
       width="min(760px, 96vw)"
@@ -173,12 +160,12 @@ export default function RecepcionTrillaModal({ open, onClose, onSubmit, orden, l
             <Descriptions.Item label="Kilos Enviados" span={1}>
               <strong>{orden.kilosEnviados?.toLocaleString()} kg</strong>
             </Descriptions.Item>
-            {orden.numeroGuia && (
-              <Descriptions.Item label="N° Guía" span={1}>
-                <Tag color="geekblue">{orden.numeroGuia}</Tag>
+            {(orden.guiaSalida ?? orden.numeroGuia) && (
+              <Descriptions.Item label="Guía de salida" span={1}>
+                <Tag color="geekblue">{orden.guiaSalida ?? orden.numeroGuia}</Tag>
               </Descriptions.Item>
             )}
-            <Descriptions.Item label="Lotes incluidos" span={orden.numeroGuia ? 1 : 2}>
+            <Descriptions.Item label="Lotes incluidos" span={(orden.guiaSalida ?? orden.numeroGuia) ? 1 : 2}>
               <Space wrap>
                 {orden.lotes && orden.lotes.length > 0
                   ? orden.lotes.map((l: any) => (
@@ -197,7 +184,7 @@ export default function RecepcionTrillaModal({ open, onClose, onSubmit, orden, l
               showIcon
               icon={<EditOutlined />}
               message="Código temporal pendiente"
-              description="Ingresa el número definitivo de trilla entregado por el proveedor (Hayland u otro)."
+              description="Ingresa el código definitivo que te entregó la trilladora. Si aún está pendiente, puedes guardar la recepción con el código temporal."
               style={{ marginBottom: 20 }}
             />
           )}
@@ -205,59 +192,31 @@ export default function RecepcionTrillaModal({ open, onClose, onSubmit, orden, l
       )}
 
       <Form form={form} layout="vertical" onFinish={handleFinish}>
+        {esTemporalCodigo && (
+          <Form.Item
+            name="codigoTrilla"
+            label="Código definitivo de trilla"
+            rules={[{
+              validator: async (_, value?: string) => {
+                if (value?.trim().toUpperCase().startsWith("TEMP-")) {
+                  throw new Error("Ingresa el código definitivo que te entregó la trilladora.");
+                }
+              },
+            }]}
+          >
+            <Input placeholder="Código informado por la trilladora" allowClear />
+          </Form.Item>
+        )}
         <Form.Item name="estadoManual" label="Estado" rules={[{ required: true }]}>
           <Select options={[...estadosTrilla]} />
         </Form.Item>
         <Form.Item name="numeroGuiaHayland" label="N.º de guía de recepción Hayland">
           <Input maxLength={80} allowClear />
         </Form.Item>
-        <Row gutter={12}>
-          {([2, 3, 4] as const).map((numero) => (
-            <Col key={numero} xs={24} sm={8}>
-              <Form.Item name={`exportable${numero}`} label={`Exportable ${numero}`}>
-                <InputNumber min={0} precision={2} decimalSeparator="," addonAfter="kg" />
-              </Form.Item>
-            </Col>
-          ))}
-        </Row>
 
-        {/* ── Código de trilla ── */}
-        <Form.Item
-          label="Número de Trilla (Código definitivo)"
-          name="codigoTrilla"
-          rules={[
-            { required: true, message: "El código de trilla es obligatorio" },
-            { min: 2, message: "Mínimo 2 caracteres" },
-          ]}
-        >
-          <Input
-            placeholder="Ej: HAY-2026-001"
-            prefix={<EditOutlined />}
-            allowClear
-          />
-        </Form.Item>
-
-        {/* ── N° Guía de Despacho ── */}
-        <Form.Item
-          label={
-            <Space>
-              <NumberOutlined />
-              <span>N° Guía de Despacho (Opcional)</span>
-            </Space>
-          }
-          name="numeroGuia"
-          tooltip="Número de guía de remisión o despacho emitido por el transportista o proveedor"
-        >
-          <Input placeholder='Ej. "GR-2026-00145"' maxLength={80} allowClear />
-        </Form.Item>
-
-        <Form.Item label="Fecha de Ingreso a Trilladora" name="fechaIngreso">
-          <DatePicker
-            style={{ width: "100%" }}
-            showTime
-            format="DD/MM/YYYY HH:mm"
-            placeholder="Seleccionar fecha de ingreso..."
-          />
+        <Form.Item name="guiaIngreso" label="Guía de ingreso"
+          rules={[{ required: true, whitespace: true, message: "Ingresa la guía de ingreso" }]}>
+          <Input />
         </Form.Item>
 
         <Divider style={{ margin: "12px 0" }} />
@@ -273,27 +232,19 @@ export default function RecepcionTrillaModal({ open, onClose, onSubmit, orden, l
               />
             </Form.Item>
           </Col>
-          <Col xs={24} md={12}>
-            <Form.Item label="Tipo de Saco" name="tipoSaco">
-              <Select
-                placeholder="Seleccionar tipo de saco..."
-                allowClear
-                options={TIPO_SACO_OPTIONS}
-              />
-            </Form.Item>
-          </Col>
         </Row>
 
         <Form.Item
           label="Kilos Netos resultantes (café verde)"
           name="kilosNetos"
+          validateStatus={excedeKilosEnviados ? "error" : undefined}
+          help={excedeKilosEnviados ? mensajeLimite : undefined}
           rules={[
             {
-              validator: (_, value) => {
-                if (value !== undefined && value !== null && value <= 0) {
-                  return Promise.reject("Los kilos netos deben ser mayor a 0");
-                }
-                return Promise.resolve();
+              validator: async (_, value) => {
+                if (value == null) return;
+                if (value <= 0) throw new Error("Los kilos netos deben ser mayores a 0.");
+                if (kilosEnviados != null && value > kilosEnviados) throw new Error(mensajeLimite);
               },
             },
           ]}
@@ -308,27 +259,16 @@ export default function RecepcionTrillaModal({ open, onClose, onSubmit, orden, l
           />
         </Form.Item>
 
-        {/* ── Panel KPI en tiempo real: % Exportable, % Recuperado y % Resto ── */}
-        {(() => {
-          const baseKilos = Number(kilosNetos || orden?.kilosNetos || orden?.kilosEnviados || 0);
-          const expVal = [allValues?.exportable, allValues?.exportable2, allValues?.exportable3, allValues?.exportable4]
+        {kilosNetos != null && kilosNetos > 0 && (() => {
+          const expVal = [datos?.exportable, datos?.exportable2, datos?.exportable3, orden?.exportable4]
             .reduce((total, kilos) => total + Number(kilos ?? 0), 0);
-          const recVal = Number(allValues?.recuperado ?? orden?.recuperado ?? 0);
-          const otrosSubproductos =
-            Number(allValues?.malla13 ?? orden?.malla13 ?? 0) +
-            Number(allValues?.segundaBuena ?? orden?.segundaBuena ?? 0) +
-            Number(allValues?.segundaMala ?? orden?.segundaMala ?? 0) +
-            Number(allValues?.sucioEscojo ?? orden?.sucioEscojo ?? 0) +
-            Number(allValues?.cisco ?? orden?.cisco ?? 0) +
-            Number(allValues?.descarteMaquina ?? orden?.descarteMaquina ?? 0) +
-            Number(allValues?.cascarilla ?? orden?.cascarilla ?? 0);
+          const recVal = Number(datos?.recuperado ?? 0);
+          const otrosSubproductos = Number((totalSubproductos - expVal - recVal).toFixed(2));
+          const sinDistribuir = Number((kilosNetos - totalSubproductos).toFixed(2));
 
-          const pctExportable = baseKilos > 0 ? (expVal / baseKilos) * 100 : 0;
-          const pctRecuperado = baseKilos > 0 ? (recVal / baseKilos) * 100 : 0;
-          const restoKilos = otrosSubproductos > 0
-            ? otrosSubproductos
-            : Math.max(0, baseKilos - (expVal + recVal));
-          const pctResto = baseKilos > 0 ? (restoKilos / baseKilos) * 100 : 0;
+          const pctExportable = (expVal / kilosNetos) * 100;
+          const pctRecuperado = (recVal / kilosNetos) * 100;
+          const pctOtros = (otrosSubproductos / kilosNetos) * 100;
 
           return (
             <div className="trilla-kpi-panel">
@@ -345,14 +285,11 @@ export default function RecepcionTrillaModal({ open, onClose, onSubmit, orden, l
                 <Space>
                   <BarChartOutlined />
                   <Text strong style={{ fontSize: 13 }}>
-                    Rendimiento de Trilla en Tiempo Real (% sobre{" "}
-                    {kilosNetos ? "kilos netos" : "base"})
+                    Desglose en tiempo real (% sobre kilos netos)
                   </Text>
                 </Space>
 
-                {baseKilos > 0 && (
-                  <Tag color="gold">Base: {baseKilos.toFixed(2)} kg</Tag>
-                )}
+                <Tag color="gold">{kilosNetos.toLocaleString("es-CL")} kg netos</Tag>
               </div>
 
               <Row gutter={[12, 8]}>
@@ -387,17 +324,25 @@ export default function RecepcionTrillaModal({ open, onClose, onSubmit, orden, l
                 <Col xs={24} sm={8}>
                   <div className="trilla-kpi-card trilla-kpi-card-resto">
                     <Text className="trilla-kpi-label trilla-kpi-label-resto">
-                      % Resto
+                      % Otros subproductos
                     </Text>
                     <span className="trilla-kpi-value trilla-kpi-value-resto">
-                      {pctResto.toFixed(1)}%
+                      {pctOtros.toFixed(1)}%
                     </span>
                     <Text className="trilla-kpi-secondary">
-                      {restoKilos.toFixed(1)} kg
+                      {otrosSubproductos.toFixed(1)} kg
                     </Text>
                   </div>
                 </Col>
               </Row>
+              {sinDistribuir !== 0 && (
+                <div style={{ marginTop: 12 }}>
+                  <Text type={sinDistribuir > 0 ? "warning" : "danger"}>
+                    {Math.abs(sinDistribuir).toLocaleString("es-CL")} kg{" "}
+                    {sinDistribuir > 0 ? "sin distribuir en el desglose" : "por encima del peso neto"}
+                  </Text>
+                </div>
+              )}
             </div>
           );
         })()}
@@ -449,7 +394,7 @@ export default function RecepcionTrillaModal({ open, onClose, onSubmit, orden, l
                 kilosNetos && totalSubproductos > Number(kilosNetos) ? "danger" : "success"
               }
             >
-              <strong>Total subproductos: </strong>
+              <strong>Total del desglose </strong>
               {totalSubproductos.toLocaleString("es-AR", { minimumFractionDigits: 2 })} kg
               {kilosNetos ? (
                 <span style={{ marginLeft: 8, opacity: 0.75 }}>

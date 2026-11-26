@@ -52,7 +52,12 @@ export const estadosTrilla = [
   { value: "DESPACHADO", label: "Despachado" },
 ] as const;
 
+export type EnvioAlmacenInput = { empaqueId: number; kilosNetos: number };
+
 export type OrdenTrilla = {
+  almacenes?: (EnvioAlmacenInput & { empaque?: { codigo?: string | null } })[];
+  guiaSalida?: string | null;
+  guiaIngreso?: string | null;
   numeroGuiaHayland?: string | null;
   estadoManual?: EstadoTrilla | null;
   exportable2?: number | null;
@@ -87,10 +92,13 @@ export type OrdenTrilla = {
 };
 
 export type CreateOrdenTrillaDTO = {
+  enviosAlmacen?: EnvioAlmacenInput[];
+  empaqueIds?: number[];
+  guiaSalida?: string;
   loteIds?: number[];
   empaqueId?: number;
   descuentosPorLote?: DescuentoLoteInput[];
-  kilosEnviados: number;
+  kilosEnviados?: number;
   sacosEnviados?: number | null;
   fechaDespacho?: string;
   codigoTrilla?: string;
@@ -108,6 +116,7 @@ export type CreateOrdenTrillaDTO = {
 };
 
 export type UpdateOrdenTrillaDTO = {
+  guiaIngreso?: string;
   numeroGuiaHayland?: string | null;
   estadoManual?: EstadoTrilla;
   exportable2?: number | null;

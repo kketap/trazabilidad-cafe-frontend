@@ -1,4 +1,5 @@
 import CamposOxidacion from "./CamposOxidacion";
+import { formatearDuracionHoras } from "../../utils/formatearDuracion";
 // src/components/trazabilidad-modals/CrearProcesoModal.tsx
 
 import { useMemo, useState } from "react";
@@ -349,15 +350,12 @@ export default function CrearProcesoModal({
                 values.finFermentacion,
             );
 
-        if (duracionCalculada === undefined) {
-            return;
-        }
 
         await onSubmit({
             ...values,
             lotes: distribucion,
             kilosIngresados: total,
-            duracionHoras: duracionCalculada,
+            duracionHoras: duracionCalculada ?? 0,
         });
 
         form.resetFields();
@@ -444,7 +442,7 @@ export default function CrearProcesoModal({
                             required
                             validateStatus={errorLotes ? "error" : undefined}
                             help={errorLotes}
-                            tooltip="Seleccione los lotes de proceso que aportarán café al proceso húmedo."
+                            tooltip="Al seleccionar un lote se cargan sus kilos disponibles. Puedes ajustar cuánto aporta cada lote."
                         >
                             <Select<number[]>
                                 mode="multiple"
@@ -472,10 +470,15 @@ export default function CrearProcesoModal({
                                                 (item) => item.loteId === id,
                                             );
 
+                                            if (existente) return existente;
+
+                                            const lote = lotesDisponibles.find(
+                                                (item) => item.id === id,
+                                            );
                                             return {
                                                 loteId: id,
                                                 kilosUsados:
-                                                    existente?.kilosUsados ?? 0,
+                                                    lote?.kilosActuales ?? lote?.kilosIniciales ?? 0,
                                             };
                                         });
 
@@ -652,11 +655,6 @@ export default function CrearProcesoModal({
                             label="Inicio de fermentación"
                             name="inicioFermentacion"
                             rules={[
-                                {
-                                    required: true,
-                                    message:
-                                        "Ingrese la fecha y hora de inicio",
-                                },
                             ]}
                         >
                             <DatePicker
@@ -687,11 +685,6 @@ export default function CrearProcesoModal({
                                 "inicioFermentacion",
                             ]}
                             rules={[
-                                {
-                                    required: true,
-                                    message:
-                                        "Ingrese la fecha y hora de fin",
-                                },
                                 {
                                     validator: async (
                                         _,
@@ -748,14 +741,12 @@ export default function CrearProcesoModal({
                         md={12}
                     >
                         <Form.Item
-                            label="Duración del proceso"
+                            label="Duración de fermentación"
                             name="duracionHoras"
+                            getValueProps={(horas?: number) => ({
+                                value: formatearDuracionHoras(horas) ?? "—",
+                            })}
                             rules={[
-                                {
-                                    required: true,
-                                    message:
-                                        "Seleccione el inicio y fin de fermentación",
-                                },
                                 {
                                     type: "number",
                                     min: 0.01,
@@ -764,16 +755,7 @@ export default function CrearProcesoModal({
                                 },
                             ]}
                         >
-                            <InputNumber
-                                style={{
-                                    width: "100%",
-                                }}
-                                precision={2} decimalSeparator=","
-                                addonAfter="horas"
-                                readOnly
-                                controls={false}
-                                placeholder="Se calcula automáticamente"
-                            />
+                            <Input readOnly />
                         </Form.Item>
                     </Col>
 

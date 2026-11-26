@@ -107,7 +107,9 @@ export default function TrillaPage() {
   }, []);
 
   // Crear orden
+  const [errorEnvio, setErrorEnvio] = useState<string>();
   const handleCreate = async (values: CreateOrdenTrillaDTO) => {
+    setErrorEnvio(undefined);
     setSaving(true);
     try {
       await createOrdenTrillaApi(values);
@@ -116,9 +118,8 @@ export default function TrillaPage() {
       fetchData();
     } catch (error: any) {
       console.error("Error creando orden de trilla:", error);
-      mostrarError(
-        error?.response?.data?.message || error.message || "Error al crear orden de trilla"
-      );
+      setErrorEnvio(error?.response?.data?.message || error.message || "No se pudo registrar el envío a Trilla. Intenta nuevamente.");
+      if (error?.response?.status === 409) void fetchData();
     } finally {
       setSaving(false);
     }
@@ -184,9 +185,8 @@ export default function TrillaPage() {
         const term = searchText.toLowerCase();
         const matchesCodigo = o.codigoTrilla?.toLowerCase().includes(term);
         const matchesCalidad = o.calidad?.toLowerCase().includes(term);
-        const matchesSaco = o.tipoSaco?.toLowerCase().includes(term);
         const matchesLotes = o.lotes && o.lotes.some((l: any) => l.codigo?.toLowerCase().includes(term));
-        if (!matchesCodigo && !matchesCalidad && !matchesSaco && !matchesLotes) return false;
+        if (!matchesCodigo && !matchesCalidad && !matchesLotes) return false;
       }
 
       if (filtroFecha && o.fechaDespacho) {
@@ -245,7 +245,7 @@ export default function TrillaPage() {
         <Space wrap size={4}>
           {record.ordenLotes && record.ordenLotes.length > 0
             ? record.ordenLotes.map((ol: any) => (
-                <Tooltip key={ol.id} title={`${Number(ol.kilosDescontados || 0).toFixed(1)} kg${ol.sacos ? ` · ${ol.sacos} sacos` : ""}`}>
+                <Tooltip key={ol.id} title={`${Number(ol.kilosDescontados || 0).toFixed(1)} kg`}>
                   <Tag color="gold" style={{ fontSize: 12 }}>
                     {ol.lote?.codigo || `Lote #${ol.loteId}`} ({Number(ol.kilosDescontados || 0).toFixed(0)} kg)
                   </Tag>
@@ -313,24 +313,14 @@ export default function TrillaPage() {
         ),
     },
     {
-      title: "Tipo Saco",
-      dataIndex: "tipoSaco",
-      key: "tipoSaco",
-      render: (tipoSaco?: string | null) =>
-        tipoSaco ? <Tag color="cyan">{tipoSaco}</Tag> : <Text type="secondary">-</Text>,
+      title: "Guía de salida",
+      key: "guiaSalida",
+      render: (_, orden) => orden.guiaSalida ?? orden.numeroGuia ?? "—",
     },
     {
-      title: "N° Guía",
-      dataIndex: "numeroGuia",
-      key: "numeroGuia",
-      render: (val?: string | null) =>
-        val ? (
-          <Tag color="geekblue" style={{ fontSize: 12 }}>
-            {val}
-          </Tag>
-        ) : (
-          <Text type="secondary">-</Text>
-        ),
+      title: "Guía de ingreso",
+      key: "guiaIngreso",
+      render: (_, orden) => orden.guiaIngreso ?? "—",
     },
     {
       title: "Subproductos",
@@ -338,7 +328,9 @@ export default function TrillaPage() {
       align: "center",
       render: (_: unknown, record: OrdenTrilla) => {
         const SUBPRODUCTO_LABELS: { key: keyof OrdenTrilla; label: string }[] = [
-          { key: "exportable", label: "Exportable" },
+          { key: "exportable", label: "Exportable 1" },
+          { key: "exportable2", label: "Exportable 2" },
+          { key: "exportable3", label: "Exportable 3" },
           { key: "recuperado", label: "Recuperado" },
           { key: "malla13", label: "Malla 13" },
           { key: "segundaBuena", label: "2° Buena" },
@@ -421,7 +413,7 @@ export default function TrillaPage() {
             )}
             {restoPct != null && restoPct > 0 && (
               <Tag color="orange" style={{ fontSize: 11, margin: 0 }}>
-                Resto: {restoPct.toFixed(1)}%
+                Otros subproductos {restoPct.toFixed(1)}%
               </Tag>
             )}
           </Space>
@@ -579,7 +571,7 @@ export default function TrillaPage() {
         <Row gutter={[12, 12]} align="middle" style={{ marginBottom: 16 }}>
           <Col xs={24} sm={12} md={8}>
             <Input
-              placeholder="Buscar por código, calidad, tipo de saco o lote..."
+              placeholder="Buscar por código, calidad o lote..."
               prefix={<SearchOutlined />}
               value={searchText}
               onChange={(e) => setSearchText(e.target.value)}
@@ -632,8 +624,9 @@ export default function TrillaPage() {
       {/* Modales */}
       <EnviarATrillaModal
         open={isCreateOpen}
-        onClose={() => setIsCreateOpen(false)}
+        onClose={() => { setIsCreateOpen(false); setErrorEnvio(undefined); }}
         onSubmit={handleCreate}
+        error={errorEnvio}
         empaques={empaques}
         loading={saving}
       />

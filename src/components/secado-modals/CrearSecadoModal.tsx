@@ -14,7 +14,8 @@ import {
   Tag,
   Typography,
 } from "antd";
-import dayjs from "dayjs";
+import dayjs, { type Dayjs } from "dayjs";
+import { formatearDuracionSecado } from "../../utils/formatearDuracion";
 import type { Lote } from "../../pages/lotes/lotes.api";
 import type { CreateSecadoDTO } from "../../pages/secado/secado.api";
 
@@ -32,7 +33,8 @@ export default function CrearSecadoModal({ open, onClose, onSubmit, lotes, loadi
   const [selectedLoteIds, setSelectedLoteIds] = useState<number[]>([]);
   const [kilosPorLote, setKilosPorLote] = useState<Record<number, number>>({});
 
-  const fechaFin = Form.useWatch("fechaFin", form);
+  const fechaInicio = Form.useWatch<Dayjs | null>("fechaInicio", form);
+  const fechaFin = Form.useWatch<Dayjs | null>("fechaFin", form);
   const tempMinima = Form.useWatch("tempMinima", form);
   const tempMaxima = Form.useWatch("tempMaxima", form);
 
@@ -429,7 +431,7 @@ export default function CrearSecadoModal({ open, onClose, onSubmit, lotes, loadi
 
         {/* ── Fechas ── */}
         <Row gutter={16}>
-          <Col xs={24} md={12}>
+          <Col xs={24} md={8}>
             <Form.Item
               name="fechaInicio"
               label="Fecha de Inicio"
@@ -438,13 +440,22 @@ export default function CrearSecadoModal({ open, onClose, onSubmit, lotes, loadi
               <DatePicker style={{ width: "100%" }} format="YYYY-MM-DD HH:mm" showTime />
             </Form.Item>
           </Col>
-          <Col xs={24} md={12}>
+          <Col xs={24} md={8}>
             <Form.Item
               name="fechaFin"
               label="Fecha de Fin (Opcional)"
               help={!fechaFin ? "El secado se guardará sin fecha de término." : undefined}
             >
               <DatePicker style={{ width: "100%" }} format="YYYY-MM-DD HH:mm" showTime />
+            </Form.Item>
+          </Col>
+          <Col xs={24} md={8}>
+            <Form.Item
+              label="Duración del proceso"
+              htmlFor="duracion-secado-crear"
+              tooltip="Se calcula a partir de las fechas y horas de inicio y fin."
+            >
+              <Input id="duracion-secado-crear" readOnly value={formatearDuracionSecado(fechaInicio, fechaFin) ?? "—"} />
             </Form.Item>
           </Col>
         </Row>
@@ -454,7 +465,7 @@ export default function CrearSecadoModal({ open, onClose, onSubmit, lotes, loadi
           <Col xs={24} md={12}>
             <Form.Item
               name="kilosIngresados"
-              label="Kilos Ingresados"
+              label="Kilos de cerezo ingresados"
               rules={[
                 { required: true, message: "Kilos ingresados requeridos" },
                 {

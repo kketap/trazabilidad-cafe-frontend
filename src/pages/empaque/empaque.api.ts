@@ -29,12 +29,16 @@ export type Empaque = {
   puntajeSca?: number | null;
   perfilSensorial?: string | null;
   fueCatado?: boolean | null;
+  muestra?: boolean | null;
   createdAt?: string;
   updatedAt?: string;
   lote?: Lote;
   secado?: Secado | null;
   empaqueSecados?: EmpaqueSecado[];
   ordenesTrilla?: { kilosEnviados: number }[];
+  enviosTrilla?: { kilosNetos: number }[];
+  saldoTrilla?: number;
+  estado?: "EN_ALMACEN" | "EN_TRILLA" | "EN_PROCESO";
 };
 
 export type CreateEmpaqueDTO = {
@@ -46,6 +50,7 @@ export type CreateEmpaqueDTO = {
   kilosResultantes: number;
   secadoId?: number | null;
   secadoIds?: number[];
+  perfilSecado?: string;
   tipoEmpaque?: string | null;
   cantidadEmpaques?: number | null;
   rendimiento?: number | null;
@@ -56,6 +61,7 @@ export type CreateEmpaqueDTO = {
   puntajeSca?: number | null;
   perfilSensorial?: string | null;
   fueCatado?: boolean | null;
+  muestra?: boolean | null;
 };
 
 export type UpdateEmpaqueDTO = Partial<CreateEmpaqueDTO>;

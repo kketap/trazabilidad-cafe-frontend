@@ -1,256 +1,28 @@
-// src/components/empaque-modals/CrearEmpaqueModal.tsx
-import { Form, Input, InputNumber, Modal, Select, DatePicker, Row, Col, Divider, Space, Switch, Typography, Tag } from "antd";
-
-import dayjs from "dayjs";
+import { Form, Modal } from "antd";
+import dayjs, { type Dayjs } from "dayjs";
 import type { Lote } from "../../pages/lotes/lotes.api";
 import type { Secado } from "../../pages/secado/secado.api";
-import type { CreateEmpaqueDTO } from "../../pages/empaque/empaque.api";
+import type { CreateEmpaqueDTO, Empaque } from "../../pages/empaque/empaque.api";
+import CamposEmpaque from "./CamposEmpaque";
+
+export type EmpaqueFormValues = Omit<CreateEmpaqueDTO, "fechaInicio"> & { fechaInicio: Dayjs };
 
 type Props = {
-  open: boolean;
-  onClose: () => void;
-  onSubmit: (values: CreateEmpaqueDTO) => Promise<void>;
-  lotes: Lote[];
-  secados: Secado[];
-  loading?: boolean;
+  open: boolean; onClose: () => void; onSubmit: (values: CreateEmpaqueDTO) => Promise<void>;
+  lotes: Lote[]; secados: Secado[]; empaques: Empaque[]; loading?: boolean;
 };
 
-export default function CrearEmpaqueModal({ open, onClose, onSubmit, lotes, secados, loading }: Props) {
-  const [form] = Form.useForm();
-  const kilosIngresados = Form.useWatch("kilosIngresados", form);
-  const kilosResultantes = Form.useWatch("kilosResultantes", form);
-  const secadoIdsVinculados = Form.useWatch<number[]>("secadoIds", form) ?? [];
-
-  const lotesOrdenados = [...lotes].sort((a, b) => {
-    if (a.estado === "EN_SECADO" && b.estado !== "EN_SECADO") return -1;
-    if (a.estado !== "EN_SECADO" && b.estado === "EN_SECADO") return 1;
-    return (a.codigo || "").localeCompare(b.codigo || "");
-  });
-
-  const handleLoteChange = (loteId: number) => {
-    const loteSeleccionado = lotes.find((l) => l.id === loteId);
-    if (loteSeleccionado && loteSeleccionado.kilosActuales) {
-      form.setFieldsValue({ kilosIngresados: loteSeleccionado.kilosActuales });
-    }
-  };
-
-  const mermaCalculada =
-    kilosIngresados !== undefined && kilosResultantes !== undefined
-      ? Number(kilosIngresados) - Number(kilosResultantes)
-      : null;
-
-  const handleFinish = async (values: any) => {
-    const secadoIds: number[] = Array.isArray(values.secadoIds)
-      ? values.secadoIds
-      : values.secadoId
-        ? [values.secadoId]
-        : [];
-
-    const payload: CreateEmpaqueDTO = {
-      codigo: values.codigo?.trim() || null,
-      loteId: values.loteId,
-      fechaInicio: values.fechaInicio ? dayjs(values.fechaInicio).toISOString() : new Date().toISOString(),
-      fechaFin: values.fechaFin ? dayjs(values.fechaFin).toISOString() : null,
-      kilosIngresados: Number(values.kilosIngresados),
-      kilosResultantes: Number(values.kilosResultantes),
-      secadoId: secadoIds[0] || null,
-      secadoIds,
-      tipoEmpaque: values.tipoEmpaque || null,
-      cantidadEmpaques: values.cantidadEmpaques != null ? Number(values.cantidadEmpaques) : null,
-      rendimiento: values.rendimiento != null ? Number(values.rendimiento) : null,
-      observaciones: values.observaciones || null,
-      humedad: values.humedad != null ? Number(values.humedad) : null,
-      actividadAgua: values.actividadAgua != null ? Number(values.actividadAgua) : null,
-      puntajeSca: values.puntajeSca != null ? Number(values.puntajeSca) : null,
-      perfilSensorial: values.perfilSensorial?.trim() || null,
-      fueCatado: values.fueCatado ?? null,
-    };
-    await onSubmit(payload);
-    form.resetFields();
-  };
-
-  const handleSecadosChange = (ids: number[]) => {
-    // Sumar los kilosResultantes de los secados seleccionados
-    const totalSecados = ids.reduce((acc, id) => {
-      const s = secados.find((item) => item.id === id);
-      return acc + Number(s?.kilosResultantes || 0);
-    }, 0);
-    const peso = ids.length ? Number(totalSecados.toFixed(2)) : null;
-    form.setFieldsValue({ kilosIngresados: peso, kilosResultantes: peso });
-  };
+export default function CrearEmpaqueModal({ open, onClose, onSubmit, lotes, secados, empaques, loading }: Props) {
+  const [form] = Form.useForm<EmpaqueFormValues>();
 
   return (
-    <Modal
-      title="Registrar ingreso a Almacén Pergamino"
-      open={open}
-      onCancel={() => { form.resetFields(); onClose(); }}
-      onOk={() => form.submit()}
-      confirmLoading={loading}
-      okText="Registrar ingreso"
-      cancelText="Cancelar"
-      width={720}
-    >
-      <Form form={form} layout="vertical" onFinish={handleFinish} initialValues={{ fechaInicio: dayjs(), fueCatado: false }}>
-        <Row gutter={16}>
-          <Col span={12}>
-            <Form.Item name="fechaInicio" label="Fecha de Ingreso" rules={[{ required: true, message: "Requerida" }]}>
-              <DatePicker style={{ width: "100%" }} format="YYYY-MM-DD HH:mm" showTime />
-            </Form.Item>
-          </Col>
-          <Col span={12}>
-            <Form.Item name="fechaFin" label="Fecha de Salida (Opcional)">
-              <DatePicker style={{ width: "100%" }} format="YYYY-MM-DD HH:mm" showTime />
-            </Form.Item>
-          </Col>
-        </Row>
-
-        <Row gutter={16}>
-          <Col span={12}>
-            <Form.Item
-              name="codigo"
-              label="Código de Empaque"
-              tooltip="Código identificador propio (autogenerado EMP-xxx si se deja vacío, o editable)"
-            >
-              <Input placeholder="Ej. EMP-001" style={{ fontWeight: "bold" }} />
-            </Form.Item>
-          </Col>
-          <Col span={12}>
-            <Form.Item name="loteId" label="Lote de Café" rules={[{ required: true, message: "Por favor seleccione un lote" }]} extra="Lotes priorizados en estado EN_SECADO">
-              <Select placeholder="Seleccione un lote" onChange={handleLoteChange} showSearch optionFilterProp="label">
-                {lotesOrdenados.map((lote) => (
-                  <Select.Option key={lote.id} value={lote.id} label={`${lote.codigo} ${lote.nombre ? `- ${lote.nombre}` : ""}`}>
-                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                      <span><strong>{lote.codigo}</strong> {lote.nombre ? `(${lote.nombre})` : ""}</span>
-                      <Space>
-                        {lote.kilosActuales ? <Tag color="blue">{lote.kilosActuales} kg</Tag> : null}
-                        <Tag color={lote.estado === "EN_SECADO" ? "gold" : "default"}>{lote.estado || "SIN ESTADO"}</Tag>
-                      </Space>
-                    </div>
-                  </Select.Option>
-                ))}
-              </Select>
-            </Form.Item>
-          </Col>
-        </Row>
-
-        <Form.Item
-          name="secadoIds"
-          label="Proceso(s) de Secado Vinculados (Agrupa múltiples secados)"
-          extra="Puede seleccionar múltiples códigos de secado para consolidar"
-        >
-          <Select
-            mode="multiple"
-            placeholder="Seleccione procesos de secado a consolidar"
-            showSearch
-            optionFilterProp="label"
-            allowClear
-            onChange={handleSecadosChange}
-          >
-            {secados.filter((secado) => secado.kilosResultantes != null).map((secado) => (
-              <Select.Option key={secado.id} value={secado.id} label={secado.codigo || `SEC-${secado.id}`}>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                  <span><strong>{secado.codigo || `SEC-${secado.id}`}</strong> - Lote: {secado.lote?.codigo}</span>
-                  <Space>
-                    <Tag color="cyan">{secado.kilosResultantes} kg pergamino</Tag>
-                  </Space>
-                </div>
-              </Select.Option>
-            ))}
-          </Select>
-        </Form.Item>
-        <Divider titlePlacement="left" orientationMargin={0}>
-          <Typography.Text strong style={{ fontSize: 13 }}>Detalles del Empaque y Sacos</Typography.Text>
-        </Divider>
-
-        <Row gutter={16}>
-          <Col span={8}>
-            <Form.Item name="tipoEmpaque" label="Tipo de Empaque">
-              <Select placeholder="Ej: Saco 69 kg" allowClear options={[
-                { value: "Saco 69 kg", label: "Saco 69 kg" },
-                { value: "Saco 69 kg + Grainpro", label: "Saco 69 kg + Grainpro" },
-                { value: "Saco 60 kg", label: "Saco 60 kg" },
-                { value: "Big Bag", label: "Big Bag" },
-                { value: "Granel", label: "Granel" },
-              ]} />
-            </Form.Item>
-          </Col>
-          <Col span={8}>
-            <Form.Item name="cantidadEmpaques" label="N° de Sacos (Bultos)">
-              <InputNumber style={{ width: "100%" }} min={0} placeholder="Ej. 10" addonAfter="sacos" />
-            </Form.Item>
-          </Col>
-          <Col span={8}>
-            <Form.Item name="rendimiento" label="Rendimiento (%)">
-              <InputNumber style={{ width: "100%" }} min={0} max={100} precision={2} decimalSeparator="," addonAfter="%" placeholder="Ej. 75.5" />
-            </Form.Item>
-          </Col>
-        </Row>
-
-
-        <Row gutter={16}>
-          <Col span={12}>
-            <Form.Item name="kilosIngresados" label="Kilos Ingresados (Secado)" rules={[{ required: true, message: "Requerido" }]}>
-              <InputNumber readOnly={secadoIdsVinculados.length > 0} decimalSeparator="," style={{ width: "100%" }} min={0.1} precision={2} placeholder="Ej. 420" addonAfter="kg" />
-            </Form.Item>
-          </Col>
-          <Col span={12}>
-            <Form.Item name="kilosResultantes" label="Kg Pergamino Seco" rules={[{ required: true, message: "Requerido" }]}>
-              <InputNumber readOnly={secadoIdsVinculados.length > 0} decimalSeparator="," style={{ width: "100%" }} min={0} precision={2} placeholder="Ej. 400" addonAfter="kg" />
-            </Form.Item>
-          </Col>
-        </Row>
-
-        {mermaCalculada !== null && (
-          <div style={{ padding: "12px 16px", marginBottom: 16, background: mermaCalculada >= 0 ? "rgba(250,173,20,0.1)" : "rgba(255,77,79,0.1)", border: `1px solid ${mermaCalculada >= 0 ? "#faad14" : "#ff4d4f"}`, borderRadius: 6 }}>
-            <Typography.Text type={mermaCalculada >= 0 ? "warning" : "danger"}>
-              <strong>Merma estimada: </strong>{mermaCalculada.toFixed(2)} kg ({kilosIngresados ? ((mermaCalculada / Number(kilosIngresados)) * 100).toFixed(1) : 0}%)
-            </Typography.Text>
-          </div>
-        )}
-
-
-        <Divider titlePlacement="left" orientationMargin={0}>
-          <Typography.Text strong style={{ fontSize: 13 }}>Datos de Calidad (Opcional)</Typography.Text>
-        </Divider>
-
-        <Row gutter={16}>
-          <Col span={12}>
-            <Form.Item name="humedad" label="Humedad">
-              <InputNumber style={{ width: "100%" }} min={0} max={100} precision={1} decimalSeparator="," step={0.1} addonAfter="%" placeholder="Ej. 11.5" />
-            </Form.Item>
-          </Col>
-          <Col span={12}>
-            <Form.Item name="actividadAgua" label="Actividad de Agua (Aw)">
-              <InputNumber style={{ width: "100%" }} min={0} max={1} precision={3} step={0.001} placeholder="Ej. 0.650" />
-            </Form.Item>
-          </Col>
-        </Row>
-
-        <Row gutter={16}>
-          <Col span={12}>
-            <Form.Item name="puntajeSca" label="Puntaje SCA" tooltip="Escala 0-100 segun protocolo SCA">
-              <InputNumber style={{ width: "100%" }} min={0} max={100} precision={2} decimalSeparator="," step={0.25} addonAfter="pts" placeholder="Ej. 83.50" />
-            </Form.Item>
-          </Col>
-          <Col span={12}>
-            <Form.Item name="fueCatado" label="Fue catado?" valuePropName="checked">
-              <Switch checkedChildren="Si" unCheckedChildren="No" />
-            </Form.Item>
-          </Col>
-        </Row>
-
-        <Form.Item name="perfilSensorial" label="Perfil Sensorial">
-          <Input.TextArea rows={2} placeholder="Ej. Notas a chocolate, caramelo, frutos rojos. Acidez media, cuerpo alto." />
-        </Form.Item>
-
-        <Divider titlePlacement="left" orientationMargin={0}>
-          <Typography.Text strong style={{ fontSize: 13 }}>Observaciones</Typography.Text>
-        </Divider>
-
-        <Form.Item name="observaciones">
-          <Input.TextArea rows={3} placeholder="Tipo de saco, lugar de almacenamiento, notas internas..." />
-        </Form.Item>
-
+    <Modal title="Registrar ingreso a Almacén Pergamino" open={open} onCancel={onClose}
+      onOk={() => form.submit()} okText="Registrar ingreso" cancelText="Cancelar" confirmLoading={loading}
+      width={720} destroyOnHidden>
+      <Form form={form} preserve={false} layout="vertical"
+        initialValues={{ fechaInicio: dayjs(), fueCatado: false, muestra: false }}
+        onFinish={({ fechaInicio, ...values }) => onSubmit({ ...values, fechaInicio: fechaInicio.toISOString() })}>
+        <CamposEmpaque lotes={lotes} secados={secados} empaques={empaques} />
       </Form>
     </Modal>
   );

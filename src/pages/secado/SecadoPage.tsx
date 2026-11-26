@@ -13,7 +13,6 @@ import {
   Modal,
   Popconfirm,
   Row,
-  Select,
   Space,
   Statistic,
   Table,
@@ -49,6 +48,7 @@ import { getLotesApi } from "../lotes/lotes.api";
 import CrearSecadoModal from "../../components/secado-modals/CrearSecadoModal";
 import EditarSecadoModal from "../../components/secado-modals/EditarSecadoModal";
 import { formatEstadoEnum } from "../../utils/enumFormatters";
+import { formatearDuracionSecado } from "../../utils/formatearDuracion";
 
 const { Title, Text } = Typography;
 
@@ -63,7 +63,6 @@ export default function SecadoPage() {
   // Filtros
   const [searchText, setSearchText] = useState("");
   const [filtroFecha, setFiltroFecha] = useState<[Dayjs, Dayjs] | null>(null);
-  const [filtroEstado, setFiltroEstado] = useState<string | undefined>(undefined);
 
   // Modales
   const [isCreateOpen, setIsCreateOpen] = useState(false);
@@ -142,17 +141,13 @@ export default function SecadoPage() {
   const handleLimpiarFiltros = () => {
     setSearchText("");
     setFiltroFecha(null);
-    setFiltroEstado(undefined);
   };
 
   const stats = useMemo(() => {
     const totalRegistros = secados.length;
     const totalIngresados = secados.reduce((acc, curr) => acc + (curr.kilosIngresados || 0), 0);
-    const totalResultantes = secados.reduce((acc, curr) => acc + (curr.kilosResultantes || 0), 0);
-    const totalMerma = secados.reduce((acc, curr) => acc + (curr.merma || 0), 0);
-    const porcentajeMermaPromedio = totalIngresados > 0 ? (totalMerma / totalIngresados) * 100 : 0;
 
-    return { totalRegistros, totalIngresados, totalResultantes, totalMerma, porcentajeMermaPromedio };
+    return { totalRegistros, totalIngresados };
   }, [secados]);
 
   // Filtrado
@@ -172,14 +167,10 @@ export default function SecadoPage() {
         }
       }
 
-      if (filtroEstado) {
-        const estado = (s as any).estado || (s.kilosResultantes != null ? "COMPLETADO" : "EN_PROCESO");
-        if (estado !== filtroEstado) return false;
-      }
 
       return true;
     });
-  }, [secados, searchText, filtroFecha, filtroEstado]);
+  }, [secados, searchText, filtroFecha]);
 
   const columns: ColumnsType<Secado> = [
     {
@@ -225,7 +216,7 @@ export default function SecadoPage() {
       render: (fecha: string) => (fecha ? dayjs(fecha).format("DD/MM/YYYY HH:mm") : "-"),
     },
     {
-      title: "Kilos Ingresados",
+      title: "Kilos de cerezo ingresados",
       dataIndex: "kilosIngresados",
       key: "kilosIngresados",
       align: "right",
@@ -238,20 +229,14 @@ export default function SecadoPage() {
       render: (perfil: string) => perfil ? <Tag color="purple">{formatEstadoEnum(perfil)}</Tag> : "-",
     },
     {
-      title: "Kilos Resultantes",
-      dataIndex: "kilosResultantes",
-      key: "kilosResultantes",
-      align: "right",
-      render: (val: number | null) => val === null ? "Pesaje pendiente" : <strong style={{ color: token.colorPrimary }}>{val.toLocaleString()} kg</strong>,
-    },
-    {
       title: "Duración",
       key: "duracion",
       render: (_: unknown, record: Secado) => {
         if (!record.fechaFin) return "En curso";
-        const minutos = dayjs(record.fechaFin).diff(dayjs(record.fechaInicio), "minute");
-        if (!Number.isFinite(minutos) || minutos < 0) return "—";
-        return `${Math.floor(minutos / 60)} h ${minutos % 60} min`;
+        return formatearDuracionSecado(
+          record.fechaInicio ? dayjs(record.fechaInicio) : null,
+          dayjs(record.fechaFin),
+        ) ?? "—";
       },
     },
     {
@@ -259,18 +244,6 @@ export default function SecadoPage() {
       dataIndex: "secadora",
       key: "secadora",
       render: (lugar?: string | null) => lugar || "—",
-    },
-    {
-      title: "Estado",
-      key: "estado",
-      render: (_, record: Secado) => {
-        const estado = (record as any).estado || (record.kilosResultantes != null ? "COMPLETADO" : "EN_SECADO");
-        return (
-          <Tag color={estado === "COMPLETADO" ? "success" : "orange"}>
-            {formatEstadoEnum(estado)}
-          </Tag>
-        );
-      },
     },
     {
       title: "Observaciones",
@@ -331,7 +304,7 @@ export default function SecadoPage() {
                 Módulo de Secado
               </Title>
               <Text type="secondary">
-                Control de ingreso a patios/marquesinas, perfiles de secado y merma.
+                Control de ingreso a patios y marquesinas, perfiles y duración del secado.
               </Text>
             </div>
           </Space>
@@ -365,28 +338,6 @@ export default function SecadoPage() {
             <Statistic title="Ingresado (Kg)" value={stats.totalIngresados} precision={1} suffix="kg" />
           </Card>
         </Col>
-        <Col xs={24} sm={12} md={6}>
-          <Card size="small">
-            <Statistic
-              title="Resultante (Kg)"
-              value={stats.totalResultantes}
-              precision={1}
-              suffix="kg"
-              valueStyle={{ color: "#3f8600" }}
-            />
-          </Card>
-        </Col>
-        <Col xs={24} sm={12} md={6}>
-          <Card size="small">
-            <Statistic
-              title="Merma Acumulada"
-              value={stats.totalMerma}
-              precision={1}
-              suffix={`kg (${stats.porcentajeMermaPromedio.toFixed(1)}%)`}
-              valueStyle={{ color: stats.totalMerma > 0 ? "#faad14" : undefined }}
-            />
-          </Card>
-        </Col>
       </Row>
 
       {/* Barra de Filtros y Tabla */}
@@ -409,19 +360,6 @@ export default function SecadoPage() {
               format="DD/MM/YYYY"
               placeholder={["Fecha inicio", "Fecha fin"]}
               style={{ width: "100%" }}
-            />
-          </Col>
-          <Col xs={24} sm={12} md={5}>
-            <Select
-              placeholder="Estado"
-              value={filtroEstado}
-              onChange={setFiltroEstado}
-              allowClear
-              style={{ width: "100%" }}
-              options={[
-                { value: "EN_SECADO", label: "En Secado" },
-                { value: "COMPLETADO", label: "Completado" },
-              ]}
             />
           </Col>
           <Col xs={24} sm={12} md={4}>
@@ -541,31 +479,22 @@ export default function SecadoPage() {
               <Descriptions.Item label="Fecha fin">
                 {viewingSecado.fechaFin
                   ? dayjs(viewingSecado.fechaFin).format("DD/MM/YYYY HH:mm")
-                  : <Typography.Text type="secondary">En proceso</Typography.Text>}
+                  : "Sin fecha de fin"}
               </Descriptions.Item>
 
-              <Descriptions.Item label="Kg ingresados">
+              <Descriptions.Item label="Estado del secado">
+                <Tooltip
+                  title="El secado queda completado al guardar su fecha de fin. Desde ese momento puede quedar disponible para Almacén Pergamino."
+                  trigger={["hover", "focus", "click"]}
+                >
+                  <Tag color={viewingSecado.fechaFin ? "success" : "processing"} tabIndex={0}>
+                    {viewingSecado.fechaFin ? "Completado" : "En curso"}
+                  </Tag>
+                </Tooltip>
+              </Descriptions.Item>
+
+              <Descriptions.Item label="Kilos de cerezo ingresados">
                 <strong>{viewingSecado.kilosIngresados?.toLocaleString("es-CL")} kg</strong>
-              </Descriptions.Item>
-
-              <Descriptions.Item label="Kg resultantes (secos)">
-                <strong style={{ color: token.colorPrimary }}>
-                  {viewingSecado.kilosResultantes == null ? "Pesaje pendiente" : `${viewingSecado.kilosResultantes.toLocaleString("es-CL")} kg`}
-                </strong>
-              </Descriptions.Item>
-
-              <Descriptions.Item label="Merma">
-                {(() => {
-                  if (viewingSecado.merma == null) return "—";
-                  const pct = viewingSecado.kilosIngresados
-                    ? ((viewingSecado.merma / viewingSecado.kilosIngresados) * 100).toFixed(1)
-                    : "0";
-                  return (
-                    <Tag color={viewingSecado.merma > 0 ? "warning" : "green"}>
-                      {viewingSecado.merma?.toLocaleString("es-CL")} kg ({pct}%)
-                    </Tag>
-                  );
-                })()}
               </Descriptions.Item>
 
               <Descriptions.Item label="Temp. mínima">

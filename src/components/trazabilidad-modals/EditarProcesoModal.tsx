@@ -1,4 +1,5 @@
 import CamposOxidacion from "./CamposOxidacion";
+import { formatearDuracionHoras } from "../../utils/formatearDuracion";
 // src/components/trazabilidad-modals/EditarProcesoModal.tsx
 
 import {
@@ -247,7 +248,6 @@ export default function EditarProcesoModal({
 
         if (!open) {
             form.resetFields();
-
         }
     }, [
         open,
@@ -356,14 +356,9 @@ export default function EditarProcesoModal({
             return;
         }
 
-        const valoresActuales =
-            form.getFieldsValue(true) as ProcesoFormValues;
+        const lotesSeleccionados = form.getFieldValue("lotes") as ProcesoLoteFormValue[] | undefined;
 
-
-        const lotesSeleccionados =
-            valoresActuales.lotes ?? values.lotes ?? [];
-
-        if (lotesSeleccionados.length === 0) {
+        if (!lotesSeleccionados?.length) {
             form.setFields([
                 {
                     name: "lotes",
@@ -388,7 +383,6 @@ export default function EditarProcesoModal({
             );
 
         if (
-            duracionCalculada === undefined ||
             !Number.isFinite(total) ||
             total <= 0
         ) {
@@ -403,8 +397,7 @@ export default function EditarProcesoModal({
             kilosIngresados:
                 Number(total.toFixed(2)),
 
-            duracionHoras:
-                duracionCalculada,
+            duracionHoras: duracionCalculada ?? 0,
         };
 
         await onSubmit(
@@ -488,6 +481,7 @@ export default function EditarProcesoModal({
                         >
                             <Select
                                 mode="multiple"
+                                aria-label="Lotes de origen"
                                 placeholder="Seleccione los lotes"
                                 showSearch
                                 optionFilterProp="label"
@@ -506,9 +500,12 @@ export default function EditarProcesoModal({
                                             (item) => item.loteId === id,
                                         );
 
-                                        return existente ?? {
+                                        if (existente) return existente;
+
+                                        const lote = lotesDisponibles.find((item) => item.id === id);
+                                        return {
                                             loteId: id,
-                                            kilosUsados: 0,
+                                            kilosUsados: lote?.kilosActuales ?? lote?.kilosIniciales ?? 0,
                                         };
                                     });
 
@@ -628,13 +625,17 @@ export default function EditarProcesoModal({
 
                     <Col xs={24} md={12}>
                         <Form.Item
-                            label="Kilos ingresados"
-                            tooltip="Total calculado a partir de los kilos aportados por cada lote"
+                            label="Total de kilos ingresados"
+                            htmlFor="editar-proceso-kilos-ingresados"
+                            tooltip="Suma de los aportes. Para cambiar el total, ajusta los kilos aportados de cada lote."
                         >
                             <InputNumber
+                                id="editar-proceso-kilos-ingresados"
                                 value={totalKilosIngresados}
                                 readOnly
                                 controls={false}
+                                precision={2}
+                                decimalSeparator=","
                                 addonAfter="kg"
                                 style={{ width: "100%" }}
                             />
@@ -658,11 +659,6 @@ export default function EditarProcesoModal({
                             label="Inicio de fermentación"
                             name="inicioFermentacion"
                             rules={[
-                                {
-                                    required: true,
-                                    message:
-                                        "Ingrese la fecha y hora de inicio",
-                                },
                             ]}
                         >
                             <DatePicker
@@ -693,11 +689,6 @@ export default function EditarProcesoModal({
                                 "inicioFermentacion",
                             ]}
                             rules={[
-                                {
-                                    required: true,
-                                    message:
-                                        "Ingrese la fecha y hora de fin",
-                                },
                                 {
                                     validator: async (
                                         _,
@@ -754,14 +745,12 @@ export default function EditarProcesoModal({
                         md={12}
                     >
                         <Form.Item
-                            label="Duración del proceso"
+                            label="Duración de fermentación"
                             name="duracionHoras"
+                            getValueProps={(horas?: number) => ({
+                                value: formatearDuracionHoras(horas) ?? "—",
+                            })}
                             rules={[
-                                {
-                                    required: true,
-                                    message:
-                                        "Seleccione el inicio y fin de fermentación",
-                                },
                                 {
                                     type: "number",
                                     min: 0.01,
@@ -770,16 +759,7 @@ export default function EditarProcesoModal({
                                 },
                             ]}
                         >
-                            <InputNumber
-                                style={{
-                                    width: "100%",
-                                }}
-                                precision={2} decimalSeparator=","
-                                addonAfter="horas"
-                                readOnly
-                                controls={false}
-                                placeholder="Se calcula automáticamente"
-                            />
+                            <Input readOnly />
                         </Form.Item>
                     </Col>
 

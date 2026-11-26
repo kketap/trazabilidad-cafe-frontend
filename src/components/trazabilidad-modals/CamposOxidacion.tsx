@@ -1,5 +1,6 @@
 import { Col, DatePicker, Divider, Form, Input, Row, Typography } from "antd";
 import type { Dayjs } from "dayjs";
+import { formatearDuracionMinutos } from "../../utils/formatearDuracion";
 
 export default function CamposOxidacion() {
     const form = Form.useFormInstance();
@@ -29,7 +30,7 @@ export default function CamposOxidacion() {
                 </Col>
                 <Col xs={24} md={12}>
                     <Form.Item label="Duración de oxidación">
-                        <Input readOnly value={minutos != null && minutos >= 0 ? `${Math.floor(minutos / 60)} h ${minutos % 60} min` : "—"} />
+                        <Input aria-label="Duración de oxidación" readOnly value={formatearDuracionMinutos(minutos) ?? "—"} />
                     </Form.Item>
                 </Col>
                 <Col xs={24} md={12}>

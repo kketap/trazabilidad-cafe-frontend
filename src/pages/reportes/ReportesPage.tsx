@@ -287,8 +287,6 @@ export default function ReportesPage() {
         return trazabilidad.porPerfilSecado.map((p) => ({
             perfil: p.perfil.replace(/_/g, " "),
             Ingresado: p.kilosIngresados,
-            Resultante: p.kilosResultantes,
-            MermaPorc: p.porcentajeMerma,
         }));
     }, [trazabilidad.porPerfilSecado]);
 
@@ -657,15 +655,12 @@ export default function ReportesPage() {
                                     <Col xs={24} sm={12} lg={6}>
                                         <Card className="report-kpi-card report-kpi-card-earth">
                                             <Statistic
-                                                title="Merma Prom. Secado"
-                                                value={trazabilidad.resumen.porcMermaSecadoPromedio}
-                                                suffix="%"
+                                                title="Cerezo ingresado a Secado"
+                                                value={trazabilidad.resumen.totalIngresadoSecado}
+                                                suffix="kg"
                                                 prefix={<SunOutlined />}
-                                                precision={2}
+                                                formatter={(val) => formatNumber(Number(val))}
                                             />
-                                            <Typography.Text type="secondary" style={{ fontSize: 12 }}>
-                                                Resultante: {formatNumber(trazabilidad.resumen.totalResultanteSecado)} kg
-                                            </Typography.Text>
                                         </Card>
                                     </Col>
 
@@ -722,7 +717,6 @@ export default function ReportesPage() {
                                                             }
                                                         />
                                                         <Bar dataKey="Ingresado" fill="#8c6d58" radius={[4, 4, 0, 0]} />
-                                                        <Bar dataKey="Resultante" fill="#52c41a" radius={[4, 4, 0, 0]} />
                                                     </BarChart>
                                                 </ResponsiveContainer>
                                             )}
@@ -837,20 +831,6 @@ export default function ReportesPage() {
                                                         dataIndex: "perfil",
                                                         key: "perfil",
                                                         render: (p: string) => <Tag color="orange">{p.replace(/_/g, " ")}</Tag>,
-                                                    },
-                                                    {
-                                                        title: "Resultante",
-                                                        dataIndex: "kilosResultantes",
-                                                        key: "kilosResultantes",
-                                                        align: "right",
-                                                        render: (k: number) => `${formatNumber(k)} kg`,
-                                                    },
-                                                    {
-                                                        title: "% Merma",
-                                                        dataIndex: "porcentajeMerma",
-                                                        key: "porcentajeMerma",
-                                                        align: "right",
-                                                        render: (p: number) => <Tag color={p > 20 ? "volcano" : "green"}>{p}%</Tag>,
                                                     },
                                                     {
                                                         title: "Acción",
@@ -1134,8 +1114,6 @@ export default function ReportesPage() {
                             { title: "Fecha Inicio", dataIndex: "fechaInicio", key: "fechaInicio", render: (f: string) => formatDate(f) },
                             { title: "Fecha Fin", dataIndex: "fechaFin", key: "fechaFin", render: (f: string | null) => (f ? formatDate(f) : "-") },
                             { title: "Ingresado", dataIndex: "kilosIngresados", key: "kilosIngresados", align: "right", render: (k: number) => `${formatNumber(k)} kg` },
-                            { title: "Resultante", dataIndex: "kilosResultantes", key: "kilosResultantes", align: "right", render: (k: number) => `${formatNumber(k)} kg` },
-                            { title: "Merma", dataIndex: "merma", key: "merma", align: "right", render: (m: number) => <Tag color="volcano">{formatNumber(m)} kg</Tag> },
                         ]}
                     />
                 )}

@@ -55,6 +55,14 @@ import { formatEstadoEnum } from "../../utils/enumFormatters";
 
 const { Title, Text } = Typography;
 
+function estadoAlmacen(registro: Empaque) {
+  if (registro.estado) return registro.estado;
+  const usado = (registro.ordenesTrilla ?? []).reduce((suma, orden) => suma + orden.kilosEnviados, 0) +
+    (registro.enviosTrilla ?? []).reduce((suma, envio) => suma + envio.kilosNetos, 0);
+  if (usado > 0 && usado >= registro.kilosResultantes - 0.000001) return "EN_TRILLA";
+  return registro.kilosResultantes > 0 ? "EN_ALMACEN" : "EN_PROCESO";
+}
+
 export default function EmpaquePage() {
   const { token } = theme.useToken();
   const [empaques, setEmpaques] = useState<Empaque[]>([]);
@@ -173,7 +181,7 @@ export default function EmpaquePage() {
       }
 
       if (filtroEstado) {
-        const estado = (e as any).estado || (e.kilosResultantes ? "EN_ALMACEN" : "EN_PROCESO");
+        const estado = estadoAlmacen(e);
         if (estado !== filtroEstado) return false;
       }
 
@@ -233,7 +241,7 @@ export default function EmpaquePage() {
       render: (fecha: string) => (fecha ? dayjs(fecha).format("DD/MM/YYYY HH:mm") : "-"),
     },
     {
-      title: "Kg Pergamino Seco",
+      title: "Kilos netos",
       dataIndex: "kilosResultantes",
       key: "kilosResultantes",
       align: "right",
@@ -261,7 +269,7 @@ export default function EmpaquePage() {
       ),
     },
     {
-      title: "Merma",
+      title: "Tara",
       dataIndex: "merma",
       key: "merma",
       align: "right",
@@ -278,7 +286,7 @@ export default function EmpaquePage() {
       title: "Estado",
       key: "estado",
       render: (_, record: Empaque) => {
-        const estado = (record as any).estado || (record.kilosResultantes ? "EN_ALMACEN" : "EN_PROCESO");
+        const estado = estadoAlmacen(record);
         return (
           <Tag color={estado === "EN_ALMACEN" ? "purple" : "blue"}>
             {formatEstadoEnum(estado)}
@@ -390,7 +398,7 @@ export default function EmpaquePage() {
         <Col xs={24} sm={12} md={6}>
           <Card size="small">
             <Statistic
-              title="Merma de Empaque"
+              title="Tara total"
               value={stats.totalMerma}
               precision={1}
               suffix={`kg (${stats.porcentajeMermaPromedio.toFixed(1)}%)`}
@@ -432,6 +440,7 @@ export default function EmpaquePage() {
               options={[
                 { value: "EN_PROCESO", label: "En Proceso" },
                 { value: "EN_ALMACEN", label: "En Almacén" },
+                { value: "EN_TRILLA", label: "En Trilla" },
               ]}
             />
           </Col>
@@ -460,6 +469,7 @@ export default function EmpaquePage() {
         onSubmit={handleCreate}
         lotes={lotes}
         secados={secados}
+        empaques={empaques}
         loading={saving}
       />
 
@@ -470,6 +480,7 @@ export default function EmpaquePage() {
         empaque={editingEmpaque}
         lotes={lotes}
         secados={secados}
+        empaques={empaques}
         loading={saving}
       />
 
@@ -518,7 +529,7 @@ export default function EmpaquePage() {
 
               <Descriptions.Item label="Estado">
                 <Tag color={viewingEmpaque.kilosResultantes ? "purple" : "blue"}>
-                  {viewingEmpaque.kilosResultantes ? "En Almacén" : "En Proceso"}
+                  {formatEstadoEnum(estadoAlmacen(viewingEmpaque))}
                 </Tag>
               </Descriptions.Item>
 
@@ -544,23 +555,18 @@ export default function EmpaquePage() {
                 {dayjs(viewingEmpaque.fechaInicio).format("DD/MM/YYYY HH:mm")}
               </Descriptions.Item>
 
-              <Descriptions.Item label="Fecha fin">
-                {viewingEmpaque.fechaFin
-                  ? dayjs(viewingEmpaque.fechaFin).format("DD/MM/YYYY HH:mm")
-                  : <Typography.Text type="secondary">En proceso</Typography.Text>}
-              </Descriptions.Item>
 
-              <Descriptions.Item label="Kg ingresados">
+              <Descriptions.Item label="Kilos brutos">
                 <strong>{viewingEmpaque.kilosIngresados?.toLocaleString("es-CL")} kg</strong>
               </Descriptions.Item>
 
-              <Descriptions.Item label="Kg Pergamino Seco (Resultantes)">
+              <Descriptions.Item label="Kilos netos">
                 <strong style={{ color: token.colorPrimary }}>
                   {viewingEmpaque.kilosResultantes?.toLocaleString("es-CL")} kg
                 </strong>
               </Descriptions.Item>
 
-              <Descriptions.Item label="Merma">
+              <Descriptions.Item label="Tara">
                 {(() => {
                   const pct = viewingEmpaque.kilosIngresados
                     ? ((viewingEmpaque.merma / viewingEmpaque.kilosIngresados) * 100).toFixed(1) : "0";
@@ -590,6 +596,9 @@ export default function EmpaquePage() {
                 </Tag>
               </Descriptions.Item>
 
+              <Descriptions.Item label="Muestra">
+                {viewingEmpaque.muestra == null ? "No registrado" : viewingEmpaque.muestra ? "Sí" : "No"}
+              </Descriptions.Item>
               <Descriptions.Item label="Humedad">
                 {viewingEmpaque.humedad != null
                   ? <Tag color="blue">{viewingEmpaque.humedad}%</Tag>

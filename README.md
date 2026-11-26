@@ -71,3 +71,7 @@ export default defineConfig([
   },
 ])
 ```
+
+## Pesos de los lotes
+
+Al crear un lote desde cosechas, el total de los aportes se guarda como peso inicial y saldo disponible. En el listado y el detalle, los kilos procesados corresponden a los aportes registrados en Secado para ese lote.

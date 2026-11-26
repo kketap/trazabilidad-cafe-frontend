@@ -62,7 +62,7 @@ export default function DetalleTrillaModal({ open, onClose, orden }: Props) {
   };
 
   // Subproductos registrados y suma
-  const subproductosList = SUBPRODUCTO_LABELS.map((item) => ({
+  const subproductosList = SUBPRODUCTO_LABELS.filter(({ key }) => key !== "exportable4" || orden.exportable4 != null).map((item) => ({
     label: item.label,
     value: orden[item.key] as number | null | undefined,
   }));
@@ -168,17 +168,26 @@ export default function DetalleTrillaModal({ open, onClose, orden }: Props) {
             {orden.numeroGuiaHayland && <Tag>N.º guía Hayland {orden.numeroGuiaHayland}</Tag>}
           </Descriptions.Item>
 
-          <Descriptions.Item label="N° Guía de Despacho">
-            {orden.numeroGuia ? (
+          <Descriptions.Item label="Guía de salida">
+            {(orden.guiaSalida ?? orden.numeroGuia) ? (
               <Tag color="geekblue" style={{ fontSize: 12 }}>
-                {orden.numeroGuia}
+                {orden.guiaSalida ?? orden.numeroGuia}
               </Tag>
             ) : (
               <Text type="secondary">—</Text>
             )}
           </Descriptions.Item>
 
-          <Descriptions.Item label="Lotes y Descuentos" span={2}>
+          {orden.almacenes && orden.almacenes.length > 0 && (
+            <Descriptions.Item label="Envío por almacén" span="filled">
+              <Space wrap>
+                {orden.almacenes.map(({ empaqueId, kilosNetos, empaque }) => (
+                  <Tag key={empaqueId}>{empaque?.codigo ?? `EMP-${empaqueId}`} · {kilosNetos.toLocaleString("es-CL")} kg netos</Tag>
+                ))}
+              </Space>
+            </Descriptions.Item>
+          )}
+          <Descriptions.Item label="Lotes de origen" span="filled">
             {orden.ordenLotes && orden.ordenLotes.length > 0 ? (
               <Space direction="vertical" style={{ width: "100%" }} size={4}>
                 {orden.ordenLotes.map((ol: any) => (
@@ -186,7 +195,6 @@ export default function DetalleTrillaModal({ open, onClose, orden }: Props) {
                     <Tag color="gold" style={{ fontWeight: 600 }}>{ol.lote?.codigo || `Lote #${ol.loteId}`}</Tag>
                     {ol.lote?.nombre && <Text type="secondary" style={{ fontSize: 12 }}>({ol.lote.nombre})</Text>}
                     <Tag color="blue">{Number(ol.kilosDescontados || 0).toFixed(2)} kg</Tag>
-                    {ol.sacos ? <Tag color="default">{ol.sacos} sacos</Tag> : null}
                   </Space>
                 ))}
               </Space>
@@ -209,6 +217,7 @@ export default function DetalleTrillaModal({ open, onClose, orden }: Props) {
               : "—"}
           </Descriptions.Item>
 
+          <Descriptions.Item label="Guía de ingreso">{orden.guiaIngreso ?? "—"}</Descriptions.Item>
           <Descriptions.Item label="Fecha de Ingreso">
             {orden.fechaIngreso
               ? dayjs(orden.fechaIngreso).format("DD/MM/YYYY")
@@ -223,21 +232,7 @@ export default function DetalleTrillaModal({ open, onClose, orden }: Props) {
             )}
           </Descriptions.Item>
 
-          <Descriptions.Item label="Tipo de Saco">
-            {orden.tipoSaco ? (
-              <Tag color="cyan">{orden.tipoSaco}</Tag>
-            ) : (
-              <Text type="secondary">—</Text>
-            )}
-          </Descriptions.Item>
 
-          <Descriptions.Item label="Sacos Enviados">
-            {orden.sacosEnviados != null ? (
-              <strong style={{ fontSize: 13 }}>{orden.sacosEnviados}</strong>
-            ) : (
-              <Text type="secondary">—</Text>
-            )}
-          </Descriptions.Item>
 
           {merma != null && (
             <Descriptions.Item label="Merma Estimada" span={2}>
@@ -251,15 +246,13 @@ export default function DetalleTrillaModal({ open, onClose, orden }: Props) {
         {/* Panel de Métricas de Rendimiento Trilla */}
         {(() => {
           const baseKilos = orden.metricasRendimiento?.baseKilos ?? Number(orden.kilosNetos ?? orden.kilosEnviados ?? 0);
-          const expVal = orden.metricasRendimiento?.exportableKg ?? Number(orden.exportable ?? 0);
+          const expVal = orden.metricasRendimiento?.exportableKg ??
+            [orden.exportable, orden.exportable2, orden.exportable3, orden.exportable4]
+              .reduce<number>((total, kilos) => total + Number(kilos ?? 0), 0);
           const pctExportable = orden.metricasRendimiento?.exportablePct ?? (baseKilos > 0 ? (expVal / baseKilos) * 100 : 0);
           const recVal = orden.metricasRendimiento?.recuperadoKg ?? Number(orden.recuperado ?? 0);
           const pctRecuperado = orden.metricasRendimiento?.recuperadoPct ?? (baseKilos > 0 ? (recVal / baseKilos) * 100 : 0);
-          const restoKilos = orden.metricasRendimiento?.restoKg ?? (
-            totalSubproductos > 0
-              ? (Number(orden.malla13 || 0) + Number(orden.segundaBuena || 0) + Number(orden.segundaMala || 0) + Number(orden.sucioEscojo || 0) + Number(orden.cisco || 0) + Number(orden.descarteMaquina || 0) + Number(orden.cascarilla || 0))
-              : Math.max(0, baseKilos - (expVal + recVal))
-          );
+          const restoKilos = orden.metricasRendimiento?.restoKg ?? Number((totalSubproductos - expVal - recVal).toFixed(2));
           const pctResto = orden.metricasRendimiento?.restoPct ?? (baseKilos > 0 ? (restoKilos / baseKilos) * 100 : 0);
 
           return (
@@ -304,7 +297,7 @@ export default function DetalleTrillaModal({ open, onClose, orden }: Props) {
                 <Col xs={24} sm={8}>
                   <div className="trilla-kpi-card trilla-kpi-card-resto">
                     <Text className="trilla-kpi-label trilla-kpi-label-resto">
-                      % Resto
+                      % Otros subproductos
                     </Text>
                     <span className="trilla-kpi-value trilla-kpi-value-resto">
                       {Number(pctResto).toFixed(1)}%
